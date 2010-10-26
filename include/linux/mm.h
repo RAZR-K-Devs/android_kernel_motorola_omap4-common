@@ -155,6 +155,7 @@ extern pgprot_t protection_map[16];
 #define FAULT_FLAG_RETRY_NOWAIT	0x10	/* Don't drop mmap_sem and wait when retrying */
 #define FAULT_FLAG_KILLABLE	0x20	/* The fault task is in SIGKILL killable region */
 
+
 /*
  * This interface is used by x86 PAT code to identify a pfn mapping that is
  * linear over entire vma. This is to optimize PAT code that deals with

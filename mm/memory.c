@@ -2924,7 +2924,7 @@ static int do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	swp_entry_t entry;
 	pte_t pte;
 	int locked;
-	struct mem_cgroup *ptr;
+	struct mem_cgroup *ptr = NULL;
 	int exclusive = 0;
 	int ret = 0;
 

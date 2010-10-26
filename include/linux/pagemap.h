@@ -304,6 +304,7 @@ static inline pgoff_t linear_page_index(struct vm_area_struct *vma,
 
 extern void __lock_page(struct page *page);
 extern int __lock_page_killable(struct page *page);
+extern void __lock_page_nosync(struct page *page);
 extern int __lock_page_or_retry(struct page *page, struct mm_struct *mm,
 				unsigned int flags);
 extern void unlock_page(struct page *page);
@@ -344,6 +345,17 @@ static inline int lock_page_killable(struct page *page)
 	if (!trylock_page(page))
 		return __lock_page_killable(page);
 	return 0;
+}
+
+/*
+ * lock_page_or_retry - Lock the page, unless this would block and the
+ * caller indicated that it can handle a retry.
+ */
+static inline int lock_page_or_retry(struct page *page, struct mm_struct *mm,
+				     unsigned int flags)
+{
+	might_sleep();
+	return trylock_page(page) || __lock_page_or_retry(page, mm, flags);
 }
 
 /*
