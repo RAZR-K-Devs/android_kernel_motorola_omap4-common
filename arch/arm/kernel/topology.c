@@ -33,8 +33,6 @@
 #include <asm/cputype.h>
 #include <asm/topology.h>
 
-#define ARM_FAMILY_MASK 0xFF0FFFF0
-
 #define MPIDR_SMP_BITMASK (0x3 << 30)
 #define MPIDR_SMP_VALUE (0x2 << 30)
 
@@ -224,8 +222,6 @@ static int init_cpu_power_scale(void)
 
 core_initcall(init_cpu_power_scale);
 
-ATOMIC_NOTIFIER_HEAD(topology_update_notifier_list);
-
 /*
  * Update the cpu power
  */
@@ -233,29 +229,6 @@ ATOMIC_NOTIFIER_HEAD(topology_update_notifier_list);
 unsigned long arch_scale_freq_power(struct sched_domain *sd, int cpu)
 {
 	return per_cpu(cpu_scale, cpu);
-}
-
-/*
- * sched_domain flag configuration
- */
-/* TODO add a config flag for this function */
-int arch_sd_sibling_asym_packing(void)
-{
-	if (sched_smt_power_savings || sched_mc_power_savings)
-		return SD_ASYM_PACKING;
-	return 0;
-}
-
-int topology_register_notifier(struct notifier_block *nb)
-{
-	return atomic_notifier_chain_register(
-			&topology_update_notifier_list, nb);
-}
-
-int topology_unregister_notifier(struct notifier_block *nb)
-{
-	return atomic_notifier_chain_unregister(
-			&topology_update_notifier_list, nb);
 }
 
 /*
@@ -440,9 +413,6 @@ void store_cpu_topology(unsigned int cpuid)
 			cpuid_topo->socket_id = (mpidr >> MPIDR_LEVEL1_SHIFT)
 				& MPIDR_LEVEL1_MASK;
 		}
-
-		cpuid_topo->id = read_cpuid_id() & ARM_FAMILY_MASK;
-
 	} else {
 		/*
 		 * This is an uniprocessor system
@@ -484,10 +454,6 @@ int arch_update_cpu_topology(void)
 	/* set topology mask and power */
 	(*set_cpu_topology_mask)();
 
-	/* notify the topology update */
-	atomic_notifier_call_chain(&topology_update_notifier_list,
-			TOPOLOGY_POSTCHANGE, (void *)sched_mc_power_savings);
-
 	return 1;
 }
 
@@ -503,7 +469,6 @@ void init_cpu_topology(void)
 	for_each_possible_cpu(cpu) {
 		struct cputopo_arm *cpu_topo = &(cpu_topology[cpu]);
 
-		cpu_topo->id = -1;
 		cpu_topo->thread_id = -1;
 		cpu_topo->core_id =  -1;
 		cpu_topo->socket_id = -1;
@@ -622,3 +587,4 @@ err_out:
 
 late_initcall(topo_debugfs_init);
 #endif
+
