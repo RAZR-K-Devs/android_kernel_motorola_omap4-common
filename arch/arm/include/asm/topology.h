@@ -39,6 +39,9 @@ static inline int topology_register_notifier(struct notifier_block *nb)  { }
 static inline int topology_unregister_notifier(struct notifier_block *nb)  { }
 #endif
 
+/* Topology notifier event */
+#define TOPOLOGY_POSTCHANGE 0
+
 /* Common values for CPUs */
 #ifndef SD_CPU_INIT
 #define SD_CPU_INIT (struct sched_domain) {				\
@@ -72,9 +75,6 @@ static inline int topology_unregister_notifier(struct notifier_block *nb)  { }
 }
 #endif
 
-/* Topology notifier event */
-
-#define TOPOLOGY_POSTCHANGE 0
 #include <asm-generic/topology.h>
 
 #endif /* _ASM_ARM_TOPOLOGY_H */
