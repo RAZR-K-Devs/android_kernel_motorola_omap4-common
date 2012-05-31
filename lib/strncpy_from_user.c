@@ -4,6 +4,7 @@
 #include <linux/errno.h>
 
 #include <asm/byteorder.h>
+<<<<<<< HEAD
 
 static inline long find_zero(unsigned long mask)
 {
@@ -35,6 +36,9 @@ static inline long find_zero(unsigned long mask)
 	return (mask & 0xff) ? byte : byte + 1;
 #endif
 }
+=======
+#include <asm/word-at-a-time.h>
+>>>>>>> b5a165f... word-at-a-time: make the interfaces truly generic
 
 #ifdef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
 #define IS_UNALIGNED(src, dst)	0
@@ -51,8 +55,12 @@ static inline long find_zero(unsigned long mask)
  */
 static inline long do_strncpy_from_user(char *dst, const char __user *src, long count, unsigned long max)
 {
+<<<<<<< HEAD
 	const unsigned long high_bits = REPEAT_BYTE(0xfe) + 1;
 	const unsigned long low_bits = REPEAT_BYTE(0x7f);
+=======
+	const struct word_at_a_time constants = WORD_AT_A_TIME_CONSTANTS;
+>>>>>>> b5a165f... word-at-a-time: make the interfaces truly generic
 	long res = 0;
 
 	/*
@@ -66,11 +74,16 @@ static inline long do_strncpy_from_user(char *dst, const char __user *src, long 
 		goto byte_at_a_time;
 
 	while (max >= sizeof(unsigned long)) {
+<<<<<<< HEAD
 		unsigned long c, v, rhs;
+=======
+		unsigned long c, data;
+>>>>>>> b5a165f... word-at-a-time: make the interfaces truly generic
 
 		/* Fall back to byte-at-a-time if we get a page fault */
 		if (unlikely(__get_user(c,(unsigned long __user *)(src+res))))
 			break;
+<<<<<<< HEAD
 		rhs = c | low_bits;
 		v = (c + high_bits) & ~rhs;
 		*(unsigned long *)(dst+res) = c;
@@ -78,6 +91,13 @@ static inline long do_strncpy_from_user(char *dst, const char __user *src, long 
 			v = (c & low_bits) + low_bits;
 			v = ~(v | rhs);
 			return res + find_zero(v);
+=======
+		*(unsigned long *)(dst+res) = c;
+		if (has_zero(c, &data, &constants)) {
+			data = prep_zero_mask(c, data, &constants);
+			data = create_zero_mask(data);
+			return res + find_zero(data);
+>>>>>>> b5a165f... word-at-a-time: make the interfaces truly generic
 		}
 		res += sizeof(unsigned long);
 		max -= sizeof(unsigned long);
