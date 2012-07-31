@@ -267,20 +267,13 @@ static enum oom_constraint constrained_alloc(struct zonelist *zonelist,
 }
 #endif
 
-enum oom_scan_t {
-	OOM_SCAN_OK,		/* scan thread and find its badness */
-	OOM_SCAN_CONTINUE,	/* do not consider thread for oom kill */
-	OOM_SCAN_ABORT,		/* abort the iteration and return */
-	OOM_SCAN_SELECT,	/* always select this thread first */
-};
-
-static enum oom_scan_t oom_scan_process_thread(struct task_struct *task,
-		struct mem_cgroup *memcg, unsigned long totalpages,
-		const nodemask_t *nodemask, bool force_kill)
+enum oom_scan_t oom_scan_process_thread(struct task_struct *task,
+		unsigned long totalpages, const nodemask_t *nodemask,
+		bool force_kill)
 {
 	if (task->exit_state)
 		return OOM_SCAN_CONTINUE;
-	if (oom_unkillable_task(task, memcg, nodemask))
+	if (oom_unkillable_task(task, NULL, nodemask))
 		return OOM_SCAN_CONTINUE;
 
 	/*
@@ -327,8 +320,9 @@ static enum oom_scan_t oom_scan_process_thread(struct task_struct *task,
  * (not docbooked, we don't want this one cluttering up the manual)
  */
 static struct task_struct *select_bad_process(unsigned int *ppoints,
-		unsigned long totalpages, struct mem_cgroup *mem,
-		const nodemask_t *nodemask)
+		unsigned long totalpages, const nodemask_t *nodemask,
+		bool force_kill)
+
 {
 	struct task_struct *g, *p;
 	struct task_struct *chosen = NULL;
@@ -337,7 +331,7 @@ static struct task_struct *select_bad_process(unsigned int *ppoints,
 	do_each_thread(g, p) {
 		unsigned int points;
 
-		switch (oom_scan_process_thread(p, memcg, totalpages, nodemask,
+		switch (oom_scan_process_thread(p, totalpages, nodemask,
 						force_kill)) {
 		case OOM_SCAN_SELECT:
 			chosen = p;
@@ -350,7 +344,8 @@ static struct task_struct *select_bad_process(unsigned int *ppoints,
 		case OOM_SCAN_OK:
 			break;
 		};
-		points = oom_badness(p, memcg, nodemask, totalpages);
+
+		points = oom_badness(p, NULL, nodemask, totalpages);
 
 		if (points > chosen_points) {
 			chosen = p;
@@ -422,6 +417,7 @@ static void dump_header(struct task_struct *p, gfp_t gfp_mask, int order,
 }
 
 #define K(x) ((x) << (PAGE_SHIFT-10))
+
 static int oom_kill_task(struct task_struct *p, struct mem_cgroup *mem)
 {
 	struct task_struct *q;
@@ -466,10 +462,10 @@ static int oom_kill_task(struct task_struct *p, struct mem_cgroup *mem)
 }
 #undef K
 
-static int oom_kill_process(struct task_struct *p, gfp_t gfp_mask, int order,
-			    unsigned int points, unsigned long totalpages,
-			    struct mem_cgroup *mem, nodemask_t *nodemask,
-			    const char *message)
+void oom_kill_process(struct task_struct *p, gfp_t gfp_mask, int order,
+		      unsigned int points, unsigned long totalpages,
+		      struct mem_cgroup *memcg, nodemask_t *nodemask,
+		      const char *message)
 {
 	struct task_struct *victim = p;
 	struct task_struct *child;
@@ -547,10 +543,6 @@ static void check_panic_on_oom(enum oom_constraint constraint, gfp_t gfp_mask,
 #ifdef CONFIG_CGROUP_MEM_RES_CTLR
 void mem_cgroup_out_of_memory(struct mem_cgroup *mem, gfp_t gfp_mask)
 {
-	unsigned long limit;
-	unsigned int points = 0;
-	struct task_struct *p;
-
 	/*
 	 * If current has a pending SIGKILL, then automatically select it.  The
 	 * goal is to allow it to allocate so that it may quickly exit and free
@@ -561,19 +553,9 @@ void mem_cgroup_out_of_memory(struct mem_cgroup *mem, gfp_t gfp_mask)
 		return;
 	}
 
-	check_panic_on_oom(CONSTRAINT_MEMCG, gfp_mask, 0, NULL);
-	limit = mem_cgroup_get_limit(memcg) >> PAGE_SHIFT ? : 1;
-	read_lock(&tasklist_lock);
-retry:
-	p = select_bad_process(&points, limit, mem, NULL);
-	if (!p || PTR_ERR(p) == -1UL)
-		goto out;
+	check_panic_on_oom(CONSTRAINT_MEMCG, gfp_mask, order, NULL);
+	__mem_cgroup_out_of_memory(memcg, gfp_mask, order);
 
-	if (oom_kill_process(p, gfp_mask, 0, points, limit, mem, NULL,
-				"Memory cgroup out of memory"))
-		goto retry;
-out:
-	read_unlock(&tasklist_lock);
 }
 #endif
 
@@ -697,7 +679,7 @@ void out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 	struct task_struct *p;
 	unsigned long totalpages;
 	unsigned long freed = 0;
-	unsigned int points;
+	unsigned int uninitialized_var(points);
 	enum oom_constraint constraint = CONSTRAINT_NONE;
 	int killed = 0;
 
@@ -740,10 +722,7 @@ void out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 			goto out;
 	}
 
-retry:
-	p = select_bad_process(&points, totalpages, NULL, mpol_mask);
-	if (PTR_ERR(p) == -1UL)
-		goto out;
+	p = select_bad_process(&points, totalpages, mpol_mask, force_kill);
 
 	/* Found nothing?!?! Either we hang forever, or we panic. */
 	if (!p) {
