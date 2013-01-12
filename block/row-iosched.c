@@ -47,37 +47,38 @@ enum row_queue_prio {
 	ROWQ_MAX_PRIO,
 };
 
-/* Flags indicating whether idling is enabled on the queue */
-static const bool queue_idling_enabled[] = {
-	true,	/* ROWQ_PRIO_HIGH_READ */
-	true,	/* ROWQ_PRIO_REG_READ */
-	false,	/* ROWQ_PRIO_HIGH_SWRITE */
-	false,	/* ROWQ_PRIO_REG_SWRITE */
-	false,	/* ROWQ_PRIO_REG_WRITE */
-	false,	/* ROWQ_PRIO_LOW_READ */
-	false,	/* ROWQ_PRIO_LOW_SWRITE */
+/**
+ * struct row_queue_params - ROW queue parameters
+ * @idling_enabled: Flag indicating whether idling is enable on
+ *			the queue
+ * @quantum: Number of requests to be dispatched from this queue
+ *			in a dispatch cycle
+ * @is_urgent: Flags indicating whether the queue can notify on
+ *			urgent requests
+ *
+ */
+struct row_queue_params {
+	bool idling_enabled;
+	int quantum;
+	bool is_urgent;
 };
 
-/* Flags indicating whether the queue can notify on urgent requests */
-static const bool urgent_queues[] = {
-	true,	/* ROWQ_PRIO_HIGH_READ */
-	true,	/* ROWQ_PRIO_REG_READ */
-	false,	/* ROWQ_PRIO_HIGH_SWRITE */
-	false,	/* ROWQ_PRIO_REG_SWRITE */
-	false,	/* ROWQ_PRIO_REG_WRITE */
-	false,	/* ROWQ_PRIO_LOW_READ */
-	false,	/* ROWQ_PRIO_LOW_SWRITE */
-};
-
-/* Default values for row queues quantums in each dispatch cycle */
-static const int queue_quantum[] = {
-	100,	/* ROWQ_PRIO_HIGH_READ */
-	75,	/* ROWQ_PRIO_REG_READ */
-	5,	/* ROWQ_PRIO_HIGH_SWRITE */
-	4,	/* ROWQ_PRIO_REG_SWRITE */
-	4,	/* ROWQ_PRIO_REG_WRITE */
-	3,	/* ROWQ_PRIO_LOW_READ */
-	2	/* ROWQ_PRIO_LOW_SWRITE */
+/*
+ * This array holds the default values of the different configurables
+ * for each ROW queue. Each row of the array holds the following values:
+ * {idling_enabled, quantum, is_urgent}
+ * Each row corresponds to a queue with the same index (according to
+ * enum row_queue_prio)
+ */
+static const struct row_queue_params row_queues_def[] = {
+/* idling_enabled, quantum, is_urgent */
+	{true, 100, true},	/* ROWQ_PRIO_HIGH_READ */
+	{true, 100, true},	/* ROWQ_PRIO_REG_READ */
+	{false, 2, false},	/* ROWQ_PRIO_HIGH_SWRITE */
+	{false, 1, false},	/* ROWQ_PRIO_REG_SWRITE */
+	{false, 1, false},	/* ROWQ_PRIO_REG_WRITE */
+	{false, 1, false},	/* ROWQ_PRIO_LOW_READ */
+	{false, 1, false}	/* ROWQ_PRIO_LOW_SWRITE */
 };
 
 /* Default values for idling on read queues (in msec) */
@@ -266,7 +267,7 @@ static void row_add_request(struct request_queue *q,
 	rd->nr_reqs[rq_data_dir(rq)]++;
 	rq_set_fifo_time(rq, jiffies); /* for statistics*/
 
-	if (queue_idling_enabled[rqueue->prio]) {
+	if (row_queues_def[rqueue->prio].idling_enabled) {
 		if (delayed_work_pending(&rd->read_idle.idle_work))
 			(void)cancel_delayed_work(
 				&rd->read_idle.idle_work);
@@ -282,7 +283,7 @@ static void row_add_request(struct request_queue *q,
 
 		rqueue->idle_data.last_insert_time = ktime_get();
 	}
-	if (urgent_queues[rqueue->prio] &&
+	if (row_queues_def[rqueue->prio].is_urgent &&
 	    row_rowq_unserved(rd, rqueue->prio)) {
 		row_log_rowq(rd, rqueue->prio,
 			     "added urgent req curr_queue = %d",
@@ -334,8 +335,8 @@ static bool row_urgent_pending(struct request_queue *q)
 	int i;
 
 	for (i = 0; i < ROWQ_MAX_PRIO; i++)
-		if (urgent_queues[i] && row_rowq_unserved(rd, i) &&
-		    !list_empty(&rd->row_queues[i].rqueue.fifo)) {
+		if (row_queues_def[i].is_urgent && row_rowq_unserved(rd, i) &&
+		    !list_empty(&rd->row_queues[i].fifo)) {
 			row_log_rowq(rd, i,
 				     "Urgent request pending (curr=%i)",
 				     rd->curr_queue);
@@ -472,8 +473,8 @@ static int row_dispatch_requests(struct request_queue *q, int force)
 			}
 		}
 
-		if (!force && queue_idling_enabled[currq] &&
-		    rd->row_queues[currq].rqueue.idle_data.begin_idling) {
+		if (!force && row_queues_def[currq].idling_enabled &&
+		    rd->row_queues[currq].idle_data.begin_idling) {
 			if (!queue_delayed_work(rd->read_idle.idle_workqueue,
 						&rd->read_idle.idle_work,
 						rd->read_idle.idle_time)) {
@@ -520,12 +521,12 @@ static void *row_init_queue(struct request_queue *q)
 		return NULL;
 
 	for (i = 0; i < ROWQ_MAX_PRIO; i++) {
-		INIT_LIST_HEAD(&rdata->row_queues[i].rqueue.fifo);
-		rdata->row_queues[i].disp_quantum = queue_quantum[i];
-		rdata->row_queues[i].rqueue.rdata = rdata;
-		rdata->row_queues[i].rqueue.prio = i;
-		rdata->row_queues[i].rqueue.idle_data.begin_idling = false;
-		rdata->row_queues[i].rqueue.idle_data.last_insert_time =
+		INIT_LIST_HEAD(&rdata->row_queues[i].fifo);
+		rdata->row_queues[i].disp_quantum = row_queues_def[i].quantum;
+		rdata->row_queues[i].rdata = rdata;
+		rdata->row_queues[i].prio = i;
+		rdata->row_queues[i].idle_data.begin_idling = false;
+		rdata->row_queues[i].idle_data.last_insert_time =
 			ktime_set(0, 0);
 	}
 
