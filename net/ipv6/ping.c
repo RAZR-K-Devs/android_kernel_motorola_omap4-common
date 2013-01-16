@@ -215,4 +215,3 @@ int ping_v6_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 
 	return len;
 }
-
