@@ -43,7 +43,7 @@
 #include <linux/idr.h>
 #include <linux/moduleparam.h>
 
-#include "workqueue_sched.h"
+#include "workqueue_internal.h"
 
 enum {
 	/* global_cwq flags */
