@@ -290,6 +290,7 @@ struct binder_proc {
 	struct rb_root refs_by_node;
 	int pid;
 	struct vm_area_struct *vma;
+	struct mm_struct *vma_vm_mm;
 	struct task_struct *tsk;
 	struct files_struct *files;
 	struct hlist_node deferred_work_node;
@@ -2306,6 +2307,7 @@ retry:
 	thread->looper |= BINDER_LOOPER_STATE_WAITING;
 	if (wait_for_proc_work)
 		proc->ready_threads++;
+
 	binder_unlock(__func__);
 
 	trace_binder_wait_for_work(wait_for_proc_work,
@@ -2584,38 +2586,36 @@ static void binder_release_work(struct list_head *list)
 			struct binder_transaction *t;
 
 			t = container_of(w, struct binder_transaction, work);
-			if (t->buffer->target_node &&
-			    !(t->flags & TF_ONE_WAY)) {
+			if (t->buffer->target_node && !(t->flags & TF_ONE_WAY))
 				binder_send_failed_reply(t, BR_DEAD_REPLY);
-			} else {
+			else{
 				binder_debug(BINDER_DEBUG_DEAD_TRANSACTION,
 					"binder: undelivered transaction %d\n",
 					t->debug_id);
 				t->buffer->transaction = NULL;
 				kfree(t);
-				binder_stats_deleted(BINDER_STAT_TRANSACTION);
+				binder_stats_deleted(BINDER_STAT_TRANSACTION); 
 			}
 		} break;
 		case BINDER_WORK_TRANSACTION_COMPLETE: {
-			binder_debug(BINDER_DEBUG_DEAD_TRANSACTION,
-				"binder: undelivered TRANSACTION_COMPLETE\n");
+			 binder_debug(BINDER_DEBUG_DEAD_TRANSACTION,
+				      "binder: undelivered TRANSACTION_COMPLETE\n");
 			kfree(w);
 			binder_stats_deleted(BINDER_STAT_TRANSACTION_COMPLETE);
 		} break;
 		case BINDER_WORK_DEAD_BINDER_AND_CLEAR:
 		case BINDER_WORK_CLEAR_DEATH_NOTIFICATION: {
 			struct binder_ref_death *death;
-
 			death = container_of(w, struct binder_ref_death, work);
 			binder_debug(BINDER_DEBUG_DEAD_TRANSACTION,
-				"binder: undelivered death notification, %p\n",
-				death->cookie);
+				     "binder: undelivered death notification, %p\n",
+				      death->cookie);
 			kfree(death);
 			binder_stats_deleted(BINDER_STAT_DEATH);
-		} break;
+		} break; 
 		default:
 			pr_err("binder: unexpected work type, %d, not freed\n",
-			       w->type);
+				w->type); 
 			break;
 		}
 	}
@@ -2760,15 +2760,14 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	void __user *ubuf = (void __user *)arg;
 
 	/*printk(KERN_INFO "binder_ioctl: %d:%d %x %lx\n", proc->pid, current->pid, cmd, arg);*/
-	
-	trace_binder_ioctl(cmd, arg);	
+
+	trace_binder_ioctl(cmd, arg);
 
 	ret = wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
 	if (ret)
 		goto err_unlocked;
 
 	binder_lock(__func__);
-
 	thread = binder_get_thread(proc);
 	if (thread == NULL) {
 		ret = -ENOMEM;
@@ -2793,7 +2792,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 		if (bwr.write_size > 0) {
 			ret = binder_thread_write(proc, thread, (void __user *)bwr.write_buffer, bwr.write_size, &bwr.write_consumed);
-			trace_binder_write_done(ret);			
+			trace_binder_write_done(ret);
 			if (ret < 0) {
 				bwr.read_consumed = 0;
 				if (copy_to_user(ubuf, &bwr, sizeof(bwr)))
@@ -2804,7 +2803,6 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (bwr.read_size > 0) {
 			ret = binder_thread_read(proc, thread, (void __user *)bwr.read_buffer, bwr.read_size, &bwr.read_consumed, filp->f_flags & O_NONBLOCK);
 			trace_binder_read_done(ret);
-
 			if (!list_empty(&proc->todo))
 				wake_up_interruptible(&proc->wait);
 			if (ret < 0) {
@@ -3020,6 +3018,7 @@ static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
 	barrier();
 	proc->files = get_files_struct(proc->tsk);
 	proc->vma = vma;
+	proc->vma_vm_mm = vma->vm_mm;
 
 	/*printk(KERN_INFO "binder_mmap: %d %lx-%lx maps %p\n",
 		 proc->pid, vma->vm_start, vma->vm_end, proc->buffer);*/
@@ -3657,7 +3656,7 @@ static void binder_stats_seq_stop(struct seq_file *m, void *v)
 {
 	struct binder_stats_data *data = m->private;
 	if (data->do_lock)
-		binder_unlock(__func__););
+		binder_unlock(__func__);
 }
 
 
@@ -3858,7 +3857,7 @@ static void binder_state_seq_stop(struct seq_file *m, void *v)
 {
 	struct binder_state_data *d = m->private;
 	if (d->do_lock)
-		binder_unlock(__func__););
+		binder_unlock(__func__);
 }
 
 static int binder_transactions_show(struct seq_file *m, void *unused)
@@ -3868,13 +3867,13 @@ static int binder_transactions_show(struct seq_file *m, void *unused)
 	int do_lock = !binder_debug_no_lock;
 
 	if (do_lock)
-		binder_lock(__func__););
+		binder_lock(__func__);
 
 	seq_puts(m, "binder transactions:\n");
 	hlist_for_each_entry(proc, pos, &binder_procs, proc_node)
 		print_binder_proc(m, proc, 0);
 	if (do_lock)
-		binder_unlock(__func__););
+		binder_unlock(__func__);
 	return 0;
 }
 
@@ -3884,11 +3883,11 @@ static int binder_proc_show(struct seq_file *m, void *unused)
 	int do_lock = !binder_debug_no_lock;
 
 	if (do_lock)
-		binder_lock(__func__););
+		binder_lock(__func__);
 	seq_puts(m, "binder proc state:\n");
 	print_binder_proc(m, proc, 1);
 	if (do_lock)
-		binder_unlock(__func__););
+		binder_unlock(__func__);
 	return 0;
 }
 

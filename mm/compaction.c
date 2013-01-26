@@ -732,7 +732,7 @@ int sysctl_compaction_handler(struct ctl_table *table, int write,
 			void __user *buffer, size_t *length, loff_t *ppos)
 {
 	if (write)
-		compact_nodes(true);
+		compact_nodes();
 
 	return 0;
 }
