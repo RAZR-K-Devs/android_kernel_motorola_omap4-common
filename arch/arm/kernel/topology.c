@@ -224,6 +224,8 @@ static int init_cpu_power_scale(void)
 
 core_initcall(init_cpu_power_scale);
 
+ATOMIC_NOTIFIER_HEAD(topology_update_notifier_list);
+
 /*
  * Update the cpu power
  */
@@ -242,6 +244,18 @@ int arch_sd_sibling_asym_packing(void)
 	if (sched_smt_power_savings || sched_mc_power_savings)
 		return SD_ASYM_PACKING;
 	return 0;
+}
+
+int topology_register_notifier(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_register(
+			&topology_update_notifier_list, nb);
+}
+
+int topology_unregister_notifier(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_unregister(
+			&topology_update_notifier_list, nb);
 }
 
 /*
@@ -458,6 +472,10 @@ int arch_update_cpu_topology(void)
 
 	/* set topology mask and power */
 	(*set_cpu_topology_mask)();
+
+	/* notify the topology update */
+	atomic_notifier_call_chain(&topology_update_notifier_list,
+			TOPOLOGY_POSTCHANGE, (void *)sched_mc_power_savings);
 
 	return 1;
 }
