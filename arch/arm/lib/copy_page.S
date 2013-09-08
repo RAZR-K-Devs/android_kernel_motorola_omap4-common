@@ -73,3 +73,4 @@ ENTRY(copy_page)
 	PLD(	bgt	2b			)
 		ldmfd	sp!, {r4-r8, pc}
 ENDPROC(copy_page)
+
