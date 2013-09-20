@@ -7,11 +7,13 @@
  */
 #ifndef _ASM_MUTEX_H
 #define _ASM_MUTEX_H
+<<<<<<< HEAD
 
 #if __LINUX_ARM_ARCH__ < 6
-/* On pre-ARMv6 hardware the swp based implementation is the most efficient. For ARMv6+, we have exclusive memory accessors and use atomic_dec to avoid the extra xchg operations on the locking slowpaths. */
+/*
+ * On pre-ARMv6 hardware this results in a swp-based implementation,
+ * which is the most efficient. For ARMv6+, we emit a pair of exclusive
+ * accesses instead.
+ */
 #include <asm-generic/mutex-xchg.h>
-#else
-#include <asm-generic/mutex-dec.h>
-#endif
 #endif
