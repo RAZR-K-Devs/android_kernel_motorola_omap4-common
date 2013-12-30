@@ -463,9 +463,7 @@ do_cache_op_iov(const struct iovec __user *uiov, unsigned long cnt, int flags)
 	for (i = 0; i < cnt; ++i) {
 		unsigned long start = (unsigned long __force)iov[i].iov_base;
 		unsigned long end = start + iov[i].iov_len;
-		ret = do_cache_op(start, end, flags);
-		if (ret)
-			break;
+		do_cache_op(start, end, flags);
 	}
 
 out_free:
@@ -521,7 +519,7 @@ asmlinkage int arm_syscall(int no, struct pt_regs *regs)
 		return 0;
 
 	case NR(cacheflush_iov):
-		return do_cache_op_iov((const struct iovec __user *)regs->ARM_r0,
+		do_cache_op_iov((const struct iovec __user *)regs->ARM_r0,
 					regs->ARM_r1, regs->ARM_r2);
 
 	case NR(usr26):
