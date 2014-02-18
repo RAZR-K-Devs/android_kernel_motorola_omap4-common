@@ -85,9 +85,7 @@ static int set_timestamp(const char *val, const struct kernel_param *kp);
 static int set_cc_counter(const char *val, const struct kernel_param *kp);
 static int set_cc_counter_percentage(const char *val,
 				const struct kernel_param *kp);
-#ifdef USE_OWN_CALCULATE_METHOD
-static struct task_struct * batt_task;
-#endif
+
 struct cpcap_batt_ps {
 	struct power_supply batt;
 	struct power_supply ac;
@@ -160,6 +158,10 @@ static struct platform_driver cpcap_batt_driver = {
 };
 
 static struct cpcap_batt_ps *cpcap_batt_sply;
+#ifdef USE_OWN_CALCULATE_METHOD
+static struct task_struct * batt_task;
+static int cpcap_batt_status(struct cpcap_batt_ps *sply);
+#endif
 
 static struct kernel_param_ops timestamp_param_ops = {
 	.set = set_timestamp,
@@ -571,7 +573,11 @@ static int cpcap_batt_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
+#ifdef USE_OWN_CALCULATE_METHOD
+		val->intval = cpcap_batt_status(sply);
+#else
 		val->intval = sply->batt_state.status;
+#endif
 		break;
 
 	case POWER_SUPPLY_PROP_HEALTH:
@@ -619,6 +625,16 @@ static int cpcap_batt_get_property(struct power_supply *psy,
 }
 
 #ifdef USE_OWN_CALCULATE_METHOD
+static int cpcap_batt_status(struct cpcap_batt_ps *sply) {
+        if (sply->usb_state.online == 1 || sply->ac_state.online == 1) {
+	   return POWER_SUPPLY_STATUS_CHARGING;
+        } else if (sply->batt_state.batt_capacity_one > 95) {
+	   return POWER_SUPPLY_STATUS_FULL;
+        } else {
+           return POWER_SUPPLY_STATUS_DISCHARGING;
+	}
+}
+
 void delay_ms(__u32 t)
 {
     __u32 timeout = t*HZ/1000;
@@ -1464,7 +1480,6 @@ CPCAP_MACRO_7 0, 8 0, 9 1, 10 0, 11 0, 12 1
 	if (percent > 100) percent = 100;
 	if (volt_batt > 4150) percent = 100;
 	if (percent < 0)   percent = 0;
-	if (volt_batt > 95)  sply->batt_state.status = POWER_SUPPLY_STATUS_FULL;
 
         if (sply->batt_state.capacity != percent) {
        		sply->batt_state.capacity = percent;
