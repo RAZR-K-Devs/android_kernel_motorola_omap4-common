@@ -645,9 +645,10 @@ static int cpcap_batt_get_property(struct power_supply *psy,
 #ifdef USE_OWN_CALCULATE_METHOD
 static int cpcap_batt_status(struct cpcap_batt_ps *sply) {
         if (sply->usb_state.online == 1 || sply->ac_state.online == 1) {
-	   return POWER_SUPPLY_STATUS_CHARGING;
-        } else if (cpcap_batt_counter(sply) > 95) {
-	   return POWER_SUPPLY_STATUS_FULL;
+	if (cpcap_batt_counter(sply) > 95)
+	return POWER_SUPPLY_STATUS_FULL;
+ 		else
+	return POWER_SUPPLY_STATUS_CHARGING;
         } else {
            return POWER_SUPPLY_STATUS_DISCHARGING;
 	}
