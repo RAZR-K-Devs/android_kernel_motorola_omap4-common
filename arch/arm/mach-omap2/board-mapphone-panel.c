@@ -237,8 +237,10 @@ static struct omap_dss_device mapphone_hdtv_device = {
 	.manual_power_control  = OMAP_DSS_MPC_DISABLED,
 	.platform_enable       = mapphone_panel_enable_hdtv,
 	.platform_disable      = mapphone_panel_disable_hdtv,
+#ifdef CONFIG_PANEL_MAPPHONE_OMAP4_HDTV
 	.platform_enable_hpd   = mapphone_panel_enable_hpd_hdtv,
 	.platform_disable_hpd  = mapphone_panel_disable_hpd_hdtv,
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 	/* Used as a simple engineering test interface */
