@@ -708,7 +708,7 @@ static int cpcap_batt_value(struct cpcap_batt_ps *sply, int value) {
 
 static int cpcap_batt_counter(struct cpcap_batt_ps *sply) {
 
-	int i, volt_batt, old_volt;
+	int volt_batt, volt_batt_10 = volt_batt*10;
 	u32 cap = 0;
 
 	volt_batt = cpcap_batt_value(sply, CPCAP_ADC_BATTP);
@@ -740,15 +740,18 @@ static int cpcap_batt_counter(struct cpcap_batt_ps *sply) {
 	 * Results in a quite linear chart (first 10% probably need some "fine-tuning"
 	 * but coeffs are quite close to be true and if it works we can make them more accurate
 	 */
-		if (volt_batt >= 4181) {
-			cap = 100;
-		} else if (volt_batt <= 3500) {
-			cap = 0;
-		} else if (volt_batt > 3635) {
-			cap = (volt_batt - 3635) / 6.2;
-		} else {
-			cap = (volt_batt - 3500) / 14;
-		}
+			if (volt_batt >= 4181) {
+				cap = 100;
+
+			} else if (volt_batt <= 3500) {
+				cap = 0;
+
+			} else if (volt_batt > 3635) {
+				cap = (volt_batt_10 - 36350) / 62;   //cap = (volt_batt - 3635) / 6.2;
+	
+			} else {
+				cap = (volt_batt - 3500) / 14;
+			}
 	
 		printk("%s: capacity=%d\n",__func__,cap);
 
