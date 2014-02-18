@@ -408,7 +408,6 @@ if (req.type == 2) {
                                req_us.result[CPCAP_ADC_TSX1_AD12],req_us.result[CPCAP_ADC_TSX2_AD13],req_us.result[CPCAP_ADC_TSY1_AD14],req_us.result[CPCAP_ADC_TSY2_AD15]);
 }
 */
-               // printk("Result Voltage: %dmV\n",req_us.result[CPCAP_ADC_BATTP]);
 #endif
 		if (copy_to_user((void *)arg, (void *)&req_us,
 				 sizeof(struct cpcap_adc_us_request)))
@@ -420,9 +419,7 @@ if (req.type == 2) {
 		req_us.timing = req_async->timing;
 		req_us.type = req_async->type;
 		req_us.status = req_async->status;
-#ifdef USE_OWN_CALCULATE_METHOD
-             printk("CPCAP_IOCTL_BATT_ATOD_SYNC:\n format %d\n timing %d\n type %d\n status %d\n", req_us.format , req_us.timing, req_us.type, req_us.status);
-#endif
+                printk("CPCAP_IOCTL_BATT_ATOD_SYNC:\n format %d\n timing %d\n type %d\n status %d\n", req_us.format , req_us.timing, req_us.type, req_us.status);
 		for (i = 0; i < CPCAP_ADC_BANK0_NUM; i++)
 			req_us.result[i] = req_async->result[i];
 #ifdef USE_OWN_CALCULATE_METHOD
@@ -659,19 +656,24 @@ static int cpcap_batt_status(struct cpcap_batt_ps *sply) {
 	amperage = cpcap_batt_value(sply, CPCAP_ADC_CHG_ISENSE); // CPCAP_ADC_CHG_ISENSE used for detect charger amperage
         if (amperage > 10) {
 #ifdef CONFIG_BLX
-if ((get_charginglimit() != MAX_CHARGINGLIMIT && cpcap_batt_counter(sply) >= get_charginglimit()) {
+if (get_charginglimit() != MAX_CHARGINGLIMIT && cpcap_batt_counter(sply) >= get_charginglimit()) {
 			return POWER_SUPPLY_STATUS_FULL;
 			printk("BLX: capacity reached %d, chrgcmpl set\n", get_charginglimit());
 			}
+		else
+	return POWER_SUPPLY_STATUS_CHARGING;
+        } else {
+           return POWER_SUPPLY_STATUS_DISCHARGING;
+	}
 #else
 	if (cpcap_batt_counter(sply) > 95)
-#endif
 	return POWER_SUPPLY_STATUS_FULL;
  		else
 	return POWER_SUPPLY_STATUS_CHARGING;
         } else {
            return POWER_SUPPLY_STATUS_DISCHARGING;
 	}
+#endif
 }
 
 static int cpcap_batt_value(struct cpcap_batt_ps *sply, int value) {
@@ -845,6 +847,15 @@ CPCAP_MACRO_7 0, 8 0, 9 1, 10 0, 11 0, 12 1
  return 0;
 }
 #endif
+
+static int cpcap_batt_update(void* arg) {
+	struct cpcap_batt_ps *sply = cpcap_batt_sply;
+	while(1) {
+		power_supply_changed(&sply->batt);
+	        delay_ms(60000);
+	}
+	return 0;
+}
 #endif
 
 static int set_timestamp(const char *val, const struct kernel_param *kp)
@@ -879,15 +890,6 @@ static int set_cc_counter_percentage(const char *val,
 		return 0;
 }
 
-static int cpcap_batt_update(void* arg) {
-	struct cpcap_batt_ps *sply = cpcap_batt_sply;
-	while(1) {
-		power_supply_changed(&sply->batt);
-	        delay_ms(60000);
-	}
-	return 0;
-}
-
 static int cpcap_batt_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -917,7 +919,7 @@ static int cpcap_batt_probe(struct platform_device *pdev)
 	sply->batt_state.batt_volt = 4200000;	/* uV */
 	sply->batt_state.batt_temp = 230;	/* tenths of degrees Celsius */
 	sply->batt_state.batt_full_capacity = 0;
-	sply->batt_state.batt_capacity_one = 99;
+	sply->batt_state.batt_capacity_one = 100;
 	sply->batt_state.cycle_count = 100;	/* Percentage */
 
 	sply->ac_state.online = 0;
@@ -1037,8 +1039,8 @@ unregac_exit:
 
 prb_exit:
 #ifdef USE_OWN_CALCULATE_METHOD
-batt_task = kthread_create(cpcap_batt_monitor, (void*)0, "cpcap_batt_monitor");
-wake_up_process(batt_task);
+        batt_task = kthread_create(cpcap_batt_update, (void*)0, "cpcap_batt_monitor");
+	wake_up_process(batt_task);
 #endif
 	return ret;
 }
