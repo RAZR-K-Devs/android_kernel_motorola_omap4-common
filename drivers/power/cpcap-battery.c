@@ -44,6 +44,8 @@
 #include <linux/blx.h>
 #endif
 
+// For later use if needed. We might have to store the percent into safe place to restore it in case of bad update while charging
+/*
 #ifdef USE_OWN_CALCULATE_METHOD
 unsigned int dyn_mv;
 module_param(dyn_mv, int, 0755);
@@ -52,6 +54,7 @@ module_param(cur_val, int, 0755);
 unsigned int old_val;
 module_param(old_val, int, 0755);
 #endif
+*/
 
 #define CPCAP_BATT_IRQ_BATTDET 0x01
 #define CPCAP_BATT_IRQ_OV      0x02
