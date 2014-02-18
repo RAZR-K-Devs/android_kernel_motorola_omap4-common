@@ -1285,11 +1285,7 @@ static int cpcap_batt_debug_get(void *prop, u64 *val)
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_COUNTER:
-#ifdef USE_OWN_CALCULATE_METHOD
-		*val = cpcap_batt_counter(sply);
-#else
 		*val = sply->batt_state.batt_capacity_one;
-#endif
 		break;
 
 	case POWER_SUPPLY_PROP_CYCLE_COUNT:
