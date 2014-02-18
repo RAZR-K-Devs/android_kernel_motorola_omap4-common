@@ -38,8 +38,6 @@
 #include <linux/delay.h>
 #include <linux/kthread.h>
 
-// #include "cpcap_charge_table.h"
-
 #ifdef CONFIG_BLX
 #include <linux/blx.h>
 #endif
@@ -660,7 +658,14 @@ static int cpcap_batt_status(struct cpcap_batt_ps *sply) {
         int amperage = 0;
 	amperage = cpcap_batt_value(sply, CPCAP_ADC_CHG_ISENSE); // CPCAP_ADC_CHG_ISENSE used for detect charger amperage
         if (amperage > 10) {
+#ifdef CONFIG_BLX
+if ((get_charginglimit() != MAX_CHARGINGLIMIT && cpcap_batt_counter(sply) >= get_charginglimit()) {
+			return POWER_SUPPLY_STATUS_FULL;
+			printk("BLX: capacity reached %d, chrgcmpl set\n", get_charginglimit());
+			}
+#else
 	if (cpcap_batt_counter(sply) > 95)
+#endif
 	return POWER_SUPPLY_STATUS_FULL;
  		else
 	return POWER_SUPPLY_STATUS_CHARGING;
