@@ -1,3 +1,14 @@
+3e4d107 build script: edison: fix wrong device tree selection for modules building
+3c2051a omap: dss: dsi: panel: allow vsync and handle the common way due to new kexec reject workaround
+9e43d9d Simplify kexec reject (first_boot) fix
+e5f99bf defconfig: edison: fix firstboot option missing
+cfc39b0 omap4: ion: Fix missing stuff
+cd54c5f defconfig: hdmi: enable needed stuff
+16d7808 omap4: ion: revert carveout memory for hdcpr
+0638e61 omap: hdmi: disable all
+30eddf7 defconfig: critical updates!
+dbfec50 Revert "EDISON/TARGA: disable smartreflex"
+62a2878 Added todays changelog and updated full history
 203b920 Revert "Revert "omap: cpufreq: battery_friend: Fix the frequency handling""
 fb1260d Fix disable first_boot logic in maphhone_panel
 6483ad3 Revert "omap: cpufreq: battery_friend: Fix the frequency handling"
@@ -42,16 +53,3 @@ e453ee2 Revert "GPIO: OMAP: Fix the sequence to clear the IRQ status"
 aa01e8f Revert "omap: usb: host: merge and adapt settings from 3.4 backpüoprt to 3.0.31"
 e68f360 omap: usb: host: merge and adapt settings from 3.4 backpüoprt to 3.0.31
 2b314f6 Revert "fix false disconnect due to a signal sent to the reading process"
-273db76 Added todays changelog and updated full history
-4c4953b omap: cpufreq: Set frequencies to avoid it being set to 100mhz which will cause lockups on some devices
-3f562d1 Revert "Revert "Revert "Backport all workarounds for usb resume on omap from 3.4"""
-b957f7e Revert "ipv4: ping: empty commit"
-d3a8326 Revert "ipv4: ping: Fix trash from merge"
-ee7b38e ipv4: ping: Fix trash from merge
-393f153 build script: fix mistake
-2a8ab25 build scripts: updates
-8bbccde fix false disconnect due to a signal sent to the reading process
-d3cecbc SELinux: Fix kernel BUG on empty security contexts.
-226746c SELinux: Fix possible NULL pointer dereference in selinux_inode_permission()
-41d3350 nf: xt_qtaguid: fix handling for cases where tunnels are used.
-a66ca87 ipv4: ping: empty commit
