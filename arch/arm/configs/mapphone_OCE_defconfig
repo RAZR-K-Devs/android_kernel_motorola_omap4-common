@@ -1164,6 +1164,7 @@ CONFIG_OMAP4_DUTY_CYCLE=y
 # Texas Instruments shared transport line discipline
 # JBX-Kernel Additions
 #
+# CONFIG_USE_OWN_CALCULATE_METHOD is not set
 CONFIG_TI_ST=y
 CONFIG_ST_GPS=y
 CONFIG_ST_FM=y
