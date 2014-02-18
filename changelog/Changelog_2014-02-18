@@ -1,3 +1,19 @@
+dc3a2a2 power: cpcap_battery: Add a larger integer 'volt_batt_10' to avoid floating point calculation.
+586dfff defconfig: disable 'DEBUG_MUTEXES'.
+8c27d72 power: cpcap_battery: remove from debugfs
+e9d7fa2 defconfig: Add config option for own battery percent calculation
+f0bf44b power: cpcap_battery: disable module for now
+7f72d01 power: cpcrap_battery: Add update battery status and some more additions:
+013035c Merge branch 'JBX_30X' into JBX_BATTD
+e656b07 defconfig: Adapt latest changes
+759d5ca Revert "revert some serial settings"
+cff3065 revert some serial settings
+0446977 Merge lucize and stargo stuff
+a12be53 Merge lucize and stargo stuff
+9aacd38 Added todays changelog and updated full history
+32f551a Merge branch 'JBX_30X' into JBX_BATTD
+0d84d84 Add detect charger
+79f3a87  add more debug, disable by default
 3e4d107 build script: edison: fix wrong device tree selection for modules building
 3c2051a omap: dss: dsi: panel: allow vsync and handle the common way due to new kexec reject workaround
 9e43d9d Simplify kexec reject (first_boot) fix
@@ -6,6 +22,10 @@ cfc39b0 omap4: ion: Fix missing stuff
 cd54c5f defconfig: hdmi: enable needed stuff
 16d7808 omap4: ion: revert carveout memory for hdcpr
 0638e61 omap: hdmi: disable all
+b5f9114 Fix battery status
+8b0e262 CLeanup battery code
+fc93946 Improve battery driver code and add charge_table
+1508cf0 Add detect battery status
 30eddf7 defconfig: critical updates!
 dbfec50 Revert "EDISON/TARGA: disable smartreflex"
 62a2878 Added todays changelog and updated full history
@@ -13,6 +33,8 @@ dbfec50 Revert "EDISON/TARGA: disable smartreflex"
 fb1260d Fix disable first_boot logic in maphhone_panel
 6483ad3 Revert "omap: cpufreq: battery_friend: Fix the frequency handling"
 a956c59 add wakelocks to isl29030 ambient light and proximity sensor
+bbcb552 Add mV - Percent Table
+df67d58 Add own battery percentage calculate method, disabled by default
 cf85d06 Merge local changes
 e9b373f omap: cpufreq: battery_friend: Fix the frequency handling
 7baaa6a build script updates
