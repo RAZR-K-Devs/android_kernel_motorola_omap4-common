@@ -71,7 +71,7 @@ module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 		} \
 	} while (0)
 
-#undef USE_OWN_CALCULATE_METHOD
+#define USE_OWN_CALCULATE_METHOD
 
 #ifdef USE_OWN_CALCULATE_METHOD
 #include "cpcap_charge_table.h"
@@ -164,6 +164,7 @@ static struct platform_driver cpcap_batt_driver = {
 
 static struct cpcap_batt_ps *cpcap_batt_sply;
 #ifdef USE_OWN_CALCULATE_METHOD
+static struct task_struct * batt_task;
 static int cpcap_batt_status(struct cpcap_batt_ps *sply);
 static int cpcap_batt_counter(struct cpcap_batt_ps *sply);
 static int cpcap_batt_value(struct cpcap_batt_ps *sply, int value);
@@ -682,7 +683,7 @@ static int cpcap_batt_value(struct cpcap_batt_ps *sply, int value) {
 
 static int cpcap_batt_counter(struct cpcap_batt_ps *sply) {
 
-	int i, volt_batt;
+	int i, volt_batt, old_volt;
 	u32 cap = 0;
 
 	volt_batt = cpcap_batt_value(sply, CPCAP_ADC_BATTP);
@@ -713,7 +714,7 @@ static int cpcap_batt_counter(struct cpcap_batt_ps *sply) {
 	return cap;
 }
 
-#if 0
+
 void delay_ms(__u32 t)
 {
     __u32 timeout = t*HZ/1000;
@@ -721,7 +722,7 @@ void delay_ms(__u32 t)
     set_current_state(TASK_INTERRUPTIBLE);
     schedule_timeout(timeout);
 }
-#endif
+
 
 #if 0
 static int cpcap_batt_monitor(void* arg) {
@@ -873,6 +874,15 @@ static int set_cc_counter_percentage(const char *val,
 		return 0;
 }
 
+static int cpcap_batt_update(void* arg) {
+	struct cpcap_batt_ps *sply = cpcap_batt_sply;
+	while(1) {
+		power_supply_changed(&sply->batt);
+	        delay_ms(60000);
+	}
+	return 0;
+}
+
 static int cpcap_batt_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1022,8 +1032,8 @@ unregac_exit:
 
 prb_exit:
 #ifdef USE_OWN_CALCULATE_METHOD
-// batt_task = kthread_create(cpcap_batt_monitor, (void*)0, "cpcap_batt_monitor");
-//wake_up_process(batt_task);
+batt_task = kthread_create(cpcap_batt_monitor, (void*)0, "cpcap_batt_monitor");
+wake_up_process(batt_task);
 #endif
 	return ret;
 }
@@ -1086,10 +1096,12 @@ void cpcap_batt_set_ac_prop(struct cpcap_device *cpcap,
 	struct cpcap_platform_data *data = spi->dev.platform_data;
 
 	if (sply != NULL) {
+
 		sply->ac_state.online = ac->online;
 		sply->ac_state.model = ac->model;
+#ifndef USE_OWN_CALCULATE_METHOD
 		power_supply_changed(&sply->ac);
-
+#endif		
 		if (data->ac_changed)
 			data->ac_changed(&sply->ac, &sply->ac_state);
 	}
@@ -1109,8 +1121,9 @@ void cpcap_batt_set_usb_prop_online(struct cpcap_device *cpcap, int online,
 
 		sply->usb_state.online = online;
 		sply->usb_state.model = model;
+#ifndef USE_OWN_CALCULATE_METHOD
 		power_supply_changed(&sply->usb);
-
+#endif
 		if (data->usb_changed)
 			data->usb_changed(&sply->usb, &sply->usb_state);
 	}
