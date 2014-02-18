@@ -2985,9 +2985,9 @@ static int dsi_vc_config_vp(struct platform_device *dsidev, int channel)
 		return 0;
 
 	DSSDBGF("%d", channel);
-#if !defined(CONFIF_MAPPHONE_TARGA) || !defined(CONFIG_MAPPHONE_EDISON)
+
 	dsi_sync_vc(dsidev, channel);
-#endif
+
 	dsi_vc_enable(dsidev, channel, 0);
 
 	/* VC_BUSY */

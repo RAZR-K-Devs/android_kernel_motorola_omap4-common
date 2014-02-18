@@ -1,0 +1,57 @@
+203b920 Revert "Revert "omap: cpufreq: battery_friend: Fix the frequency handling""
+fb1260d Fix disable first_boot logic in maphhone_panel
+6483ad3 Revert "omap: cpufreq: battery_friend: Fix the frequency handling"
+a956c59 add wakelocks to isl29030 ambient light and proximity sensor
+cf85d06 Merge local changes
+e9b373f omap: cpufreq: battery_friend: Fix the frequency handling
+7baaa6a build script updates
+1e8e7cb omap: serial: remove test file
+de917e4 [3.0.31]: omap: serial: disable serial port irq during suspend
+d6dea35 omap4-common: Revert USB-code back to Motorola implementation
+07a9d8f Revert changes to ehci-omap
+4433b6f Revert "Revert "nf: xt_qtaguid: fix handling for cases where tunnels are used.""
+0231103 Added todays changelog and updated full history
+077e7e8 Add device names to version line
+8a4cbb3 Revert "SPlit config for UMTS and CDMA devices"
+607e5d3 Added todays changelog and updated full history
+9480153 Backport all workarounds for usb resume on omap from 3.4
+49cbe7f SPlit config for UMTS and CDMA devices
+f2a15b4 Revert "Revert "[WIP] merge to 3.0.31""
+3bb9b9e Revert "Revert "omap4-common: Update Workaround for OMAP errata i640""
+ff463ca Keep the modem confiog for both, umts and cdma, the same like before. Modem converter should do do the job as usual. We only use different device tree settings for moduzles builing.
+8e1cdb7 Revert "omap4-common: Update Workaround for OMAP errata i640"
+daf5c3a Revert "[WIP] merge to 3.0.31"
+f28a34f Revert "Revert "Revert "omap: usb: host: merge and adapt settings from 3.4 backpüoprt to 3.0.31"""
+796a13f defconfig: split config for whether buuilding UMTS or CDMA kernel support
+342f4c1 build script: fix typo
+2918a0c README.md: Fix mistake
+479cbb3 README.md: Fix mistake
+5027bc6 build script: Set device build tree to umts_spyder to make sure to init the correct mopdem driver on init
+d929f8e build script: add seperate one for UMTS_SPYDER
+59997ee Update README.md
+7ad5188 [WIP] merge to 3.0.31
+2881aa3 Revert "Revert "omap: usb: host: merge and adapt settings from 3.4 backpüoprt to 3.0.31""
+f7b9de2 Revert "MErge EHCI workaround"
+5b1f948 MErge EHCI workaround
+6e29cbf Revert "Revert "revert and re-enable usb_phy_resume_workaround""
+87cc8ec Revert "omap: serial: serial port irq and cleanup from merge"
+64c30a2 Revert "revert and re-enable usb_phy_resume_workaround"
+e453ee2 Revert "GPIO: OMAP: Fix the sequence to clear the IRQ status"
+9630e6e Revert "Revert "fix false disconnect due to a signal sent to the reading process""
+9aad059 Revert "nf: xt_qtaguid: fix handling for cases where tunnels are used."
+aa01e8f Revert "omap: usb: host: merge and adapt settings from 3.4 backpüoprt to 3.0.31"
+e68f360 omap: usb: host: merge and adapt settings from 3.4 backpüoprt to 3.0.31
+2b314f6 Revert "fix false disconnect due to a signal sent to the reading process"
+273db76 Added todays changelog and updated full history
+4c4953b omap: cpufreq: Set frequencies to avoid it being set to 100mhz which will cause lockups on some devices
+3f562d1 Revert "Revert "Revert "Backport all workarounds for usb resume on omap from 3.4"""
+b957f7e Revert "ipv4: ping: empty commit"
+d3a8326 Revert "ipv4: ping: Fix trash from merge"
+ee7b38e ipv4: ping: Fix trash from merge
+393f153 build script: fix mistake
+2a8ab25 build scripts: updates
+8bbccde fix false disconnect due to a signal sent to the reading process
+d3cecbc SELinux: Fix kernel BUG on empty security contexts.
+226746c SELinux: Fix possible NULL pointer dereference in selinux_inode_permission()
+41d3350 nf: xt_qtaguid: fix handling for cases where tunnels are used.
+a66ca87 ipv4: ping: empty commit
