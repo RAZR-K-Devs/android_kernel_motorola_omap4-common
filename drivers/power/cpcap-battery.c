@@ -44,6 +44,15 @@
 #include <linux/blx.h>
 #endif
 
+#ifdef USE_OWN_CALCULATE_METHOD
+unsigned int dyn_mv;
+module_param(dyn_mv, int, 0755);
+unsigned int cur_val;
+module_param(cur_val, int, 0755);
+unsigned int old_val;
+module_param(old_val, int, 0755);
+#endif
+
 #define CPCAP_BATT_IRQ_BATTDET 0x01
 #define CPCAP_BATT_IRQ_OV      0x02
 #define CPCAP_BATT_IRQ_CC_CAL  0x04
@@ -71,11 +80,11 @@ module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 		} \
 	} while (0)
 
-#undef USE_OWN_CALCULATE_METHOD
-
+#define USE_OWN_CALCULATE_METHOD
+/*
 #ifdef USE_OWN_CALCULATE_METHOD
 #include "cpcap_charge_table.h"
-#endif
+#endif */
 static long cpcap_batt_ioctl(struct file *file,
 			    unsigned int cmd,
 			    unsigned long arg);
@@ -164,6 +173,7 @@ static struct platform_driver cpcap_batt_driver = {
 
 static struct cpcap_batt_ps *cpcap_batt_sply;
 #ifdef USE_OWN_CALCULATE_METHOD
+static struct task_struct * batt_task;
 static int cpcap_batt_status(struct cpcap_batt_ps *sply);
 static int cpcap_batt_counter(struct cpcap_batt_ps *sply);
 static int cpcap_batt_value(struct cpcap_batt_ps *sply, int value);
@@ -462,9 +472,13 @@ static void cpcap_batt_ind_chrg_ctrl(struct cpcap_batt_ps *sply)
 
 	pr_cpcap_batt(STATUS, "batt update: capacity=%d",
 		      sply->batt_state.capacity);
+#ifdef USE_OWN_CALCULATE_METHOD
+	pr_cpcap_batt(STATUS, "batt update: batt_counter=%d",
+		      cpcap_batt_counter(sply));
+#else
 	pr_cpcap_batt(STATUS, "batt update: capacity_one=%d",
 		      sply->batt_state.batt_capacity_one);
-
+#endif
 	if (cpcap_regacc_read(sply->cpcap, CPCAP_REG_INTS1, &cpcap_reg))
 		cpcap_reg = 0;
 
@@ -501,8 +515,17 @@ static void cpcap_batt_ind_chrg_ctrl(struct cpcap_batt_ps *sply)
 			pdata->ind_chrg->force_charge_complete(1);
 		pr_cpcap_batt(TRANSITION, "batt capacity full, chrgcmpl set");
 		sply->ind_chrg_dsbl_time = (unsigned long)temp;
-#ifdef CONFIG_BLX
+#ifdef USE_OWN_CALCULATE_METHOD
+	} else if ((cpcap_batt_counter(sply) >= 100) &&
+		   (sply->ac_state.model == CPCAP_BATT_AC_IND)) {
+		if (pdata->ind_chrg->force_charge_complete != NULL)
+			pdata->ind_chrg->force_charge_complete(1);
+		pr_cpcap_batt(TRANSITION, "batt capacity full, chrgcmpl set");
+		sply->ind_chrg_dsbl_time = (unsigned long)temp;
+#endif
+#if defined(CONFIG_BLX) && defined(USE_OWN_CALCULATE_METHOD)
 	} else if ((get_charginglimit() != MAX_CHARGINGLIMIT && sply->batt_state.batt_capacity_one >= get_charginglimit()) && 
+		   (sply->ac_state.model == CPCAP_BATT_AC_IND)) || ((get_charginglimit() != MAX_CHARGINGLIMIT && cpcap_batt_counter(sply) >= get_charginglimit()) && 
 		   (sply->ac_state.model == CPCAP_BATT_AC_IND)) {
 			pdata->ind_chrg->force_charge_complete(1);
 		pr_cpcap_batt(TRANSITION, "BLX: capacity reached, chrgcmpl set");
@@ -682,14 +705,14 @@ static int cpcap_batt_value(struct cpcap_batt_ps *sply, int value) {
 
 static int cpcap_batt_counter(struct cpcap_batt_ps *sply) {
 
-	int i, volt_batt;
+	int i, volt_batt, old_volt;
 	u32 cap = 0;
 
 	volt_batt = cpcap_batt_value(sply, CPCAP_ADC_BATTP);
 
 	printk("%s: batt_vol=%d\n",__func__, volt_batt);
 
-	for (i=0; i < ARRAY_SIZE(tbl); i++) {
+/*	for (i=0; i < ARRAY_SIZE(tbl); i++) {
 		if (volt_batt <= 3500) {
 			cap = 0;
 			break;
@@ -702,18 +725,34 @@ static int cpcap_batt_counter(struct cpcap_batt_ps *sply) {
 			if (i == (ARRAY_SIZE(tbl)-1)) {
 				cap = 99;
 				break;
-			}
+			} 
 			continue;
 		}
 		cap = tbl[i].capacity;
-		break;
-	}
-	printk("%s: capacity=%d\n",__func__,cap);
+		cur_val = cap;
+		break; 
+	} */
+	
+	/*
+	 * Results in a quite linear chart (first 10% probably need some "fine-tuning"
+	 * but coeffs are quite close to be true and if it works we can make them more accurate
+	 */
+		if (volt_batt >= 4181) {
+			cap = 100;
+		} else if (volt_batt <= 3500) {
+			cap = 0;
+		} else if (volt_batt > 3635) {
+			cap = (volt_batt - 3635) / 6.2;
+		} else {
+			cap = (volt_batt - 3500) / 14;
+		}
+	
+		printk("%s: capacity=%d\n",__func__,cap);
 
 	return cap;
 }
 
-#if 0
+
 void delay_ms(__u32 t)
 {
     __u32 timeout = t*HZ/1000;
@@ -721,7 +760,7 @@ void delay_ms(__u32 t)
     set_current_state(TASK_INTERRUPTIBLE);
     schedule_timeout(timeout);
 }
-#endif
+
 
 #if 0
 static int cpcap_batt_monitor(void* arg) {
@@ -873,6 +912,15 @@ static int set_cc_counter_percentage(const char *val,
 		return 0;
 }
 
+static int cpcap_batt_update(void* arg) {
+	struct cpcap_batt_ps *sply = cpcap_batt_sply;
+	while(1) {
+		power_supply_changed(&sply->batt);
+	        delay_ms(60000);
+	}
+	return 0;
+}
+
 static int cpcap_batt_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1022,8 +1070,8 @@ unregac_exit:
 
 prb_exit:
 #ifdef USE_OWN_CALCULATE_METHOD
-// batt_task = kthread_create(cpcap_batt_monitor, (void*)0, "cpcap_batt_monitor");
-//wake_up_process(batt_task);
+batt_task = kthread_create(cpcap_batt_update, (void*)0, "cpcap_batt_monitor");
+wake_up_process(batt_task);
 #endif
 	return ret;
 }
@@ -1181,7 +1229,11 @@ static int cpcap_batt_debug_set(void *prop, u64 val)
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_COUNTER:
+#ifdef USE_OWN_CALCULATE_METHOD
+		cpcap_batt_counter(sply) = data;
+#else
 		sply->batt_state.batt_capacity_one = data;
+#endif
 		break;
 
 	case POWER_SUPPLY_PROP_CYCLE_COUNT:
@@ -1234,7 +1286,11 @@ static int cpcap_batt_debug_get(void *prop, u64 *val)
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_COUNTER:
+#ifdef USE_OWN_CALCULATE_METHOD
+		*val = cpcap_batt_counter(sply);
+#else
 		*val = sply->batt_state.batt_capacity_one;
+#endif
 		break;
 
 	case POWER_SUPPLY_PROP_CYCLE_COUNT:
