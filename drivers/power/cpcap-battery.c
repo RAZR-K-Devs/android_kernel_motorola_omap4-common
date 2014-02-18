@@ -38,6 +38,7 @@
 #include <linux/delay.h>
 #include <linux/kthread.h>
 
+#include "cpcap_charge_table.h"
 
 #ifdef CONFIG_BLX
 #include <linux/blx.h>
@@ -159,8 +160,9 @@ static struct platform_driver cpcap_batt_driver = {
 
 static struct cpcap_batt_ps *cpcap_batt_sply;
 #ifdef USE_OWN_CALCULATE_METHOD
-static struct task_struct * batt_task;
 static int cpcap_batt_status(struct cpcap_batt_ps *sply);
+static int cpcap_batt_counter(struct cpcap_batt_ps *sply);
+static int cpcap_batt_value(struct cpcap_batt_ps *sply, int value);
 #endif
 
 static struct kernel_param_ops timestamp_param_ops = {
@@ -593,15 +595,27 @@ static int cpcap_batt_get_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
-		val->intval = sply->batt_state.capacity;
+#ifdef USE_OWN_CALCULATE_METHOD
+		val->intval = cpcap_batt_counter(sply);
+#else
+		val->intval = sply->batt_state.batt_capacity;
+#endif
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
+#ifdef USE_OWN_CALCULATE_METHOD
+		val->intval = cpcap_batt_value(sply, CPCAP_ADC_BATTP)*1000;
+#else
 		val->intval = sply->batt_state.batt_volt;
+#endif
 		break;
 
 	case POWER_SUPPLY_PROP_TEMP:
+#ifdef USE_OWN_CALCULATE_METHOD
+		val->intval = (cpcap_batt_value(sply, CPCAP_ADC_AD3)-273)*10;
+#else
 		val->intval = sply->batt_state.batt_temp;
+#endif
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
@@ -609,7 +623,11 @@ static int cpcap_batt_get_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_COUNTER:
+#ifdef USE_OWN_CALCULATE_METHOD
+		val->intval = cpcap_batt_counter(sply);
+#else
 		val->intval = sply->batt_state.batt_capacity_one;
+#endif
 		break;
 
 	case POWER_SUPPLY_PROP_CYCLE_COUNT:
@@ -628,13 +646,79 @@ static int cpcap_batt_get_property(struct power_supply *psy,
 static int cpcap_batt_status(struct cpcap_batt_ps *sply) {
         if (sply->usb_state.online == 1 || sply->ac_state.online == 1) {
 	   return POWER_SUPPLY_STATUS_CHARGING;
-        } else if (sply->batt_state.batt_capacity_one > 95) {
+        } else if (cpcap_batt_counter(sply) > 95) {
 	   return POWER_SUPPLY_STATUS_FULL;
         } else {
            return POWER_SUPPLY_STATUS_DISCHARGING;
 	}
 }
 
+static int cpcap_batt_value(struct cpcap_batt_ps *sply, int value) {
+        int i;
+	struct cpcap_adc_request req;
+	struct cpcap_adc_us_request req_us;
+
+	req.format = CPCAP_ADC_FORMAT_CONVERTED;
+	req.timing = CPCAP_ADC_TIMING_IMM;
+	req.type = CPCAP_ADC_TYPE_BANK_0;
+ 
+	cpcap_adc_sync_read(sply->cpcap, &req);
+
+	req_us.status = req.status;
+
+	for (i = 0; i < CPCAP_ADC_BANK0_NUM; i++)
+	    req_us.result[i] = req.result[i];
+
+        return req_us.result[value];
+}
+
+static int cpcap_batt_counter(struct cpcap_batt_ps *sply) {
+/*
+        int percent, volt_batt, range, max, min;
+
+	min  = 3500;
+        max  = 4200;
+        volt_batt = cpcap_batt_value(sply, CPCAP_ADC_BATTP);
+	range = (max - min) / 100;
+	percent = (volt_batt - min) / range;
+	if (percent > 100) percent = 100;
+	if (volt_batt > 4150) percent = 100;
+	if (percent < 0)   percent = 0;
+
+	return percent;
+*/
+
+	int i, volt_batt;
+	u32 cap = 0;
+
+	volt_batt = cpcap_batt_value(sply, CPCAP_ADC_BATTP);
+	printk("%s: batt_vol=%d\n",__func__, volt_batt);
+
+	for (i=0; i < ARRAY_SIZE(tbl); i++) {
+		if (volt_batt <= 3500) {
+			cap = 0;
+			break;
+		}
+		if (volt_batt >= 4181) {
+			cap = 100;
+			break;
+		}
+		if (volt_batt >= tbl[i].volt_batt) {
+			if (i == (ARRAY_SIZE(tbl)-1)) {
+				cap = 99;
+				break;
+			}
+			continue;
+		}
+		cap = tbl[i].capacity;
+		break;
+	}
+	printk("%s: capacity=%d\n",__func__,cap);
+
+	return cap;
+}
+
+#if 0
 void delay_ms(__u32 t)
 {
     __u32 timeout = t*HZ/1000;
@@ -642,7 +726,7 @@ void delay_ms(__u32 t)
     set_current_state(TASK_INTERRUPTIBLE);
     schedule_timeout(timeout);
 }
-
+#endif
 
 #define MAX_LVLS 2 // TODO Change it.
 static const unsigned short percent_map[MAX_LVLS][2] = {
@@ -1349,7 +1433,7 @@ static const unsigned short percent_map[MAX_LVLS][2] = {
 {4199,100}, /*100%*/
 {4200,100}, /*100%*/
 };
-
+#if 0
 static int cpcap_batt_monitor(void* arg) {
 
 
@@ -1432,36 +1516,18 @@ CPCAP_MACRO_7 0, 8 0, 9 1, 10 0, 11 0, 12 1
 
            printk("CPCAP_MACRO_7 %d, 8 %d, 9 %d, 10 %d, 11 %d, 12 %d\n",
             cpcap_uc_status(sply->cpcap, CPCAP_MACRO_7), cpcap_uc_status(sply->cpcap,CPCAP_MACRO_8), cpcap_uc_status(sply->cpcap,CPCAP_MACRO_9),cpcap_uc_status(sply->cpcap,CPCAP_MACRO_10), cpcap_uc_status(sply->cpcap,CPCAP_MACRO_11),cpcap_uc_status(sply->cpcap,CPCAP_MACRO_12));
-*/
+
        // printk("ac_state.online: %d\n",sply->ac_state.online);
         //printk("usb_state.online: %d\n",sply->usb_state.online);
     	printk("Result Voltage: %dmV\n",sply->batt_state.batt_volt/1000);
     	printk("Result Temp: %d*C\n",sply->batt_state.batt_temp/10);
-/*
-        if (sply->usb_state.online == 1 || sply->ac_state.online == 1) {
-	   sply->batt_state.status = POWER_SUPPLY_STATUS_CHARGING;
-        } else {
-           sply->batt_state.status = POWER_SUPPLY_STATUS_DISCHARGING;
-        }
-*/
         printk("batt_state.status: %d\n",sply->batt_state.status);
 
 
 //Getting values from cpcap.
 
-	req.format = CPCAP_ADC_FORMAT_CONVERTED;
-	req.timing = CPCAP_ADC_TIMING_IMM;
-	req.type = CPCAP_ADC_TYPE_BANK_0;
- 
-	cpcap_adc_sync_read(sply->cpcap, &req);
-
-	req_us.status = req.status;
-
-	for (i = 0; i < CPCAP_ADC_BANK0_NUM; i++)
-	    req_us.result[i] = req.result[i];
-
-        sply->batt_state.batt_volt = req_us.result[CPCAP_ADC_BATTP]*1000;
-        sply->batt_state.batt_temp = (req_us.result[CPCAP_ADC_AD3]-273)*10;  //cpcap report temp in kelvins !!!not accurately!!!
+      //  sply->batt_state.batt_volt = req_us.result[CPCAP_ADC_BATTP]*1000;
+      //  sply->batt_state.batt_temp = (req_us.result[CPCAP_ADC_AD3]-273)*10;  //cpcap report temp in kelvins !!!not accurately!!!
 
         //printk("CPCAP_IOCTL_BATT_ATOD_SYNC:\n format %d\n timing %d\n type %d\n status %d\n",req.format , req.timing, req.type, req.status);
 
@@ -1472,28 +1538,17 @@ CPCAP_MACRO_7 0, 8 0, 9 1, 10 0, 11 0, 12 1
 
 //Calculate Percent like in bootmenu. TODO: Replace formula with TABLE.
 
-	min  = 3500;
-        max  = 4200; // TODO: Make dynamically
-        volt_batt = cpcap_batt_sply->batt_state.batt_volt/1000;
-	range = (max - min) / 100;
-	percent = (volt_batt - min) / range;
-	if (percent > 100) percent = 100;
-	if (volt_batt > 4150) percent = 100;
-	if (percent < 0)   percent = 0;
-
-        if (sply->batt_state.capacity != percent) {
-       		sply->batt_state.capacity = percent;
-        	sply->batt_state.batt_capacity_one = percent;
-		power_supply_changed(&sply->batt);
-        }
+	power_supply_changed(&sply->batt);
 
 	printk("Result percent: %d\n",sply->batt_state.capacity);
 
         delay_ms(10000);
+*/
   }
 
  return 0;
 }
+#endif
 #endif
 
 static int set_timestamp(const char *val, const struct kernel_param *kp)
@@ -1677,8 +1732,8 @@ unregac_exit:
 
 prb_exit:
 #ifdef USE_OWN_CALCULATE_METHOD
-        batt_task = kthread_create(cpcap_batt_monitor, (void*)0, "cpcap_batt_monitor");
-	wake_up_process(batt_task);
+// batt_task = kthread_create(cpcap_batt_monitor, (void*)0, "cpcap_batt_monitor");
+//wake_up_process(batt_task);
 #endif
 	return ret;
 }
