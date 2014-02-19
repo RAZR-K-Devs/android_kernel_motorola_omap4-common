@@ -106,7 +106,7 @@ static int set_timestamp(const char *val, const struct kernel_param *kp);
 static int set_cc_counter(const char *val, const struct kernel_param *kp);
 static int set_cc_counter_percentage(const char *val,
 				const struct kernel_param *kp);
-
+#endif
 struct cpcap_batt_ps {
 	struct power_supply batt;
 	struct power_supply ac;
