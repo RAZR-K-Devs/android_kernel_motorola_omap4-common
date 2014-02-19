@@ -1769,7 +1769,6 @@ do_release_region:
 	  dev_err(&pdev->dev, "[UART%d]: failure [%s]: %d\n",
 	        pdev->id, __func__, ret);
 	return ret;
-}
 
 static int serial_omap_remove(struct platform_device *dev)
 {
