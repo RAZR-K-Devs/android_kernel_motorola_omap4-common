@@ -39,9 +39,14 @@
 
 #include <linux/i2c.h>
 #include <linux/i2c/twl.h>
+#include "twl-core.h"
 
 #if defined(CONFIG_ARCH_OMAP2) || defined(CONFIG_ARCH_OMAP3)
 #include <plat/cpu.h>
+#endif
+
+#ifdef CONFIG_MACH_OMAP_4430_KC1
+#include <linux/proc_fs.h>
 #endif
 
 /*
@@ -246,6 +251,34 @@
 
 /* need to access USB_PRODUCT_ID_LSB to identify which 6030 varient we are */
 #define USB_PRODUCT_ID_LSB	0x02
+
+/* need to check eeprom revision and jtagver number */
+#define TWL6030_REG_EPROM_REV	0xdf
+#define TWL6030_REG_JTAGVERNUM	0x87
+
+#ifdef CONFIG_MACH_OMAP_4430_KC1
+/* need to access USB_PRODUCT_ID_LSB to identify which 6030 varient we are */
+#define USB_PRODUCT_ID_LSB	0x02
+
+/* PMC Master Module */
+#define PHOENIX_START_CONDITION		0x1F
+#define START_COND_STRT_ON_PWRON 	BIT(0)
+#define START_COND_STRT_ON_RPWRON	BIT(1)
+#define START_COND_STRT_ON_USB_ID	BIT(2)
+#define START_COND_STRT_ON_PLUG_DET	BIT(3)
+#define START_COND_STRT_ON_RTC		BIT(4)
+#define START_COND_FIRST_SYS_INS	BIT(5)
+#define START_COND_RESTART_BB 		BIT(6)
+
+#define PHOENIX_STS_HW_CONDITIONS 	0x21
+#define PHOENIX_LAST_TURNOFF_STS 	0x22
+#define TURNOFF_DEVOFF_RPWRON 		BIT(6)
+#define TURNOFF_DEVOFF_SHORT 		BIT(5)
+#define TURNOFF_DEVOFF_WDT 		BIT(4)
+#define TURNOFF_DEVOFF_TSHUT 		BIT(3)
+#define TURNOFF_DEVOFF_BCK 		BIT(2)
+#define TURNOFF_DEVOFF_LPK 		BIT(1)
+#endif
 
 /*----------------------------------------------------------------------*/
 
@@ -658,6 +691,12 @@ add_regulator(int num, struct regulator_init_data *pdata,
 	return add_regulator_linked(num, pdata, NULL, 0, features);
 }
 
+#define SET_LDO_STATE_MEM(ldo, state)				\
+	do {							\
+		ldo->constraints.state_mem.enabled = state;	\
+		ldo->constraints.state_mem.disabled = !state;	\
+	} while (0)
+
 /*
  * NOTE:  We know the first 8 IRQs after pdata->base_irq are
  * for the PIH, and the next are for the PWR_INT SIH, since
@@ -665,10 +704,13 @@ add_regulator(int num, struct regulator_init_data *pdata,
  */
 
 static int
-add_children(struct twl4030_platform_data *pdata, unsigned long features)
+add_children(struct twl4030_platform_data *pdata, unsigned long features,
+		unsigned long errata)
 {
 	struct device	*child;
 	unsigned sub_chip_id;
+	u8 eepromrev = 0;
+	u8 twlrev = 0;
 
 	if (twl_has_gpio() && pdata->gpio) {
 		child = add_child(SUB_CHIP_ID1, "twl4030_gpio",
@@ -687,6 +729,7 @@ add_children(struct twl4030_platform_data *pdata, unsigned long features)
 	}
 	if (twl_has_bci() && pdata->bci) {
 		pdata->bci->features = features;
+		pdata->bci->errata = errata;
 		child = add_child(1, "twl6030_bci",
 				pdata->bci, sizeof(*pdata->bci),
 				false,
@@ -794,28 +837,23 @@ add_children(struct twl4030_platform_data *pdata, unsigned long features)
 
 		static struct regulator_consumer_supply usb3v3;
 		int regulator;
-
 		if (twl_has_regulator()) {
-			/* this is a template that gets copied */
-			struct regulator_init_data usb_fixed = {
-				.constraints.valid_modes_mask =
-					REGULATOR_MODE_NORMAL
-					| REGULATOR_MODE_STANDBY,
-				.constraints.valid_ops_mask =
-					REGULATOR_CHANGE_MODE
-					| REGULATOR_CHANGE_STATUS,
-			};
-
 			if (features & TWL6032_SUBCLASS) {
 				usb3v3.supply =	"ldousb";
 				regulator = TWL6032_REG_LDOUSB;
+				child = add_regulator_linked(regulator,
+							     pdata->ldousb,
+							     &usb3v3, 1,
+							     features);
 			} else {
 				usb3v3.supply = "vusb";
 				regulator = TWL6030_REG_VUSB;
+				child = add_regulator_linked(regulator,
+							     pdata->vusb,
+							     &usb3v3, 1,
+							     features);
 			}
-			child = add_regulator_linked(regulator, &usb_fixed,
-							&usb3v3, 1,
-							features);
+
 			if (IS_ERR(child))
 				return PTR_ERR(child);
 		}
@@ -974,6 +1012,32 @@ add_children(struct twl4030_platform_data *pdata, unsigned long features)
 			return PTR_ERR(child);
 	}
 
+	if (twl_has_regulator() && twl_class_is_6030()) {
+		/*
+		 * For TWL6032 revision < ES1.1 with EEPROM revision < rev56.0
+		 * LDO6 and LDOLN must be always ON
+		 * if LDO6 or LDOLN is always on then SYSEN must be always on
+		 * for TWL6030 or TWL6032 revision >= ES1.1 with EEPROM
+		 * revision >= rev56.0 those LDOs can be off in sleep-mode
+		 */
+		if (features & TWL6032_SUBCLASS) {
+			twl_i2c_read_u8(TWL6030_MODULE_ID2, &eepromrev,
+					TWL6030_REG_EPROM_REV);
+
+			twl_i2c_read_u8(TWL6030_MODULE_ID2, &twlrev,
+					TWL6030_REG_JTAGVERNUM);
+
+			if ((eepromrev < 56) && (twlrev < 1)) {
+				SET_LDO_STATE_MEM(pdata->ldo6, true);
+				SET_LDO_STATE_MEM(pdata->ldoln, true);
+				SET_LDO_STATE_MEM(pdata->sysen, true);
+				WARN(1, "This TWL6032 is an older revision that "
+						"does not support low power "
+						"measurements\n");
+			}
+		}
+	}
+
 	/* twl6030 regulators */
 	if (twl_has_regulator() && twl_class_is_6030() &&
 			!(features & TWL6032_SUBCLASS)) {
@@ -1057,6 +1121,16 @@ add_children(struct twl4030_platform_data *pdata, unsigned long features)
 
 		child = add_regulator(TWL6030_REG_CLK32KAUDIO,
 				pdata->clk32kaudio, features);
+		if (IS_ERR(child))
+			return PTR_ERR(child);
+
+		child = add_regulator(TWL6030_REG_SYSEN,
+				pdata->sysen, features);
+		if (IS_ERR(child))
+			return PTR_ERR(child);
+
+		child = add_regulator(TWL6030_REG_REGEN1,
+				pdata->sysen, features);
 		if (IS_ERR(child))
 			return PTR_ERR(child);
 	}
@@ -1224,18 +1298,94 @@ static void clocks_init(struct device *dev,
 	if (e < 0)
 		pr_err("%s: clock init err [%d]\n", DRIVER_NAME, e);
 }
+#ifdef CONFIG_MACH_OMAP_4430_KC1
 
 /*----------------------------------------------------------------------*/
 
-int twl4030_init_irq(int irq_num, unsigned irq_base, unsigned irq_end);
-int twl4030_exit_irq(void);
-int twl4030_init_chip_irq(const char *chip);
-int twl6030_init_irq(int irq_num, unsigned irq_base, unsigned irq_end);
-int twl6030_exit_irq(void);
+/*
+ * PROC FS entries for start condition and last turnoff reason
+ */
+#define TWL_BOOT_INFO_SIZE	256
+static char twl_start_condition[TWL_BOOT_INFO_SIZE];
+static char twl_turnoff_reason[TWL_BOOT_INFO_SIZE];
+
+#define TWL_PROC_DIRNAME		"twl"
+#define TWL_STARTCOND_PROCNAME		"start-condition"
+#define TWL_LAST_TURNOFF_PROCNAME	"turnoff-reason"
+
+static struct {
+	const char *str;
+	u32 mask;
+} start_cond_flags[] = {
+	{ "battery bounce",		START_COND_RESTART_BB },
+	{ "first batt. ins.",		START_COND_FIRST_SYS_INS },
+	{ "rtc alarm",			START_COND_STRT_ON_RTC },
+	{ "USB plug",			START_COND_STRT_ON_PLUG_DET },
+	{ "USB ID event",		START_COND_STRT_ON_USB_ID },
+	{ "remote power on",		START_COND_STRT_ON_RPWRON },
+	{ "power on",			START_COND_STRT_ON_PWRON },
+}, last_turnoff_flags[] = {
+	{ "remote power on",		TURNOFF_DEVOFF_RPWRON },
+	{ "shorted power resource",	TURNOFF_DEVOFF_SHORT },
+	{ "watchdog",			TURNOFF_DEVOFF_WDT },
+	{ "thermal shutdown",		TURNOFF_DEVOFF_TSHUT },
+	{ "battery bounce",		TURNOFF_DEVOFF_BCK },
+	{ "long key press",		TURNOFF_DEVOFF_LPK },
+};
+
+static int proc_startcond_read(char *page, char **start, off_t off, int count,
+				int *eof, void *data)
+{
+	strlcpy(page, twl_start_condition, sizeof(twl_start_condition));
+	*eof = 1;
+
+	return strlen(page);
+}
+
+static int proc_turnoff_sts_read(char *page, char **start, off_t off, int count,
+				int *eof, void *data)
+{
+	strlcpy(page, twl_turnoff_reason, sizeof(twl_turnoff_reason));
+	*eof = 1;
+
+	return strlen(page);
+}
+
+static void create_twl_proc_files(void)
+{
+	struct proc_dir_entry* twl_proc_dir = NULL;
+	struct proc_dir_entry *twl_proc_dir_entry = NULL;
+
+	twl_proc_dir = proc_mkdir(TWL_PROC_DIRNAME, NULL);
+	if (twl_proc_dir == NULL) {
+		return;
+	}
+
+	twl_proc_dir_entry = create_proc_entry(TWL_STARTCOND_PROCNAME, S_IRUGO, twl_proc_dir);
+	if (twl_proc_dir_entry != NULL) {
+		twl_proc_dir_entry->data = NULL;
+		twl_proc_dir_entry->read_proc = proc_startcond_read;
+		twl_proc_dir_entry->write_proc = NULL;
+	}
+
+	twl_proc_dir_entry = create_proc_entry(TWL_LAST_TURNOFF_PROCNAME, S_IRUGO, twl_proc_dir);
+	if (twl_proc_dir_entry != NULL) {
+		twl_proc_dir_entry->data = NULL;
+		twl_proc_dir_entry->read_proc = proc_turnoff_sts_read;
+		twl_proc_dir_entry->write_proc = NULL;
+	}
+}
+#endif
+
+/*----------------------------------------------------------------------*/
 
 #ifdef CONFIG_PM
 static int twl_suspend(struct i2c_client *client, pm_message_t mesg)
 {
+#ifdef CONFIG_MACH_OMAP_4430_KC1
+	/*For low battery wake up function*/
+	twl6030_interrupt_unmask(VLOW_INT_MASK, REG_INT_MSK_STS_A);
+#endif
 	return irq_set_irq_wake(client->irq, 1);
 }
 
@@ -1281,6 +1431,11 @@ twl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct twl4030_platform_data	*pdata = client->dev.platform_data;
 	u8 temp;
 	int ret = 0, features;
+	unsigned long errata = 0;
+	u8 twlrev;
+#ifdef CONFIG_MACH_OMAP_4430_KC1
+	u8 twl_reg = 0;
+#endif
 
 	if (!pdata) {
 		dev_dbg(&client->dev, "no platform data?\n");
@@ -1334,12 +1489,31 @@ twl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		WARN(ret < 0, "Error: reading twl_idcode register value\n");
 	}
 
+	features = id->driver_data;
+	if (twl_class_is_6030()) {
+		twl_i2c_read_u8(TWL_MODULE_USB, &temp, USB_PRODUCT_ID_LSB);
+		if (temp == 0x32)
+			features |= TWL6032_SUBCLASS;
+
+		twl_i2c_read_u8(TWL6030_MODULE_ID2, &twlrev,
+				TWL6030_REG_JTAGVERNUM);
+
+		/*
+		 * Check for the errata implementation
+		 * Errata ProDB00119490 present only in the TWL6032 ES1.1
+		 */
+		if (features & TWL6032_SUBCLASS) {
+			if (twlrev == 1)
+				errata |= TWL6032_ERRATA_DB00119490;
+		}
+	}
+
 	/* load power event scripts */
 	if (twl_has_power()) {
 		if (twl_class_is_4030() && pdata->power)
 			twl4030_power_init(pdata->power);
 		if (twl_class_is_6030())
-			twl6030_power_init(pdata->power);
+			twl6030_power_init(pdata->power, features);
 	}
 
 	/* Maybe init the T2 Interrupt subsystem */
@@ -1352,7 +1526,7 @@ twl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			pdata->irq_end);
 		} else {
 			status = twl6030_init_irq(client->irq, pdata->irq_base,
-			pdata->irq_end);
+			pdata->irq_end, features);
 		}
 
 		if (status < 0)
@@ -1370,16 +1544,53 @@ twl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		I2C_SDA_CTRL_PU | I2C_SCL_CTRL_PU);
 		twl_i2c_write_u8(TWL4030_MODULE_INTBR, temp, REG_GPPUPDCTR1);
 	}
-
-
-	features = id->driver_data;
+#ifdef CONFIG_MACH_OMAP_4430_KC1
 	if (twl_class_is_6030()) {
-		twl_i2c_read_u8(TWL_MODULE_USB, &temp, USB_PRODUCT_ID_LSB);
-		if (temp == 0x32)
-			features |= TWL6032_SUBCLASS;
-	}
+		twl_i2c_write_u8(TWL6030_MODULE_ID0, 0xC0, PHOENIX_MSK_TRANSITION);
+		/*rtc off mode low power,BBSPOR_CFG,VRTC_EN_OFF_STS*/
+		twl_i2c_write_u8(TWL6030_MODULE_ID0, 0x72,0xe6);
 
-	status = add_children(pdata, features);
+		/* Print some useful registers at boot up */
+		pr_info("TWL603x Boot Information:\n");
+		twl_i2c_read_u8(TWL6030_MODULE_ID0, &twl_reg, PHOENIX_START_CONDITION);
+		memset(twl_start_condition, 0 , TWL_BOOT_INFO_SIZE);
+		for (i = 0; i < ARRAY_SIZE(start_cond_flags); i++)
+			if (twl_reg & start_cond_flags[i].mask)
+				strlcat(twl_start_condition, start_cond_flags[i].str,
+					sizeof(twl_start_condition));
+		pr_info("Start condition is %s (PHOENIX_START_CONDITION = 0x%02x)\n", twl_start_condition, twl_reg);
+
+		/* Clear register for next boot */
+		twl_reg = 0x7F; // Bit 8 is reserved
+		twl_i2c_write_u8(TWL6030_MODULE_ID0, twl_reg, PHOENIX_STS_HW_CONDITIONS);
+
+		twl_i2c_read_u8(TWL6030_MODULE_ID0, &twl_reg, PHOENIX_LAST_TURNOFF_STS);
+		memset(twl_turnoff_reason, 0 , TWL_BOOT_INFO_SIZE);
+
+		if (0x01 == twl_reg) {
+			/* Upon normal shutdown with power button, this register will be set to 0x1 */
+			snprintf(twl_turnoff_reason,  TWL_BOOT_INFO_SIZE, "normal shutdown");			
+		}
+		else {
+			for (i = 0; i < ARRAY_SIZE(last_turnoff_flags); i++)
+				if (twl_reg & last_turnoff_flags[i].mask)
+					strlcat(twl_turnoff_reason, last_turnoff_flags[i].str,
+						sizeof(twl_turnoff_reason));
+		}
+		pr_info("Last turn off status is %s (PHOENIX_LAST_TURN_OFF_STATUS = 0x%02x)\n", twl_turnoff_reason, twl_reg);
+		/* Clear register for next boot */
+		twl_reg = 0xFE; // Bit 0 is read-only
+		twl_i2c_write_u8(TWL6030_MODULE_ID0, twl_reg, PHOENIX_LAST_TURNOFF_STS);
+
+		twl_i2c_read_u8(TWL6030_MODULE_ID0, &twl_reg, PHOENIX_STS_HW_CONDITIONS);
+		printk(KERN_INFO "Hardware Conditions (PHOENIX_STS_HW_CONDITIONS) is 0x%02x\n", twl_reg);
+
+		/* Create proc files */
+		create_twl_proc_files();
+	}
+#endif
+
+	status = add_children(pdata, features, errata);
 fail:
 	if (status < 0)
 		twl_remove(client);
