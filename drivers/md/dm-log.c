@@ -204,12 +204,6 @@ struct log_header {
 	 * Simple, incrementing version. no backward
 	 * compatibility.
 	 */
-	  __le32 version;
-	  __le64 nr_regions;
-  	} __packed;
-
-struct log_header_core {
-	uint32_t magic;
 	uint32_t version;
 	sector_t nr_regions;
 };

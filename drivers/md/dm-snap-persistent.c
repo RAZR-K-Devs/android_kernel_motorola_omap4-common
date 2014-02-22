@@ -73,16 +73,6 @@ struct disk_header {
 	uint32_t version;
 
 	/* In sectors */
-	  __le32 chunk_size;
-	} __packed;
-};
-
-struct disk_exception {
-	  __le64 old_chunk;
-	  __le64 new_chunk;
-	} __packed;
-
-struct core_exception {
 	uint32_t chunk_size;
 };
 
