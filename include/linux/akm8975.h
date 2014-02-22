@@ -30,11 +30,12 @@ struct akm8975_platform_data {
 #define	AK8975_MODE_SELF_TEST	0x08
 #define	AK8975_MODE_FUSE_ACCESS	0x0F
 #define	AK8975_MODE_POWERDOWN	0x00
+#define	AK8975_MODE_POWER_DOWN    0x00
 /*! @}*/
 
 #define SENSOR_DATA_SIZE	8
 #define RWBUF_SIZE			16
-
+#define RBUFF_SIZE		8	/* Rx buffer size */
 #define MAG_DATA_READY		1
 #define ACC_DATA_READY		2
 #define ORI_DATA_READY		4
@@ -101,6 +102,15 @@ Defines a read-only address of the fuse ROM of the AK8975.*/
 #define ECS_IOCTL_APP_SET_ACCEL		_IOW(AKMIO, 0x1B, short[3])
 #define ECS_IOCTL_APP_SET_TFLAG         _IOR(AKMIO, 0x15, short)
 #define ECS_IOCTL_APP_SET_SOLANAFLAG    _IOW(AKMIO, 0x86, short)
+
+struct akm8975_platform_data {
+	int intr;
+
+	int (*init)(void);
+	void (*exit)(void);
+	int (*power_on)(void);
+	int (*power_off)(void);
+};
 
 #endif
 
