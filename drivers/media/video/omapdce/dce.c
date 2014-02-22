@@ -388,10 +388,9 @@ static int ioctl_codec_create(struct dce_file_priv *priv, struct omap_dce_codec_
 			return ret;
 		}
 
-		// safe to use null for device her atm, it's not used.  This may change in the future
-		ret = ion_phys_frm_dev(NULL, (struct ion_handle *)arg->sparams_bo, &paddr, &len);
+		ret = ion_handle_phys((struct ion_handle *)arg->sparams_bo, &paddr, &len);
 		if (ret) {
-			printk(KERN_ERR "ioctl_codec_create failed: ion_phys_frm_dev return %d\n", ret);
+			printk(KERN_ERR "ioctl_codec_create failed: ion_handle_phys return %d\n", ret);
 			return ret;
 		}
 		req.sparams = paddr;
@@ -442,12 +441,12 @@ static int ioctl_codec_control(struct dce_file_priv *priv, struct omap_dce_codec
 		if (ret)
 			return ret;
 
-		ret = ion_phys_frm_dev(NULL, (struct ion_handle *)arg->dparams_bo, &paddr, &len);
+		ret = ion_handle_phys((struct ion_handle *)arg->dparams_bo, &paddr, &len);
 		if (ret)
 			return ret;
 		req.dparams = paddr;
 
-		ret = ion_phys_frm_dev(NULL, (struct ion_handle *)arg->status_bo, &paddr, &len);
+		ret = ion_handle_phys((struct ion_handle *)arg->status_bo, &paddr, &len);
 		if (ret)
 			return ret;
 		req.status = paddr;
@@ -558,7 +557,7 @@ static inline int handle_single_buf_desc(
 DBG("handle_single_buf_desc: bu %08X", desc->buf);
 	if( desc->buf >= 0xC0000000 ) {
 		// buf is an ion handle...
-		ret = ion_phys_frm_dev(NULL, (struct ion_handle *)desc->buf, &paddr, &len);
+		ret = ion_handle_phys((struct ion_handle *)desc->buf, &paddr, &len);
 	} else {
 		// buf is a vaddr...
 		paddr = dce_virt_to_phys( desc->buf );
@@ -684,7 +683,7 @@ static int ioctl_codec_process(struct dce_file_priv *priv, struct omap_dce_codec
 		if (ret)
 			goto rpsend_out;
 
-		ret = ion_phys_frm_dev(NULL, (struct ion_handle *)arg->out_args_bo, &paddr, &len);
+		ret = ion_handle_phys((struct ion_handle *)arg->out_args_bo, &paddr, &len);
 		if (ret)
 			goto rpsend_out;
 		req->out_args = paddr;
