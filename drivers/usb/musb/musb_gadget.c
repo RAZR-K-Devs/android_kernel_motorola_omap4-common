@@ -330,13 +330,14 @@ static void txstate(struct musb *musb, struct musb_request *req)
 
 	musb_ep = req->ep;
 
+#ifdef CONFIG_MACH_OMAP_4430_KC1
 	/* Check if EP is disabled */
 	if (!musb_ep->desc) {
 		dev_dbg(musb->controller, "ep:%s disabled - ignore request\n",
 						musb_ep->end_point.name);
 		return;
 	}
-
+#endif
 	/* we shouldn't get here while DMA is active ... but we do ... */
 	if (dma_channel_status(musb_ep->dma) == MUSB_DMA_STATUS_BUSY) {
 		dev_dbg(musb->controller, "dma pending...\n");
@@ -654,13 +655,14 @@ static void rxstate(struct musb *musb, struct musb_request *req)
 		musb_ep = &hw_ep->ep_out;
 
 	len = musb_ep->packet_sz;
-
+#ifdef CONFIG_MACH_OMAP_4430_KC1
 	/* Check if EP is disabled */
 	if (!musb_ep->desc) {
 		dev_dbg(musb->controller, "ep:%s disabled - ignore request\n",
-						musb_ep->end_point.name);
+					musb_ep->end_point.name);
 		return;
 	}
+#endif
 
 	/* We shouldn't get here while DMA is active, but we do... */
 	if (dma_channel_status(musb_ep->dma) == MUSB_DMA_STATUS_BUSY) {
@@ -995,6 +997,15 @@ void musb_g_rx(struct musb *musb, u8 epnum)
 		}
 #endif
 		musb_g_giveback(musb_ep, request, 0);
+		/*
+		 * In the giveback function the MUSB lock is
+		 * released and acquired after sometime. During
+		 * this time period the INDEX register could get
+		 * changed by the gadget_queue function especially
+		 * on SMP systems. Reselect the INDEX to be sure
+		 * we are reading/modifying the right registers
+		 */
+		musb_ep_select(mbase, epnum);
 
 		req = next_request(musb_ep);
 		if (!req)
