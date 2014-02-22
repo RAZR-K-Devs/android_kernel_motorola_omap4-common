@@ -969,7 +969,6 @@ static struct dmi_system_id __initdata ec_dmi_table[] = {
 	{},
 };
 
-
 int __init acpi_ec_ecdt_probe(void)
 {
 	acpi_status status;
