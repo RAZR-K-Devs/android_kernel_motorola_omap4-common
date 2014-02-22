@@ -47,11 +47,7 @@ static struct cpufreq_driver *cpufreq_driver;
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 #ifdef CONFIG_HOTPLUG_CPU
 /* This one keeps track of the previously set governor of a removed CPU */
-struct cpufreq_cpu_save_data {
-  char gov[CPUFREQ_NAME_LEN];
-  unsigned int max, min;
-};
-static DEFINE_PER_CPU(struct cpufreq_cpu_save_data, cpufreq_policy_save); 
+static DEFINE_PER_CPU(char[CPUFREQ_NAME_LEN], cpufreq_cpu_governor);
 #endif
 static DEFINE_SPINLOCK(cpufreq_driver_lock);
 
@@ -78,7 +74,7 @@ static DEFINE_PER_CPU(int, cpufreq_policy_cpu);
 static DEFINE_PER_CPU(struct rw_semaphore, cpu_policy_rwsem);
 
 #define lock_policy_rwsem(mode, cpu)					\
-int lock_policy_rwsem_##mode					\
+static int lock_policy_rwsem_##mode					\
 (int cpu)								\
 {									\
 	int policy_cpu = per_cpu(cpufreq_policy_cpu, cpu);		\
@@ -96,14 +92,14 @@ lock_policy_rwsem(read, cpu);
 
 lock_policy_rwsem(write, cpu);
 
-void unlock_policy_rwsem_read(int cpu) 
+static void unlock_policy_rwsem_read(int cpu)
 {
 	int policy_cpu = per_cpu(cpufreq_policy_cpu, cpu);
 	BUG_ON(policy_cpu == -1);
 	up_read(&per_cpu(cpu_policy_rwsem, policy_cpu));
 }
 
-void unlock_policy_rwsem_write(int cpu)
+static void unlock_policy_rwsem_write(int cpu)
 {
 	int policy_cpu = per_cpu(cpufreq_policy_cpu, cpu);
 	BUG_ON(policy_cpu == -1);
@@ -279,10 +275,8 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 		trace_cpu_frequency(freqs->new, freqs->cpu);
 		srcu_notifier_call_chain(&cpufreq_transition_notifier_list,
 				CPUFREQ_POSTCHANGE, freqs);
-		if (likely(policy) && likely(policy->cpu == freqs->cpu)) {
+		if (likely(policy) && likely(policy->cpu == freqs->cpu))
 			policy->cur = freqs->new;
-			sysfs_notify(&policy->kobj, NULL, "scaling_cur_freq");
-		}
 		break;
 	}
 }
@@ -461,9 +455,6 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	unsigned int ret = -EINVAL;
 	char	str_governor[16];
 	struct cpufreq_policy new_policy;
-	char *envp[3];
-	char buf1[64];
-	char buf2[64];
 
 	ret = cpufreq_get_policy(&new_policy, policy->cpu);
 	if (ret)
@@ -483,15 +474,6 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 
 	policy->user_policy.policy = policy->policy;
 	policy->user_policy.governor = policy->governor;
-
-	sysfs_notify(&policy->kobj, NULL, "scaling_governor");
-
-	snprintf(buf1, sizeof(buf1), "GOV=%s", policy->governor->name);
-	snprintf(buf2, sizeof(buf2), "CPU=%u", policy->cpu);
-	envp[0] = buf1;
-	envp[1] = buf2;
-	envp[2] = NULL;
-	kobject_uevent_env(cpufreq_global_kobject, KOBJ_ADD, envp);
 
 	if (ret)
 		return ret;
@@ -730,7 +712,7 @@ static int cpufreq_add_dev_policy(unsigned int cpu,
 #ifdef CONFIG_HOTPLUG_CPU
 	struct cpufreq_governor *gov;
 
-	gov = __find_governor(per_cpu(cpufreq_policy_save, cpu).gov);
+	gov = __find_governor(per_cpu(cpufreq_cpu_governor, cpu));
 	if (gov) {
 		policy->governor = gov;
 		pr_debug("Restoring governor %s for cpu %d\n",
@@ -1089,12 +1071,8 @@ static int __cpufreq_remove_dev(struct sys_device *sys_dev)
 #ifdef CONFIG_SMP
 
 #ifdef CONFIG_HOTPLUG_CPU
-	strncpy(per_cpu(cpufreq_policy_save, cpu).gov, data->governor->name, 
+	strncpy(per_cpu(cpufreq_cpu_governor, cpu), data->governor->name,
 			CPUFREQ_NAME_LEN);
-	per_cpu(cpufreq_policy_save, cpu).min = data->min;
-	  per_cpu(cpufreq_policy_save, cpu).max = data->max;
-	  pr_debug("Saving CPU%d policy min %d and max %d\n",
-	      cpu, data->min, data->max); 
 #endif
 
 	/* if we have other CPUs still registered, we need to unlink them,
@@ -1118,12 +1096,8 @@ static int __cpufreq_remove_dev(struct sys_device *sys_dev)
 				continue;
 			pr_debug("removing link for cpu %u\n", j);
 #ifdef CONFIG_HOTPLUG_CPU
-			strncpy(per_cpu(cpufreq_policy_save, j).gov, 
+			strncpy(per_cpu(cpufreq_cpu_governor, j),
 				data->governor->name, CPUFREQ_NAME_LEN);
-			per_cpu(cpufreq_policy_save, j).min = data->min;
-			      per_cpu(cpufreq_policy_save, j).max = data->max;
-			      pr_debug("Saving CPU%d policy min %d and max %d\n",
-			          j, data->min, data->max); 
 #endif
 			cpu_sys_dev = get_cpu_sysdev(j);
 			kobj = &cpu_sys_dev->kobj;
@@ -1609,11 +1583,8 @@ void cpufreq_unregister_governor(struct cpufreq_governor *governor)
 	for_each_present_cpu(cpu) {
 		if (cpu_online(cpu))
 			continue;
-		if (!strcmp(per_cpu(cpufreq_policy_save, cpu).gov,
-          governor->name))
-      strcpy(per_cpu(cpufreq_policy_save, cpu).gov, "\0");
-    per_cpu(cpufreq_policy_save, cpu).min = 0;
-    per_cpu(cpufreq_policy_save, cpu).max = 0; 
+		if (!strcmp(per_cpu(cpufreq_cpu_governor, cpu), governor->name))
+			strcpy(per_cpu(cpufreq_cpu_governor, cpu), "\0");
 	}
 #endif
 
@@ -1700,6 +1671,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 
 	data->min = policy->min;
 	data->max = policy->max;
+
 	pr_debug("new min and max freqs are %u - %u kHz\n",
 					data->min, data->max);
 
@@ -1937,56 +1909,6 @@ no_policy:
 	return ret;
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
-
-/*
- *	cpufreq_set_gov - set governor for a cpu
- *	@cpu: CPU whose governor needs to be changed
- *	@target_gov: new governor to be set
- */
-int cpufreq_set_gov(char *target_gov, unsigned int cpu)
-{
-	int ret = 0;
-	struct cpufreq_policy new_policy;
-	struct cpufreq_policy *cur_policy;
-
-	if (target_gov == NULL)
-		return -EINVAL;
-
-	/* Get current governer */
-	cur_policy = cpufreq_cpu_get(cpu);
-	if (!cur_policy)
-		return -EINVAL;
-
-	new_policy = *cur_policy;
-	if (!strncmp(cur_policy->governor->name, target_gov,
-			strlen(target_gov))) {
-		/* Target governer & current governer is same */
-		ret = -EINVAL;
-		goto err_out;
-	} else {
-		if (cpufreq_parse_governor(target_gov, &new_policy.policy,
-				&new_policy.governor)) {
-			ret = -EINVAL;
-			goto err_out;
-		}
-
-		if (lock_policy_rwsem_write(cur_policy->cpu) < 0) {
-			ret = -EINVAL;
-			goto err_out;
-		}
-
-		ret = __cpufreq_set_policy(cur_policy, &new_policy);
-
-		cur_policy->user_policy.policy = cur_policy->policy;
-		cur_policy->user_policy.governor = cur_policy->governor;
-
-		unlock_policy_rwsem_write(cur_policy->cpu);
-	}
-err_out:
-	cpufreq_cpu_put(cur_policy);
-	return ret;
-}
-EXPORT_SYMBOL(cpufreq_set_gov);
 
 static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 					unsigned long action, void *hcpu)
