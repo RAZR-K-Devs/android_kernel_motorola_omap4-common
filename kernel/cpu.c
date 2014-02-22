@@ -336,10 +336,8 @@ int __cpuinit cpu_up(unsigned int cpu)
 #endif
 
 	if (!cpu_possible(cpu)) {
-#if 0
 		printk(KERN_ERR "can't online cpu %d because it is not "
 			"configured as may-hotadd at boot time\n", cpu);
-#endif
 #if defined(CONFIG_IA64)
 		printk(KERN_ERR "please check additional_cpus= boot "
 				"parameter\n");
