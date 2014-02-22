@@ -144,7 +144,6 @@
 #define is_ehci_phy_mode(x)	(x == OMAP_EHCI_PORT_MODE_PHY)
 #define is_ehci_tll_mode(x)	(x == OMAP_EHCI_PORT_MODE_TLL)
 #define is_ehci_hsic_mode(x)	(x == OMAP_EHCI_PORT_MODE_HSIC)
-#define MAX_WAKELOCK_TIME       (300*HZ)
 
 
 struct usbhs_hcd_omap {
@@ -165,7 +164,6 @@ struct usbhs_hcd_omap {
 
 	u32				usbhs_rev;
 	spinlock_t			lock;
-	struct wake_lock                usbhs_wakelock;
 };
 /*-------------------------------------------------------------------------*/
 
@@ -344,8 +342,6 @@ static int __devinit usbhs_omap_probe(struct platform_device *pdev)
 	}
 
 	spin_lock_init(&omap->lock);
-	wake_lock_init(&omap->usbhs_wakelock, WAKE_LOCK_SUSPEND,
-		"omap_usbhs_wakelock");
 
 	for (i = 0; i < OMAP3_HS_USB_PORTS; i++)
 		omap->platdata.port_mode[i] = pdata->port_mode[i];
@@ -522,7 +518,6 @@ err_utmi_p1_fck:
 
 err_end:
 	pm_runtime_disable(dev);
-	wake_lock_destroy(&omap->usbhs_wakelock);
 	kfree(omap);
 
 end_probe:
@@ -553,7 +548,6 @@ static int __devexit usbhs_omap_remove(struct platform_device *pdev)
 	clk_put(omap->xclk60mhsp1_ck);
 	clk_put(omap->utmi_p1_fck);
 	pm_runtime_disable(&pdev->dev);
-	wake_lock_destroy(&omap->usbhs_wakelock);
 	kfree(omap);
 
 	return 0;
@@ -653,7 +647,7 @@ static void usbhs_omap_tll_init(struct device *dev, u8 tll_channel_count)
 			reg &= ~(OMAP_TLL_CHANNEL_CONF_UTMIAUTOIDLE
 				| OMAP_TLL_CHANNEL_CONF_ULPINOBITSTUFF
 				| OMAP_TLL_CHANNEL_CONF_ULPIDDRMODE);
-			reg |= OMAP_TLL_CHANNEL_CONF_ULPINOBITSTUFF;
+
 		} else
 			continue;
 
@@ -670,7 +664,6 @@ static int usbhs_runtime_resume(struct device *dev)
 {
 	struct usbhs_hcd_omap		*omap = dev_get_drvdata(dev);
 	struct usbhs_omap_platform_data	*pdata = &omap->platdata;
-	u32 reg;
 
 	dev_dbg(dev, "usbhs_runtime_resume\n");
 
@@ -679,7 +672,6 @@ static int usbhs_runtime_resume(struct device *dev)
 		return  -ENODEV;
 	}
 
-	wake_lock_timeout(&omap->usbhs_wakelock, MAX_WAKELOCK_TIME);
 	if (is_omap_usbhs_rev2(omap)) {
 		if (is_ehci_tll_mode(pdata->port_mode[0])) {
 			clk_enable(omap->usbhost_p1_fck);
@@ -691,9 +683,6 @@ static int usbhs_runtime_resume(struct device *dev)
 		}
 		clk_enable(omap->utmi_p1_fck);
 		clk_enable(omap->utmi_p2_fck);
-		reg = usbhs_read(omap->uhh_base, OMAP_UHH_HOSTCONFIG);
-		reg |= OMAP4_UHH_HOSTCONFIG_APP_START_CLK;
-		usbhs_write(omap->uhh_base, OMAP_UHH_HOSTCONFIG, reg);
 	}
 	return 0;
 }
@@ -702,7 +691,6 @@ static int usbhs_runtime_suspend(struct device *dev)
 {
 	struct usbhs_hcd_omap		*omap = dev_get_drvdata(dev);
 	struct usbhs_omap_platform_data	*pdata = &omap->platdata;
-	u32    reg;
 
 	dev_dbg(dev, "usbhs_runtime_suspend\n");
 
@@ -722,11 +710,7 @@ static int usbhs_runtime_suspend(struct device *dev)
 		}
 		clk_disable(omap->utmi_p2_fck);
 		clk_disable(omap->utmi_p1_fck);
-		reg = usbhs_read(omap->uhh_base, OMAP_UHH_HOSTCONFIG);
-		reg &= ~OMAP4_UHH_HOSTCONFIG_APP_START_CLK;
-		usbhs_write(omap->uhh_base, OMAP_UHH_HOSTCONFIG, reg);
 	}
-	wake_unlock(&omap->usbhs_wakelock);
 	return 0;
 }
 
@@ -736,7 +720,6 @@ static void omap_usbhs_init(struct device *dev)
 	struct usbhs_omap_platform_data	*pdata = &omap->platdata;
 	unsigned long			flags = 0;
 	unsigned			reg;
-	unsigned long timeout = jiffies + msecs_to_jiffies(1000);
 
 	dev_dbg(dev, "starting TI HSUSB Controller\n");
 
@@ -779,7 +762,8 @@ static void omap_usbhs_init(struct device *dev)
 	reg |= (OMAP_UHH_HOSTCONFIG_INCR4_BURST_EN
 			| OMAP_UHH_HOSTCONFIG_INCR8_BURST_EN
 			| OMAP_UHH_HOSTCONFIG_INCR16_BURST_EN);
-	reg |= OMAP4_UHH_HOSTCONFIG_APP_START_CLK;
+
+	/* Keep ENA_INCR_ALIGN = 0: Known to cause OCP delays */
 	reg &= ~OMAP_UHH_HOSTCONFIG_INCRX_ALIGN_EN;
 
 	if (is_omap_usbhs_rev1(omap)) {
@@ -841,30 +825,6 @@ static void omap_usbhs_init(struct device *dev)
 		(is_ohci_port(pdata->port_mode[0])) ||
 		(is_ohci_port(pdata->port_mode[1])) ||
 		(is_ohci_port(pdata->port_mode[2]))) {
-
-		/* perform TLL soft reset, and wait
-		 * until reset is complete */
-		usbhs_write(omap->tll_base, OMAP_USBTLL_SYSCONFIG,
-				OMAP_USBTLL_SYSCONFIG_SOFTRESET);
-
-		/* Wait for TLL reset to complete */
-		while (!(usbhs_read(omap->tll_base,
-			OMAP_USBTLL_SYSSTATUS) &
-			OMAP_USBTLL_SYSSTATUS_RESETDONE)) {
-			cpu_relax();
-
-			if (time_after(jiffies, timeout)) {
-				dev_err(dev,
-					"operation timed out\n");
-			}
-		}
-
-		dev_err(dev, "TLL RESET DONE\n");
-
-		usbhs_write(omap->tll_base, OMAP_USBTLL_SYSCONFIG,
-				OMAP_USBTLL_SYSCONFIG_ENAWAKEUP |
-				OMAP_USBTLL_SYSCONFIG_SIDLEMODE |
-				OMAP_USBTLL_SYSCONFIG_AUTOIDLE);
 
 		/* Enable UTMI mode for required TLL channels */
 		if (is_omap_usbhs_rev2(omap))
