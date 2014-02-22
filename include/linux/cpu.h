@@ -68,6 +68,9 @@ enum {
 	CPU_PRI_MIGRATION	= 10,
 	/* prepare workqueues for other notifiers */
 	CPU_PRI_WORKQUEUE	= 5,
+	/* bring up workqueues before normal notifiers and down after */
+	CPU_PRI_WORKQUEUE_UP	= 5,
+	CPU_PRI_WORKQUEUE_DOWN	= -5,
 };
 
 #ifdef CONFIG_SMP

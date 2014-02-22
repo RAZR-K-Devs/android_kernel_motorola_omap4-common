@@ -24,37 +24,43 @@
 
 #define  ABS_DATA_SIZE 50
 #define  VKEY_DATA_SIZE 40
+/* platform related defines */
+#define CY_I2C_NAME     "cyttsp4-i2c"
+#define CY_I2C_TCH_ADR	0x67
+#define CY_I2C_LDR_ADR	0x69
+
+
 
 struct touch_settings {
-	const uint8_t	*data;
-	uint8_t			size;
-	uint8_t			tag;
-} __attribute__ ((packed));
+	const uint8_t   *data;
+	uint8_t         size;
+	uint8_t         tag;
+} __packed;
 
 struct touch_firmware {
-	const uint8_t	*img;
-	uint32_t		size;
-	const uint8_t	*ver;
-	uint8_t			vsize;
+	const uint8_t   *img;
+	uint32_t        size;
+	const uint8_t   *ver;
+	uint8_t         vsize;
 } __attribute__ ((packed));
 
 struct touch_framework {
-	const uint16_t	abs[ABS_DATA_SIZE];
-	uint8_t			size;
-	uint8_t			enable_vkeys;
-} __attribute__ ((packed));
+	const uint16_t  *abs;
+	uint8_t         size;
+	uint8_t         enable_vkeys;
+} __packed;
 
 struct touch_platform_data {
-	struct touch_settings	*sett[256];
-	struct touch_firmware	*fw;
-	struct touch_framework	*frmwrk;
+	struct touch_settings   *sett[256];
+	struct touch_firmware   *fw;
+	struct touch_framework  *frmwrk;
 
-	uint8_t			addr[2];
-	uint16_t		flags;
+	uint8_t         addr[2];
+	uint16_t        flags;
 
-	int			(*hw_reset)(void);
-	int			(*hw_recov)(int);
-	int			(*irq_stat)(void);
-} __attribute__ ((packed));
+	int         (*hw_reset)(void);
+	int         (*hw_recov)(int);
+	int         (*irq_stat)(void);
+} __packed;
 
 #endif /* _LINUX_TOUCH_PLATFORM_H */

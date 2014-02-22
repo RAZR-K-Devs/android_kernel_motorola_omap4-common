@@ -187,6 +187,15 @@ TWL_CLASS_IS(6030, TWL6030_CLASS_ID)
 
 #define TWL6032_SUBCLASS	BIT(4)  /* Phoenix Lite is a varient*/
 
+#ifdef CONFIG_MACH_OMAP_4430_KC1
+/* Added by Hashcode from L27.13.1-Beta Kernel */
+/* TWL6030 control interface  registers */
+#define TWL6030_TOGGLE1			0x90
+#define TWL6030_TOGGLE2			0x91
+#define TWL6030_TOGGLE3			0x92
+#define PHOENIX_MSK_TRANSITION      0x20
+#endif
+
 /*
  * Read and write single 8-bit registers
  */
@@ -250,6 +259,13 @@ int twl6030_unregister_notifier(struct notifier_block *nb,
 				unsigned int events);
 
 /*----------------------------------------------------------------------*/
+#ifdef CONFIG_MACH_OMAP_4430_KC1
+/*
+* PMC Master Module offser
+*/
+#define REG_START_CONDITION         0x0
+#define REG_STS_HW_CONDITIONS       0x2
+#endif
 
 /*
  * GPIO Block Register offsets (use TWL4030_MODULE_GPIO)
@@ -423,6 +439,28 @@ int twl6030_unregister_notifier(struct notifier_block *nb,
 #define TWL5031_INTERRUPTS_BCIEDR2	0x6
 #define TWL5031_INTERRUPTS_BCISIHCTRL	0x7
 
+#ifdef CONFIG_MACH_OMAP_4430_KC1
+#define CONTROLLER_INT_MASK	0x00
+#define CONTROLLER_CTRL1	0x01
+#define CONTROLLER_WDG		0x02
+#define CONTROLLER_STAT1	0x03
+#define CHARGERUSB_INT_STATUS	0x04
+#define CHARGERUSB_INT_MASK	0x05
+#define CHARGERUSB_STATUS_INT1	0x06
+#define CHARGERUSB_STATUS_INT2	0x07
+#define CHARGERUSB_CTRL1	0x08
+#define CHARGERUSB_CTRL2	0x09
+#define CHARGERUSB_CTRL3	0x0A
+#define CHARGERUSB_STAT1	0x0B
+#define CHARGERUSB_VOREG	0x0C
+#define CHARGERUSB_VICHRG	0x0D
+#define CHARGERUSB_CINLIMIT	0x0E
+#define CHARGERUSB_CTRLLIMIT1	0x0F
+#define CHARGERUSB_CTRLLIMIT2	0x10
+#define ANTICOLLAPSE_CTRL1	0x11
+#define ANTICOLLAPSE_CTRL2	0x12
+#endif
+
 /*----------------------------------------------------------------------*/
 
 /*
@@ -469,12 +507,17 @@ int twl6030_unregister_notifier(struct notifier_block *nb,
 
 #define TWL4030_PM_MASTER_GLOBAL_TST		0xb6
 
+#ifdef CONFIG_MACH_OMAP_4430_KC1
+#define TWL6030_PHOENIX_DEV_ON			0x25
+#else
 #define TWL6030_PHOENIX_DEV_ON			0x06
+#endif
 
 /*
  * TWL6030 PM Master module register offsets (use TWL_MODULE_PM_MASTER)
  */
 
+#define TWL6030_PM_MASTER_MSK_TRANSITION	0x01
 #define TWL6030_VBATMIN_HI_THRESHOLD		0x05
 
 /*
@@ -577,6 +620,23 @@ int twl6030_unregister_notifier(struct notifier_block *nb,
 #define RES_RC6MHZ		45
 #define RES_TEMP		46
 
+/* 6032 extra resources */
+#define RES_LDOUSB		47
+#define RES_SMPS5		48
+#define RES_SMPS4		49
+#define RES_SMPS3		50
+#define RES_SMPS2		51
+#define RES_SMPS1		52
+#define RES_LDOLN		53
+#define RES_LDO7		54
+#define RES_LDO6		55
+#define RES_LDO5		56
+#define RES_LDO4		57
+#define RES_LDO3		58
+#define RES_LDO2		59
+#define RES_LDO1		60
+#define RES_VSYSMIN_HI	61
+
 /*
  * Power Bus Message Format ... these can be sent individually by Linux,
  * but are usually part of downloaded scripts that are run when various
@@ -622,11 +682,15 @@ struct twl4030_bci_platform_data {
 	unsigned int max_bat_voltagemV;
 	unsigned int low_bat_voltagemV;
 
+	unsigned int sense_resistor_mohm;
+
 	/* twl6032 */
 	unsigned int use_hw_charger;
 	unsigned int use_power_path;
 	unsigned long features;
 	unsigned int use_eeprom_config;
+	unsigned long errata;
+
 };
 
 /* TWL4030_GPIO_MAX (18) GPIOs, with interrupts */
@@ -741,9 +805,11 @@ static inline int twl4030_remove_script(u8 flags) { return -EINVAL; }
 #endif
 
 #ifdef CONFIG_TWL6030_POWER
-extern void twl6030_power_init(struct twl4030_power_data *power_data);
+extern void twl6030_power_init(struct twl4030_power_data *power_data,\
+					unsigned long features);
 #else
-extern inline void twl6030_power_init(struct twl4030_power_data *power_data) { }
+extern inline void twl6030_power_init(struct twl4030_power_data *power_data,\
+					unsigned long features) { }
 #endif
 
 struct twl4030_codec_audio_data {
@@ -848,6 +914,10 @@ struct twl4030_platform_data {
 	struct regulator_init_data		*smps3;
 	struct regulator_init_data		*smps4;
 	struct regulator_init_data		*vio6032;
+
+	/* External control pins */
+	struct regulator_init_data		*sysen;
+	struct regulator_init_data		*regen1;
 };
 
 /*----------------------------------------------------------------------*/
@@ -946,5 +1016,13 @@ static inline int twl4030charger_usb_en(int enable) { return 0; }
 #define TWL6032_REG_VIO		60
 
 #define TWL6030_REG_CLK32KAUDIO	61
+
+/* External control pins */
+#define TWL6030_REG_SYSEN	62
+#define TWL6030_REG_REGEN1	63
+
+#define TWL6032_PREQ1_RES_ASS_A	0xd7
+
+#define TWL6032_ERRATA_DB00119490	(1 << 0)
 
 #endif /* End of __TWL4030_H */

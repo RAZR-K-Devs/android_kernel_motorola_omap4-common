@@ -366,6 +366,8 @@ void gc_dump_phys_surface(struct gcdbgfilter *filter, unsigned int zone,
 			  unsigned int gpuaddr);
 
 /* Dump MMU content. */
+void gc_dump_mmu_arenas(struct gcdbgfilter *filter, unsigned int zone,
+			char *message, struct list_head *head);
 void gc_dump_mmu(struct gcdbgfilter *filter, unsigned int zone,
 		 struct gcmmucontext *gcmmucontext);
 
