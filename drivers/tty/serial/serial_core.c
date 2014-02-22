@@ -2000,15 +2000,18 @@ int uart_resume_port(struct uart_driver *drv, struct uart_port *uport)
 		memset(&termios, 0, sizeof(struct ktermios));
 		termios.c_cflag = uport->cons->cflag;
 
+		if (console_suspend_enabled)
+			uart_change_pm(state, 0);
 		/*
 		 * If that's unset, use the tty termios setting.
 		 */
-		if (port->tty && port->tty->termios && termios.c_cflag == 0)
+		if (termios.c_cflag)
+			uport->ops->set_termios(uport, &termios, NULL);
+		else if (port->tty && port->tty->termios) {
 			termios = *(port->tty->termios);
+			uport->ops->set_termios(uport, &termios, NULL);
+		}
 
-		if (console_suspend_enabled)
-			uart_change_pm(state, 0);
-		uport->ops->set_termios(uport, &termios, NULL);
 		if (console_suspend_enabled)
 			console_start(uport->cons);
 	}
@@ -2328,6 +2331,7 @@ void uart_unregister_driver(struct uart_driver *drv)
 	tty_unregister_driver(p);
 	put_tty_driver(p);
 	kfree(drv->state);
+	drv->state = NULL;
 	drv->tty_driver = NULL;
 }
 
