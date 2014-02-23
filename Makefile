@@ -1,8 +1,8 @@
 VERSION = 3
 PATCHLEVEL = 0
-SUBLEVEL = 31
+SUBLEVEL = 72
 EXTRAVERSION =
-NAME = Sneaky WeaselB
+NAME = Sneaky Weasel
 
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
@@ -246,7 +246,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 HOSTCC       = ccache gcc 
 HOSTCXX      = ccache g++
 HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
-HOSTCXXFLAGS = -O2 -Wall -fno-delete-null-pointer-checks
+HOSTCXXFLAGS = -O2
+# HOSTCXXFLAGS = -O2 -Wall -fno-delete-null-pointer-checks
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -347,7 +348,8 @@ CHECK		= sparse
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-CFLAGS_MODULE   = -DMODULE -O2 -mfpu=neon -march=armv7-a -mtune=cortex-a9 -funswitch-loops -fpredictive-commoning -fgcse-after-reload -ftree-vectorize -fipa-cp-clone -fsingle-precision-constant -pipe
+CFLAGS_MODULE   =
+# CFLAGS_MODULE   = -DMODULE -O2 -mfpu=neon -march=armv7-a -mtune=cortex-a9 -funswitch-loops -fpredictive-commoning -fgcse-after-reload -ftree-vectorize -fipa-cp-clone -fsingle-precision-constant -pipe
 AFLAGS_MODULE   =
 LDFLAGS_MODULE  =
 CFLAGS_KERNEL	=
