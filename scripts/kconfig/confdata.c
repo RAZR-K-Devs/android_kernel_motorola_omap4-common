@@ -352,7 +352,7 @@ int conf_read(const char *name)
 
 	sym_set_change_count(0);
 
-	if (conf_read_simple(name, S_DEF_USER, true))
+	if (conf_read_simple(name, S_DEF_USER, 1))
 		return 1;
 
 	for_all_symbols(i, sym) {
@@ -671,7 +671,7 @@ static int conf_split_config(void)
 	int res, i, fd;
 
 	name = conf_get_autoconfig_name();
-	conf_read_simple(name, S_DEF_AUTO, true);
+	conf_read_simple(name, S_DEF_AUTO, 1);
 
 	if (chdir("include/config"))
 		return 1;
