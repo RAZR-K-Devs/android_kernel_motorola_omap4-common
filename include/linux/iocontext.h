@@ -5,11 +5,10 @@
 #include <linux/radix-tree.h>
 #include <linux/rcupdate.h>
 
-struct cfq_queue;
 struct cfq_io_context {
 	void *key;
 
-	struct cfq_queue *cfqq[2];
+	void *cfqq[2];
 
 	struct io_context *ioc;
 
@@ -50,7 +49,6 @@ struct io_context {
 	spinlock_t lock;
 
 	unsigned short ioprio;
-	unsigned short ioprio_changed;
 	DECLARE_BITMAP(ioprio_changed, IOC_IOPRIO_CHANGED_BITS);
 
 #if defined(CONFIG_BLK_CGROUP) || defined(CONFIG_BLK_CGROUP_MODULE)

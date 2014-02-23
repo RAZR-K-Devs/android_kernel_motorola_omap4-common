@@ -36,7 +36,7 @@ extern unsigned long mem_cgroup_isolate_pages(unsigned long nr_to_scan,
 					struct list_head *dst,
 					unsigned long *scanned, int order,
 					isolate_mode_t mode,
-					int mode, struct zone *z,
+					struct zone *z,
 					struct mem_cgroup *mem_cont,
 					int active, int file);
 
