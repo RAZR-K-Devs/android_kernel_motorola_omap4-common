@@ -281,7 +281,8 @@ static void sr_set_clk_length(struct omap_sr *sr)
 	if (likely(dpll_active)) {
 	if (omap4_is_in_dpll_cascading())
 		sys_clk_speed = 12288000;
-	}
+			}
+	else
 #endif
 		sys_clk_speed = clk_get_rate(sys_ck);
 	clk_put(sys_ck);

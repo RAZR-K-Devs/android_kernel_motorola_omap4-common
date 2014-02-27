@@ -11,9 +11,6 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation.
- *
- * dtrail: Headerfile for OPP eFuse addresses
- *
  */
 
 #ifndef __ARCH_ARM_MACH_OMAP2_CONTROL_H

@@ -31,6 +31,10 @@
 #ifdef CONFIG_LIVE_OC
 #include <linux/live_oc.h>
 #endif
+#ifdef CONFIG_OMAP4_DPLL_CASCADING
+#include <mach/omap4-common.h>
+#endif
+
 
 /**
  * DOC: Introduction
@@ -912,6 +916,11 @@ int omap_device_scale(struct device *req_dev, struct device *target_dev,
 		dev_dbg(target_dev, "%s: pm is not ready yet\n", __func__);
 		return -EBUSY;
 	}
+
+#ifdef CONFIG_OMAP4_DPLL_CASCADING
+	if (omap4_is_in_dpll_cascading())
+		return -EBUSY;
+#endif
 
 	/* Lock me to ensure cross domain scaling is secure */
 	mutex_lock(&omap_dvfs_lock);

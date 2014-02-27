@@ -243,14 +243,6 @@ struct freq_info {
 struct emif_regs {
 	u32 freq;
 	u8 RL_final;
-	u32 ref_ctrl_shdw;
-	u32 ref_ctrl_shdw_derated;
-	u32 sdram_tim1_shdw;
-	u32 sdram_tim1_shdw_derated;
-	u32 sdram_tim2_shdw;
-	u32 sdram_tim3_shdw;
-	u32 read_idle_ctrl_shdw_normal;
-	u32 read_idle_ctrl_shdw_volt_ramp;
 	u32 sdram_config_init;
 	u32 sdram_config_final;
 	u32 ref_ctrl;
@@ -265,8 +257,6 @@ struct emif_regs {
 	u32 zq_config_volt_ramp;
 	u32 temp_alert_config;
 	u32 temp_alert_config_derated;
-	u32 emif_ddr_phy_ctlr_1_shdw_init;
-	u32 emif_ddr_phy_ctlr_1_shdw_final;
 	u32 emif_ddr_phy_ctlr_1_init;
 	u32 emif_ddr_phy_ctlr_1_final;
 };
