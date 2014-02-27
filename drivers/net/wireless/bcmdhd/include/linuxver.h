@@ -40,7 +40,6 @@
 #endif
 #endif 
 #include <linux/module.h>
-#include <linux/semaphore.h>
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 0))
 
