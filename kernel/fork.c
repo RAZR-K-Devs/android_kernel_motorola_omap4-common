@@ -48,6 +48,7 @@
 #include <linux/audit.h>
 #include <linux/memcontrol.h>
 #include <linux/ftrace.h>
+#include <linux/proc_fs.h>
 #include <linux/profile.h>
 #include <linux/rmap.h>
 #include <linux/ksm.h>
@@ -566,7 +567,7 @@ EXPORT_SYMBOL_GPL(__mmdrop);
 /*
  * Decrement the use count and release all resources for an mm.
  */
-int mmput(struct mm_struct *mm)
+void mmput(struct mm_struct *mm)
 {
 	int mm_freed = 0;
 	might_sleep();
@@ -1002,6 +1003,9 @@ static int copy_signal(unsigned long clone_flags, struct task_struct *tsk)
 
 #ifdef CONFIG_CGROUPS
 	init_rwsem(&sig->threadgroup_fork_lock);
+#endif
+#ifdef CONFIG_CPUSETS
+	seqcount_init(&tsk->mems_allowed_seq);
 #endif
 
 	sig->oom_adj = current->signal->oom_adj;
