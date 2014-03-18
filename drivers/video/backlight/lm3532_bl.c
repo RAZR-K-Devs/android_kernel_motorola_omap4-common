@@ -110,6 +110,14 @@
 #define LM3532_REV3		0xF4
 #define LM3532_REV4		0xF8
 
+/*static enum mapphone_panel_init_state panel_init_state =
+                         MAPPHONE_PANEL_UNDETERMINE;
+
+enum mapphone_panel_init_state get_panel_state(void)
+{
+        return panel_init_state;
+}
+*/
 struct lm3532_led {
 	struct led_classdev	cdev;
 	struct work_struct	work;

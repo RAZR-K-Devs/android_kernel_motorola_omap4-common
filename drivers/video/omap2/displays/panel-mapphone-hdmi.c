@@ -160,12 +160,12 @@ static void hdmi_runtime_put(void)
 	}
 }
 
-int hdmi_init_display(struct omap_dss_device *dssdev)
+/*int hdmi_init_display(struct omap_dss_device *dssdev)
 {
 	HDTVDBG("init_display\n");
 
 	return 0;
-}
+}*/
 
 static int relaxed_fb_mode_is_equal(const struct fb_videomode *mode1,
 				    const struct fb_videomode *mode2)
@@ -234,7 +234,7 @@ done:
 	return i >= 0;
 }
 
-void hdmi_get_monspecs(struct fb_monspecs *specs)
+/*void hdmi_get_monspecs(struct fb_monspecs *specs)
 {
 	int i, j;
 	char *edid = (char *) hdmi.edid;
@@ -255,7 +255,7 @@ void hdmi_get_monspecs(struct fb_monspecs *specs)
 	hdmi.can_do_hdmi = specs->misc & FB_MISC_HDMI;
 
 	/* filter out resolutions we don't support */
-	for (i = j = 0; i < specs->modedb_len; i++) {
+/*	for (i = j = 0; i < specs->modedb_len; i++) {
 		u32 max_pclk = hdmi.dssdev->clocks.hdmi.max_pixclk_khz;
 		if (!hdmi_set_timings(&specs->modedb[i], true))
 			continue;
@@ -280,7 +280,7 @@ u8 *hdmi_read_edid(struct omap_video_timings *dp)
 		return hdmi.edid;
 
 	/* Prevent a potential panic */
-	if (hdmi.runtime_count <= 0) {
+/*	if (hdmi.runtime_count <= 0) {
 		pr_err("hdtv: Reading the EDID with the clks off\n");
 		return NULL;
 	}
@@ -311,7 +311,7 @@ u8 *hdmi_read_edid(struct omap_video_timings *dp)
 	hdmi.edid_set = true;
 	return hdmi.edid;
 }
-
+*/
 static void hdmi_compute_pll(struct omap_dss_device *dssdev, int phy,
 		struct hdmi_pll_info *pi)
 {
@@ -612,7 +612,7 @@ static void hdmi_power_off(struct omap_dss_device *dssdev)
 	hdmi.deep_color = HDMI_DEEP_COLOR_24BIT;
 }
 
-int omapdss_hdmi_get_pixel_clock(void)
+/*int omapdss_hdmi_get_pixel_clock(void)
 {
 	return PICOS2KHZ(hdmi.cfg.timings.pixclock);
 }
@@ -639,7 +639,7 @@ void omapdss_hdmi_set_deepcolor(int val)
 	hdmi.deep_color = val;
 }
 
-int omapdss_hdmi_get_deepcolor(void)
+/*int omapdss_hdmi_get_deepcolor(void)
 {
 	return hdmi.deep_color;
 }
@@ -648,7 +648,7 @@ int hdmi_get_current_hpd()
 {
 	return gpio_get_value(hdmi.dssdev->hpd_gpio);
 }
-
+*/
 static irqreturn_t hpd_irq_handler(int irq, void *ptr)
 {
 	int hpd;
@@ -678,15 +678,15 @@ static irqreturn_t hdmi_irq_handler(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
-int omapdss_hdmi_display_check_timing(struct omap_dss_device *dssdev,
+/*int omapdss_hdmi_display_check_timing(struct omap_dss_device *dssdev,
 					struct omap_video_timings *timings)
 {
 	struct fb_videomode t;
 
 	omapfb_dss2fb_timings(timings, &t);
 
-	/* also check interlaced timings */
-	if (!hdmi_set_timings(&t, true)) {
+*/	/* also check interlaced timings */
+/*	if (!hdmi_set_timings(&t, true)) {
 		t.yres *= 2;
 		t.vmode |= FB_VMODE_INTERLACED;
 	}
@@ -705,7 +705,7 @@ int omapdss_hdmi_display_set_mode(struct omap_dss_device *dssdev,
 	HDTVDBG("omapdss_hdmi_display_set_mode\n");
 
 	/* Have to grab these first since "hdmi_set_timings" may change vm */
-	audio_en = (vm->flag & FB_MODE_FLAG_DVI_AUDIO) ? 1 : 0;
+/*	audio_en = (vm->flag & FB_MODE_FLAG_DVI_AUDIO) ? 1 : 0;
 	dssmgr   = (vm->flag & FB_MODE_FLAG_DSSMGR)    ? 1 : 0;
 
 	rc = hdmi_set_timings(vm, false) ? 0 : -EINVAL;
@@ -713,7 +713,7 @@ int omapdss_hdmi_display_set_mode(struct omap_dss_device *dssdev,
 	hdmi.mode = hdmi.cfg.cm.mode;
 	hdmi.code = hdmi.cfg.cm.code;
 	/* Force audio for DVI resolutions if requested */
-	if (audio_en && hdmi.mode == HDMI_DVI) {
+/*	if (audio_en && hdmi.mode == HDMI_DVI) {
 		hdmi.mode = HDMI_HDMI;
 		hdmi.code = 0;
 	}
@@ -722,9 +722,9 @@ int omapdss_hdmi_display_set_mode(struct omap_dss_device *dssdev,
 	 * to function with or without the DSSMGR, mostly for bringup
 	 * purposes, but it doesn't hurt to keep around
 	 */
-	if (rc == 0 && (!dssmgr || hdmi.enabled)) {
+//	if (rc == 0 && (!dssmgr || hdmi.enabled)) {
 		/* turn the hdmi off and on to get new timings to use */
-		hdmi.set_mode = true;
+/*		hdmi.set_mode = true;
 		dssdev->driver->disable(dssdev);
 		hdmi.set_mode = false;
 		rc = dssdev->driver->enable(dssdev);
@@ -739,7 +739,7 @@ void omapdss_hdmi_display_set_timing(struct omap_dss_device *dssdev)
 
 	omapfb_dss2fb_timings(&dssdev->panel.timings, &t);
 	/* also check interlaced timings */
-	if (!hdmi_set_timings(&t, true)) {
+/*	if (!hdmi_set_timings(&t, true)) {
 		t.yres *= 2;
 		t.vmode |= FB_VMODE_INTERLACED;
 	}
@@ -813,7 +813,7 @@ void omapdss_hdmi_display_disable(struct omap_dss_device *dssdev)
 		goto done;
 
 	/* Need to power off before clearing the flags */
-	hdmi_power_off(dssdev);
+/*	hdmi_power_off(dssdev);
 	hdmi.enabled = false;
 	hdmi.edid_only = false;
 	hdmi.wp_reset_done = false;
@@ -821,7 +821,7 @@ void omapdss_hdmi_display_disable(struct omap_dss_device *dssdev)
 	if (dssdev->sync_lost_error == 0)
 		if (dssdev->state != OMAP_DSS_DISPLAY_SUSPENDED) {
 			/* clear EDID and mode on disable only */
-			hdmi.edid_set = false;
+/*			hdmi.edid_set = false;
 			hdmi.custom_set = 0;
 			HDTVDBG("clearing EDID info\n");
 		}
@@ -876,8 +876,8 @@ int omapdss_set_hdmi_mode(struct omap_dss_device *dssdev, int code)
 
 	if (rc == 0 && hdmi.enabled) {
 		printk(KERN_WARNING "hdtv: omapdss_set_hdmi_mode force\n");
-		/* turn the hdmi off and on to get new timings to use */
-		hdmi.set_mode = true;
+*/		/* turn the hdmi off and on to get new timings to use */
+/*		hdmi.set_mode = true;
 		dssdev->driver->disable(dssdev);
 		hdmi.set_mode = false;
 		hdmi.custom_set = 1;
@@ -886,7 +886,7 @@ int omapdss_set_hdmi_mode(struct omap_dss_device *dssdev, int code)
 
 	return rc;
 }
-
+*/
 int omapdss_set_hdmi_hpd(struct omap_dss_device *dssdev, bool enable)
 {
 	int rc = 0;
@@ -913,13 +913,13 @@ int omapdss_set_hdmi_hpd(struct omap_dss_device *dssdev, bool enable)
 
 	return rc;
 }
-
+/*
 void omapdss_set_hdmi_test(int test)
 {
 	if (hdmi.dssdev->set_backlight)
 		hdmi.dssdev->set_backlight(hdmi.dssdev, test);
 }
-
+*/
 static int hdmi_get_clocks(struct platform_device *pdev)
 {
 	struct clk *clk;
@@ -1059,7 +1059,7 @@ static struct platform_driver omapdss_hdmihw_driver = {
 	},
 };
 
-int hdmi_init_platform_driver(void)
+/*int hdmi_init_platform_driver(void)
 {
 	return platform_driver_register(&omapdss_hdmihw_driver);
 }
@@ -1078,3 +1078,4 @@ void hdmi_dump_regs(struct seq_file *s)
 
 	hdmi_runtime_put();
 }
+*/

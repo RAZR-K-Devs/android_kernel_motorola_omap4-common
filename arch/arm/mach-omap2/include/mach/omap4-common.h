@@ -114,6 +114,7 @@ static inline bool omap4_is_in_dpll_cascading(void)
 struct device;
 extern int omap4_dpll_cascading_blocker_hold(struct device *dev);
 extern int omap4_dpll_cascading_blocker_release(struct device *dev);
+#endif
 
 /*
  * Read MPIDR: Multiprocessor affinity register

@@ -10,6 +10,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/gpio.h>
 #include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/delay.h>
@@ -27,6 +28,7 @@
 #include <video/panel.h>
 #include <plat/android-display.h>
 #include "control.h"
+#include "mux.h"
 
 #include "dt_path.h"
 #include <asm/prom.h>
@@ -54,6 +56,10 @@ static unsigned int board_panel_debug;
 
 #define PANELINFO(format, ...) \
 	printk(KERN_INFO "board_panel: " format, ## __VA_ARGS__)
+
+#define HDMI_GPIO_HPD			63  /* Hot plug pin for HDMI */
+
+#define HDMI_GPIO_LS_OE 41 /* Level shifter for HDMI */
 
 #define HDMI_CONTROL_I2C_1_REG          (0x4A100624)
 #define HDMI_CONTROL_I2C_1_DDC_PU_DIS   (0x11000000)
@@ -223,16 +229,34 @@ static struct omap_dss_device mapphone_hdtv_device = {
 	.name                  = "hdmi",
 	.driver_name           = "hdmi_panel",
 	.type                  = OMAP_DISPLAY_TYPE_HDMI,
+	.panel = {
+/*		.hdmi_default_cea_code = 16,
+		.timings = {
+			.x_res = 1920,
+			.y_res = 1080,
+			.pixel_clock = 74250,
+			.hsw = 44,
+			.hfp = 88,
+			.hbp = 148,
+			.vsw = 5,
+			.vfp = 4,
+			.vbp = 36,
+		},
+*/
+	},
 	.clocks	= {
 		.dispc	= {
 			.dispc_fclk_src	= OMAP_DSS_CLK_SRC_FCK,
 		},
 		.hdmi	= {
-			.regn	= 10,
+//			.regn	= 10,
+			.regn	= 15,
 			.regm2	= 1,
+			.max_pixclk_khz = 148500,
 		},
 	},
-	.hpd_gpio = 63,
+	.reset_gpio = -EINVAL,
+	.hpd_gpio = HDMI_GPIO_HPD,
 	.channel = OMAP_DSS_CHANNEL_DIGIT,
 	.manual_power_control  = OMAP_DSS_MPC_DISABLED,
 	.platform_enable       = mapphone_panel_enable_hdtv,
@@ -746,9 +770,9 @@ static int mapphone_dt_get_dsi_panel_info(void)
 			mapphone_lcd_device.phy.dsi.type =
 				OMAP_DSS_DSI_TYPE_VIDEO_MODE;
 #ifdef CONFIG_FB_OMAP_BOOTLOADER_INIT
-			mapphone_lcd_device.skip_vm_init = true;
+			mapphone_lcd_device.skip_init = true;
 #else
-			mapphone_lcd_device.skip_vm_init = false;
+			mapphone_lcd_device.skip_init = false;
 #endif
 		} else {
 			PANELERR("Invalid disp_intf in dt = %d\n", disp_intf);

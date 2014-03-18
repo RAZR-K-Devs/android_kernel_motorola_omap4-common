@@ -113,7 +113,6 @@
 static int _omap_device_activate(struct omap_device *od, u8 ignore_lat)
 {
 	struct timespec a, b, c;
-	int ret = 0;
 
 	pr_debug("omap_device: %s: activating\n", od->pdev.name);
 
@@ -131,7 +130,8 @@ static int _omap_device_activate(struct omap_device *od, u8 ignore_lat)
 
 		read_persistent_clock(&a);
 
-		ret = odpl->activate_func(od);
+		/* XXX check return code */
+		odpl->activate_func(od);
 
 		read_persistent_clock(&b);
 
@@ -162,7 +162,7 @@ static int _omap_device_activate(struct omap_device *od, u8 ignore_lat)
 		od->dev_wakeup_lat -= odpl->activate_lat;
 	}
 
-	return ret;
+	return 0;
 }
 
 /**

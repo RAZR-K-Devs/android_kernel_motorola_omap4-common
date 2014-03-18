@@ -156,7 +156,8 @@ static int hdmi_panel_enable(struct omap_dss_device *dssdev)
 	}
 
 	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
-	r = omapdss_hdmi_display_enable(dssdev, 0);
+//	r = omapdss_hdmi_display_enable(dssdev, 0);
+	r = omapdss_hdmi_display_enable(dssdev);
 	if (r) {
 		printk(KERN_ERR "hdtv: failed to power on\n");
 		goto err;
@@ -270,7 +271,8 @@ static void hdmi_hotplug_detect_worker(struct work_struct *work)
 	} else {
 		if (state == HPD_STATE_START) {
 			dssdev->state = OMAP_DSS_DISPLAY_TRANSITION;
-			rc = omapdss_hdmi_display_enable(dssdev, 1);
+//			rc = omapdss_hdmi_display_enable(dssdev, 1);
+			rc = omapdss_hdmi_display_enable(dssdev);
 			if (rc) {
 				pr_err("hdtv: display enable failed\n");
 				goto done;
@@ -345,10 +347,10 @@ static void hdmi_hotplug_debounce_worker(struct work_struct *work)
 	sDebouncing = 0;
 }
 
-int hdmi_panel_hpd_handler(int hpd)
-{
+//int hdmi_panel_hpd_handler(int hpd)
+//{
 	/* If hotplud detection is off, just shut down. No need to debounce */
-	if (!sHpdEnabled) {
+/*	if (!sHpdEnabled) {
 		HDTVDBG("hdmi_panel_hpd_handler: hpd disabled - shut down");
 		atomic_set(&hpd_work.state, HPD_STATE_OFF);
 		queue_delayed_work(my_workq, &hpd_work.dwork,
@@ -365,7 +367,7 @@ int hdmi_panel_hpd_handler(int hpd)
 	}
 	return 0;
 }
-
+*/
 static void hdmi_get_timings(struct omap_dss_device *dssdev,
 			struct omap_video_timings *timings)
 {
@@ -473,7 +475,7 @@ static struct omap_dss_driver hdmi_driver = {
 	.set_hpd        = hdmi_set_hpd,
 };
 
-int hdmi_panel_init(void)
+/*int hdmi_panel_init(void)
 {
 	mutex_init(&hdmi.hdmi_lock);
 	hdmi.hpd_switch.name = "hdmi";
@@ -486,11 +488,12 @@ int hdmi_panel_init(void)
 
 	return 0;
 }
-
-void hdmi_panel_exit(void)
+*/
+/*void hdmi_panel_exit(void)
 {
 	destroy_workqueue(my_workq);
 	omap_dss_unregister_driver(&hdmi_driver);
 
 	switch_dev_unregister(&hdmi.hpd_switch);
 }
+*/

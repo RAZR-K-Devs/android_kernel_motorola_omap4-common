@@ -419,6 +419,7 @@ static int __init omap2_set_init_voltage(char *vdd_name, char *clk_name,
 	if (freq_cur < freq_valid) {
 		ret = voltdm_scale(voltdm,
 			omap_voltage_get_voltdata(voltdm, bootup_volt));
+//		ret = boot_volt_scale(voltdm, bootup_volt);
 		if (ret) {
 			pr_err("%s: Fail set voltage-%s(f=%ld v=%ld)on vdd%s\n",
 				__func__, vdd_name, freq_valid,
@@ -441,6 +442,7 @@ static int __init omap2_set_init_voltage(char *vdd_name, char *clk_name,
 	if (freq_cur >= freq_valid) {
 		ret = voltdm_scale(voltdm,
 			omap_voltage_get_voltdata(voltdm, bootup_volt));
+//		ret = boot_volt_scale(voltdm, bootup_volt);
 		if (ret) {
 			pr_err("%s: Fail set voltage-%s(f=%ld v=%ld)on vdd%s\n",
 				__func__, clk_name, freq_valid,

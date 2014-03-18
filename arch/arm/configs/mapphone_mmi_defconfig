@@ -459,6 +459,7 @@ CONFIG_ARM_FLUSH_CONSOLE_ON_RESTART=y
 CONFIG_USE_OF=y
 CONFIG_ZBOOT_ROM_TEXT=0
 CONFIG_ZBOOT_ROM_BSS=0
+##CONFIG_CMDLINE="root=/dev/ram0 rw mem=1023M@0x80000000 console=null vram=10300K omapfb.vram=0:8256K,1:4K,2:2040K omapdss.debug=y omapfb.debug=y init=/init ip=off mmcparts=mmcblk1:p7(pds),p8(utags),p14(boot),p15(recovery),p16(cdrom),p17(misc),p18(cid),p19(kpanic),p20(system),p21(cache),p22(preinstall),p23(webtop),p24(userdata),p25(emstorage) mot_sst=1 androidboot.bootloader=0x0A74 androidboot.selinux=permissive"
 CONFIG_CMDLINE="root=/dev/ram0 rw mem=1023M@0x80000000 console=null vram=10300K omapfb.vram=0:8256K,1:4K,2:2040K init=/init ip=off mmcparts=mmcblk1:p7(pds),p8(utags),p14(boot),p15(recovery),p16(cdrom),p17(misc),p18(cid),p19(kpanic),p20(system),p21(cache),p22(preinstall),p23(webtop),p24(userdata),p25(emstorage) mot_sst=1 androidboot.bootloader=0x0A74 androidboot.selinux=permissive"
 # CONFIG_CMDLINE_FROM_BOOTLOADER is not set
 # CONFIG_CMDLINE_EXTEND is not set
@@ -2121,7 +2122,7 @@ CONFIG_FB_MODE_HELPERS=y
 # CONFIG_FB_VIRTUAL is not set
 # CONFIG_FB_METRONOME is not set
 # CONFIG_FB_BROADSHEET is not set
-# CONFIG_HDMI_TI_4XXX_IP is not set
+CONFIG_HDMI_TI_4XXX_IP=y
 # CONFIG_OMAP_HDMI_AUDIO_WA is not set
 CONFIG_FB_OMAP_BOOTLOADER_INIT=y
 CONFIG_OMAP2_VRAM=y
@@ -2220,14 +2221,14 @@ CONFIG_SND_OMAP_SOC_ABE_DSP=y
 CONFIG_SND_OMAP_SOC_MCASP=y
 CONFIG_SND_OMAP_SOC_MCBSP=y
 CONFIG_SND_OMAP_SOC_ABE=y
-# CONFIG_SND_OMAP_SOC_HDMI is not set
-# CONFIG_SND_OMAP_SOC_OMAP4_HDMI= is not set
+CONFIG_SND_OMAP_SOC_HDMI=y
+CONFIG_SND_OMAP_SOC_OMAP4_HDMI=y
 # CONFIG_SND_OMAP4_ABE_USE_ALT_FW is not set
 CONFIG_SND_OMAP_SOC_MOTSND=y
 CONFIG_SND_SOC_I2C_AND_SPI=y
 # CONFIG_SND_SOC_ALL_CODECS is not set
 CONFIG_SND_SOC_SPDIF=y
-# CONFIG_SND_SOC_OMAP_HDMI_CODEC is not set
+CONFIG_SND_SOC_OMAP_HDMI_CODEC=y
 CONFIG_SND_SOC_CPCAP=y
 # CONFIG_SOUND_PRIME is not set
 CONFIG_HID_SUPPORT=y
@@ -2738,6 +2739,7 @@ CONFIG_HWSPINLOCK_OMAP=y
 CONFIG_REMOTE_PROC=y
 CONFIG_REMOTE_PROC_AUTOSUSPEND=y
 CONFIG_OMAP_REMOTE_PROC=y
+CONFIG_OMAP_REMOTE_PROC_IPU=y
 CONFIG_OMAP_RPRES=y
 CONFIG_REMOTEPROC_WATCHDOG=y
 CONFIG_REMOTEPROC_CORE_DUMP=y
@@ -3118,7 +3120,9 @@ CONFIG_CRYPTO_PCBC=y
 # Hash modes
 #
 CONFIG_CRYPTO_HMAC=y
-# CONFIG_CRYPTO_XCBC is not set
+CONFIG_CRYPTO_XCBC=y
+CONFIG_CRYPTO_CBC=y
+
 # CONFIG_CRYPTO_VMAC is not set
 
 #
@@ -3135,7 +3139,7 @@ CONFIG_CRYPTO_MICHAEL_MIC=y
 # CONFIG_CRYPTO_RMD320 is not set
 CONFIG_CRYPTO_SHA1=y
 CONFIG_CRYPTO_SHA256=y
-# CONFIG_CRYPTO_SHA512 is not set
+CONFIG_CRYPTO_SHA512=y
 # CONFIG_CRYPTO_TGR192 is not set
 # CONFIG_CRYPTO_WP512 is not set
 

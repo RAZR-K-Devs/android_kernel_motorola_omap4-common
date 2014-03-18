@@ -36,6 +36,26 @@
 #include <linux/spi/mdm6600_spi_tty.h>
 #include <asm/bootinfo.h>
 
+/*
+static struct regulator_consumer_supply sdp4430_vdac_supply[] = {
+	{
+		.supply = "hdmi_vref",
+	},
+};
+
+static struct regulator_init_data sdp4430_vdac = {
+	.constraints = {
+		.min_uV			= 1800000,
+		.max_uV			= 1800000,
+		.valid_modes_mask	= REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY,
+		.valid_ops_mask		= REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_STATUS,
+		.state_mem		= { .enabled = false, .disabled = true, },
+		.always_on		= true,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(vdac_supply),
+	.consumer_supplies	= vdac_supply,
+};
+*/
 struct cpcap_spi_init_data mapphone_cpcap_spi_init[CPCAP_REG_SIZE + 1] = {
 	{CPCAP_REG_ASSIGN1,   0x0101},
 	{CPCAP_REG_ASSIGN2,   0x0000},
