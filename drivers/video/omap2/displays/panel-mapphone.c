@@ -3807,11 +3807,7 @@ static int mapphone_panel_power_on(struct omap_dss_device *dssdev)
 		goto err0;
 	}
 
-#ifdef CONFIG_PANEL_MAPPHONE_SKIP_FIRSTBOOT
 	static bool skip_first_boot = true;
-#else
-	static bool skip_first_boot = false;
-#endif
 
 	if ((skip_first_boot || !first_boot) && !dssdev->phy.dsi.d2l_use_ulps) {
 		if (dssdev->platform_enable) {
@@ -3850,6 +3846,15 @@ static int mapphone_panel_power_on(struct omap_dss_device *dssdev)
 			clk_disable(clk);
 	}
 #endif
+
+	if (!dssdev->phy.dsi.d2l_use_ulps) {
+		if (dssdev->platform_enable) {
+			ret = dssdev->platform_enable(dssdev);
+		if (ret)
+			goto err0;
+	}
+}
+
 	mapphone_hw_reset(dssdev);
 
 	omapdss_dsi_vc_enable_hs(dssdev, dsi_vc_cmd, false);
