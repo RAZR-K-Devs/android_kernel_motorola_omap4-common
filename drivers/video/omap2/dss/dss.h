@@ -543,10 +543,7 @@ static inline void hdmi_uninit_platform_driver(void)
 {
 }
 #endif
-//#ifndef CONFIG_PANEL_MAPPHONE_OMAP4_HDTV
-//int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev);
-//#endif
-int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev, bool display_on);
+int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev);
 void omapdss_hdmi_display_disable(struct omap_dss_device *dssdev);
 void omapdss_hdmi_display_set_timing(struct omap_dss_device *dssdev);
 int omapdss_hdmi_display_check_timing(struct omap_dss_device *dssdev,
@@ -556,22 +553,21 @@ int omapdss_hdmi_display_set_mode(struct omap_dss_device *dssdev,
 int omapdss_hdmi_display_set_initial_mode(struct omap_dss_device *dssdev);
 
 void omapdss_hdmi_restart(void);
-//int hdmi_panel_hpd_handler(int hpd);
-void hdmi_panel_hpd_handler(void);
+int hdmi_panel_hpd_handler(int hpd);
 int omapdss_hdmi_get_pixel_clock(void);
 int omapdss_hdmi_get_mode(void);
 int omapdss_hdmi_get_deepcolor(void);
-//ssize_t omapdss_hdmi_get_edid(char *edid);
+ssize_t omapdss_hdmi_get_edid(char *edid);
 void omapdss_hdmi_set_deepcolor(int val);
-//int omapdss_hdmi_get_s3d_mode(void);
-//void omapdss_hdmi_set_s3d_mode(int val);
-//void omapdss_hdmi_enable_s3d(bool enable);
-//int omapdss_hdmi_get_s3d_enable(void);
+int omapdss_hdmi_get_s3d_mode(void);
+void omapdss_hdmi_set_s3d_mode(int val);
+void omapdss_hdmi_enable_s3d(bool enable);
+int omapdss_hdmi_get_s3d_enable(void);
 
 int hdmi_get_current_hpd(void);
 void hdmi_get_monspecs(struct fb_monspecs *specs);
-//void hdmi_inform_hpd_to_cec(int status);
-//void hdmi_inform_power_on_to_cec(int status);
+void hdmi_inform_hpd_to_cec(int status);
+void hdmi_inform_power_on_to_cec(int status);
 void hdmi_get_audspecs(struct omap_hdmi_audio_modes *specs);
 u8 *hdmi_read_edid(struct omap_video_timings *);
 void hdmi_set_edid_state(bool val);
@@ -582,12 +578,12 @@ void hdmi_dump_regs(struct seq_file *s);
 int omapdss_hdmi_register_hdcp_callbacks(void (*hdmi_start_frame_cb)(void),
 					 void (*hdmi_irq_cb)(int status),
 					 bool (*hdmi_power_on_cb)(void));
-/*int omapdss_hdmi_register_cec_callbacks(void (*hdmi_cec_enable_cb)(int status),
+int omapdss_hdmi_register_cec_callbacks(void (*hdmi_cec_enable_cb)(int status),
 					 void (*hdmi_cec_irq_cb)(void),
 					 void (*hdmi_cec_hpd)(int phy_addr,
 					 int status));
 int omapdss_hdmi_unregister_cec_callbacks(void);
-*/
+
 int omap_dss_ovl_set_info(struct omap_overlay *ovl,
 		struct omap_overlay_info *info);
 

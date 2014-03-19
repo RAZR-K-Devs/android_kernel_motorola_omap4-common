@@ -21,15 +21,24 @@
 #ifndef _HDMI_TI_4xxx_
 #define _HDMI_TI_4xxx_
 
+#include <video/cec.h>
+
 #define HDMI_HPD_LOW		0x10
 #define HDMI_HPD_HIGH		0x20
 #define HDMI_BCAP		0x40
 #define HDMI_RI_ERR		0x80
+#define HDMI_CEC_INT		0x100
 enum hdmi_pll_pwr {
 	HDMI_PLLPWRCMD_ALLOFF = 0,
 	HDMI_PLLPWRCMD_PLLONLY = 1,
 	HDMI_PLLPWRCMD_BOTHON_ALLCLKS = 2,
 	HDMI_PLLPWRCMD_BOTHON_NOPHYCLK = 3
+};
+
+enum hdmi_pwrchg_reasons {
+	HDMI_PWRCHG_DEFAULT = 0,
+	HDMI_PWRCHG_MODE_CHANGE = (1L << 0),
+	HDMI_PWRCHG_RESYNC = (1L << 1),
 };
 
 enum hdmi_core_hdmi_dvi {
@@ -49,6 +58,7 @@ struct hdmi_ip_data {
 	unsigned long hdmi_core_av_offset;
 	unsigned long hdmi_pll_offset;
 	unsigned long hdmi_phy_offset;
+	unsigned long hdmi_cec_offset;
 };
 
 struct hdmi_video_timings {
@@ -72,10 +82,8 @@ struct hdmi_timings {
 };
 
 struct hdmi_cm {
-	int	cea_code; /* set only if the video mode is a cea one,
-			   * will be 0 if the video mode is a vesa one
-			   */
-	int	hdmi_mode; /* HDMI_HDMI or HDMI_DVI */
+	int	code;
+	int	mode;
 };
 
 struct hdmi_config {
@@ -278,7 +286,22 @@ struct hdmi_core_infoframe_audio {
 	u8 db5_lsv;	/* Level shift values for downmix */
 };
 
+enum hdmi_3d_format {
+	HDMI_FRAME_PACKING = 0,
+	HDMI_FIELD_ALTERNATIVE = 1,
+	HDMI_LINE_ALTERNATIVE = 2,
+	HDMI_SIDE_BY_SIDE_FULL = 3,
+	HDMI_L_DEPTH = 4,
+	HDMI_L_DEPTH_GFX_GFX_DEPTH = 5,
+	HDMI_TOPBOTTOM = 6,
+	HDMI_SIDE_BY_SIDE_HALF = 8
+};
 
+struct hdmi_core_vendor_specific_infoframe {
+	bool enable;
+	u8 s3d_structure;
+	u8 s3d_ext_data;
+};
 
 /* INFOFRAME_AVI_ and INFOFRAME_AUDIO_ definitions */
 enum hdmi_core_infoframe {
@@ -364,7 +387,8 @@ enum hdmi_aksv_err {
 };
 
 int hdmi_ti_4xxx_phy_init(struct hdmi_ip_data *ip_data, int phy);
-void hdmi_ti_4xxx_phy_off(struct hdmi_ip_data *ip_data, bool set_mode);
+void hdmi_ti_4xxx_phy_off(struct hdmi_ip_data *ip_data,
+			enum hdmi_pwrchg_reasons reason);
 int read_ti_4xxx_edid(struct hdmi_ip_data *ip_data, u8 *pedid, u16 max_length);
 void hdmi_ti_4xxx_wp_video_start(struct hdmi_ip_data *ip_data, bool start);
 int hdmi_ti_4xxx_pll_program(struct hdmi_ip_data *ip_data,
@@ -387,7 +411,28 @@ void hdmi_ti_4xxx_core_audio_config(struct hdmi_ip_data *ip_data,
 					struct hdmi_core_audio_config *cfg);
 void hdmi_ti_4xxx_core_audio_infoframe_config(struct hdmi_ip_data *ip_data,
 		struct hdmi_core_infoframe_audio *info_aud);
-void hdmi_ti_4xxx_audio_enable(struct hdmi_ip_data *ip_data, bool idle);
+void hdmi_ti_4xxx_audio_transfer_en(struct hdmi_ip_data *ip_data,
+						bool idle);
+void hdmi_ti_4xxx_wp_audio_enable(struct hdmi_ip_data *ip_data, bool idle);
+
 int hdmi_ti_4xxx_set_wait_soft_reset(struct hdmi_ip_data *ip_data);
 int hdmi_ti_4xx_check_aksv_data(struct hdmi_ip_data *ip_data);
+void hdmi_core_vsi_config(struct hdmi_ip_data *ip_data,
+		struct hdmi_core_vendor_specific_infoframe *config);
+int hdmi_ti_4xx_cec_get_rx_cmd(struct hdmi_ip_data *ip_data,
+		char *rx_cmd);
+int hdmi_ti_4xx_cec_read_rx_cmd(struct hdmi_ip_data *ip_data,
+		struct cec_rx_data *rx_data);
+int hdmi_ti_4xx_cec_transmit_cmd(struct hdmi_ip_data *ip_data,
+		struct cec_tx_data *data, int *cmd_acked);
+int hdmi_ti_4xxx_power_on_cec(struct hdmi_ip_data *ip_data);
+int hdmi_ti_4xxx_cec_get_rx_int(struct hdmi_ip_data *ip_data);
+int hdmi_ti_4xxx_cec_clr_rx_int(struct hdmi_ip_data *ip_data, int cec_rx);
+int hdmi_ti_4xxx_cec_get_listening_mask(struct hdmi_ip_data *ip_data);
+int hdmi_ti_4xxx_cec_add_listening_device(struct hdmi_ip_data *ip_data,
+		int device_id, int clear);
+int hdmi_ti_4xxx_cec_set_listening_mask(struct hdmi_ip_data *ip_data,
+		int mask);
+
+
 #endif

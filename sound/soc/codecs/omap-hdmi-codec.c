@@ -35,7 +35,6 @@
 #include <sound/initval.h>
 #include <sound/tlv.h>
 
-#include <plat/hdmi_audio_codec.h>
 #include <plat/omap_hwmod.h>
 #include <video/omapdss.h>
 #include <video/hdmi_ti_4xxx_ip.h>
@@ -58,7 +57,7 @@ struct hdmi_params {
 
 
 /* codec private data */
-static struct hdmi_codec_data {
+struct hdmi_codec_data {
 	struct hdmi_audio_format audio_fmt;
 	struct hdmi_audio_dma audio_dma;
 	struct hdmi_core_audio_config audio_core_cfg;
@@ -68,12 +67,11 @@ static struct hdmi_codec_data {
 	struct omap_dss_device *dssdev;
 	struct notifier_block notifier;
 	struct hdmi_params params;
+	struct delayed_work delayed_work;
+	struct workqueue_struct *workqueue;
 	int active;
-
-	spinlock_t active_substream_lock;
-	struct snd_pcm_substream *active_substream;
-	int plug_state;
 } hdmi_data;
+
 
 static int hdmi_audio_set_configuration(struct hdmi_codec_data *priv)
 {
@@ -84,6 +82,9 @@ static int hdmi_audio_set_configuration(struct hdmi_codec_data *priv)
 	int err, n, cts, channel_alloc;
 	enum hdmi_core_audio_sample_freq sample_freq;
 	u32 pclk = omapdss_hdmi_get_pixel_clock();
+	struct omap_chip_id audio_must_use_mclk;
+
+	audio_must_use_mclk.oc = CHIP_IS_OMAP4430ES2_3 | CHIP_IS_OMAP446X;
 
 	switch (priv->params.format) {
 	case SNDRV_PCM_FORMAT_S16_LE:
@@ -171,7 +172,7 @@ static int hdmi_audio_set_configuration(struct hdmi_codec_data *priv)
 	if (dss_has_feature(FEAT_HDMI_CTS_SWMODE)) {
 		core_cfg->aud_par_busclk = 0;
 		core_cfg->cts_mode = HDMI_AUDIO_CTS_MODE_SW;
-		core_cfg->use_mclk = cpu_is_omap446x();
+		core_cfg->use_mclk = omap_chip_is(audio_must_use_mclk);
 	} else {
 		core_cfg->aud_par_busclk = (((128 * 31) - 1) << 8);
 		core_cfg->cts_mode = HDMI_AUDIO_CTS_MODE_HW;
@@ -189,6 +190,7 @@ static int hdmi_audio_set_configuration(struct hdmi_codec_data *priv)
 	core_cfg->en_parallel_aud_input = true;
 
 	/* Number of channels */
+	aud_if_cfg->db1_channel_count = priv->params.channels_nr;
 
 	switch (priv->params.channels_nr) {
 	case 2:
@@ -201,13 +203,21 @@ static int hdmi_audio_set_configuration(struct hdmi_codec_data *priv)
 		break;
 	case 6:
 		core_cfg->layout = HDMI_AUDIO_LAYOUT_8CH;
-		channel_alloc = 0xB;
+		channel_alloc = 0x13;
 		audio_format->stereo_channels = HDMI_AUDIO_STEREO_FOURCHANNELS;
 		audio_format->active_chnnls_msk = 0x3f;
 		/* Enable all of the four available serial data channels */
 		core_cfg->i2s_cfg.active_sds = HDMI_AUDIO_I2S_SD0_EN |
 				HDMI_AUDIO_I2S_SD1_EN | HDMI_AUDIO_I2S_SD2_EN |
 				HDMI_AUDIO_I2S_SD3_EN;
+		/*
+		 * Overwrite info frame with channel count = 7 (8-1) and
+		 * CA = 0x13 in order to ensure that sample_present bits
+		 * configuration matches the number of channels (2 channels
+		 * are padded with zeroes) that are sent to fullfil
+		 * multichannel certification tests.
+		 */
+		aud_if_cfg->db1_channel_count = 8;
 		break;
 	case 8:
 		core_cfg->layout = HDMI_AUDIO_LAYOUT_8CH;
@@ -232,7 +242,6 @@ static int hdmi_audio_set_configuration(struct hdmi_codec_data *priv)
 	 * info frame audio see doc CEA861-D page 74
 	 */
 	aud_if_cfg->db1_coding_type = HDMI_INFOFRAME_AUDIO_DB1CT_FROM_STREAM;
-	aud_if_cfg->db1_channel_count = priv->params.channels_nr;
 	aud_if_cfg->db2_sample_freq = HDMI_INFOFRAME_AUDIO_DB2SF_FROM_STREAM;
 	aud_if_cfg->db2_sample_size = HDMI_INFOFRAME_AUDIO_DB2SS_FROM_STREAM;
 	aud_if_cfg->db4_channel_alloc = channel_alloc;
@@ -251,19 +260,24 @@ int hdmi_audio_notifier_callback(struct notifier_block *nb,
 
 	if (state == OMAP_DSS_DISPLAY_ACTIVE) {
 		/* this happens just after hdmi_power_on */
-		if (hdmi_data.active) {
-			hdmi_ti_4xxx_audio_enable(&hdmi_data.ip_data, 0);
-		}
-
 		hdmi_audio_set_configuration(&hdmi_data);
 		if (hdmi_data.active) {
 			omap_hwmod_set_slave_idlemode(hdmi_data.oh,
 							HWMOD_IDLEMODE_NO);
-			hdmi_ti_4xxx_audio_enable(&hdmi_data.ip_data, 1);
-
+			hdmi_ti_4xxx_wp_audio_enable(&hdmi_data.ip_data, 1);
+			queue_delayed_work(hdmi_data.workqueue,
+				&hdmi_data.delayed_work,
+				msecs_to_jiffies(1));
 		}
+	} else {
+		cancel_delayed_work(&hdmi_data.delayed_work);
 	}
 	return 0;
+}
+
+static void hdmi_audio_work(struct work_struct *work)
+{
+	hdmi_ti_4xxx_audio_transfer_en(&hdmi_data.ip_data, 1);
 }
 
 int hdmi_audio_match(struct omap_dss_device *dssdev, void *arg)
@@ -303,19 +317,19 @@ static int hdmi_audio_trigger(struct snd_pcm_substream *substream, int cmd,
 		 */
 		omap_hwmod_set_slave_idlemode(priv->oh,
 			HWMOD_IDLEMODE_NO);
-		{
-			hdmi_ti_4xxx_audio_enable(&priv->ip_data, 1);
+		hdmi_ti_4xxx_wp_audio_enable(&priv->ip_data, 1);
+		queue_delayed_work(priv->workqueue, &priv->delayed_work,
+				msecs_to_jiffies(1));
 
-		}
 		priv->active = 1;
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+		cancel_delayed_work(&hdmi_data.delayed_work);
 		priv->active = 0;
-		{
-			hdmi_ti_4xxx_audio_enable(&priv->ip_data, 0);
-		}
+		hdmi_ti_4xxx_audio_transfer_en(&priv->ip_data, 0);
+		hdmi_ti_4xxx_wp_audio_enable(&priv->ip_data, 0);
 		/*
 		 * switch back to smart-idle & wakeup capable
 		 * after audio activity stops
@@ -332,55 +346,17 @@ static int hdmi_audio_trigger(struct snd_pcm_substream *substream, int cmd,
 static int hdmi_audio_startup(struct snd_pcm_substream *substream,
 				  struct snd_soc_dai *dai)
 {
-	unsigned long irq_state;
-	int ret_val = 0;
-
-	spin_lock_irqsave(&hdmi_data.active_substream_lock, irq_state);
-	if (!hdmi_data.plug_state) {
-		pr_err("Cannot start HDMI audio.  The HDMI cable could be"
-			" unplugged, or a pixel clock may not have been"
-			" selected or the sink may not support audio for the"
-			" currently selected video mode.\n");
-		ret_val = -EIO;
-		goto done;
+	if (!omapdss_hdmi_get_mode()) {
+		pr_err("Current video settings do not support audio.\n");
+		return -EIO;
 	}
-	hdmi_data.active_substream = substream;
-
-done:
-	spin_unlock_irqrestore(&hdmi_data.active_substream_lock, irq_state);
-	return ret_val;
-}
-
-static int hdmi_audio_shutdown(struct snd_pcm_substream *substream,
-				  struct snd_soc_dai *dai)
-{
-	unsigned long irq_state;
-
-	spin_lock_irqsave(&hdmi_data.active_substream_lock, irq_state);
-	hdmi_data.active_substream = NULL;
-	spin_unlock_irqrestore(&hdmi_data.active_substream_lock, irq_state);
 	return 0;
 }
-
-static int hdmi_audio_ioctl(
-		struct snd_pcm_substream* substream,
-		struct snd_soc_dai* dai,
-		unsigned int cmd, void *arg)
-{
-	switch (cmd) {
-	default:
-		return -ENOIOCTLCMD;
-	}
-}
-
 static int hdmi_probe(struct snd_soc_codec *codec)
 {
 	struct platform_device *pdev = to_platform_device(codec->dev);
 	struct resource *hdmi_rsrc;
 	int ret = 0;
-
-	spin_lock_init(&hdmi_data.active_substream_lock);
-	hdmi_data.plug_state = 0;
 
 	snd_soc_codec_set_drvdata(codec, &hdmi_data);
 
@@ -428,6 +404,10 @@ static int hdmi_probe(struct snd_soc_codec *codec)
 	blocking_notifier_chain_register(&hdmi_data.dssdev->state_notifiers,
 			&hdmi_data.notifier);
 
+	hdmi_data.workqueue = create_singlethread_workqueue("hdmi-codec");
+
+	INIT_DELAYED_WORK(&hdmi_data.delayed_work, hdmi_audio_work);
+
 	return 0;
 
 dssdev_err:
@@ -448,54 +428,6 @@ static int hdmi_remove(struct snd_soc_codec *codec)
 	return 0;
 }
 
-/* omap_hdmi_audio_set_plug_state(int plugged)
- *
- * A hack function added to work around some issues with the exisitng HDMI audio
- * architecture.  Basically, when the HDMI cable is unplugged, the hdmi video
- * subsystem wants to immediately shut down the entire HDMI unit.  Unfortunatly,
- * it was relying upon the application level to handle this task, quickly, by
- * monitoring the appropriate switch devices which are manipulated by the kernel
- * level.
- *
- * If the user-land level of the system is slow, or not paying attention, or
- * simply does not want to shut down the audio, then the video shutdown
- * operation in the kernel is going to get wedged behind a number of long
- * timeouts.  When these timeouts have expired, the video shutdown operation
- * will shutdown the entire HDMI unit (de-clocking it in the process).  If/When
- * the app level wakes back up again and attempts to access the hdmi audio
- * registers, it will trigger a kernel panic because of the attempts to access
- * the now powered down unit.
- *
- * Kernel code should never rely on application code doing anything (in a timely
- * fashion or not).  The workaround for now is to allow the kernel to signal the
- * plug state to the hdmi sound driver.  We will immediately shutdown the ALSA
- * device and put it into the DISCONNECTED state.  Calls to the driver will
- * start to fail, as will attempts to close and re-open the driver (which should
- * be the only way out of the DISCONNECTED state).  No matter how badly behaved
- * the app level code is, at least it cannot trigger a kernel panic.  Well
- * behaved application code will receive clear signals that the audio driver has
- * become disconnected and can handle cleanup at their own pace.
- */
-void omap_hdmi_audio_set_plug_state(int plugged)
-{
-	unsigned long irq_state;
-
-	spin_lock_irqsave(&hdmi_data.active_substream_lock, irq_state);
-	hdmi_data.plug_state = plugged;
-
-	if ((NULL == hdmi_data.active_substream) || hdmi_data.plug_state)
-		goto done;
-
-	snd_pcm_stream_lock_irq(hdmi_data.active_substream);
-	snd_pcm_stop(hdmi_data.active_substream, SNDRV_PCM_STATE_DISCONNECTED);
-	snd_pcm_stream_unlock_irq(hdmi_data.active_substream);
-	hdmi_data.active_substream = NULL;
-
-done:
-	spin_unlock_irqrestore(&hdmi_data.active_substream_lock, irq_state);
-}
-EXPORT_SYMBOL(omap_hdmi_audio_set_plug_state);
-
 
 static struct snd_soc_codec_driver hdmi_audio_codec_drv = {
 	.probe = hdmi_probe,
@@ -506,8 +438,6 @@ static struct snd_soc_dai_ops hdmi_audio_codec_ops = {
 	.hw_params = hdmi_audio_hw_params,
 	.trigger = hdmi_audio_trigger,
 	.startup = hdmi_audio_startup,
-	.shutdown = hdmi_audio_shutdown,
-	.ioctl = hdmi_audio_ioctl,
 };
 
 static struct snd_soc_dai_driver hdmi_codec_dai_drv = {
