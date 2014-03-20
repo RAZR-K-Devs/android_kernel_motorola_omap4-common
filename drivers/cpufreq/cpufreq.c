@@ -1962,6 +1962,8 @@ EXPORT_SYMBOL(cpufreq_update_policy);
  *	@cpu: CPU whose governor needs to be changed
  *	@target_gov: new governor to be set
  */
+ // DISABLED - We use default function
+ /*
 int cpufreq_set_gov(char *target_gov, unsigned int cpu)
 {
 	int ret = 0;
@@ -1971,7 +1973,7 @@ int cpufreq_set_gov(char *target_gov, unsigned int cpu)
 	if (target_gov == NULL)
 		return -EINVAL;
 
-	/* Get current governer */
+	// Get current governer 
 	cur_policy = cpufreq_cpu_get(cpu);
 	if (!cur_policy)
 		return -EINVAL;
@@ -1979,7 +1981,7 @@ int cpufreq_set_gov(char *target_gov, unsigned int cpu)
 	new_policy = *cur_policy;
 	if (!strncmp(cur_policy->governor->name, target_gov,
 			strlen(target_gov))) {
-		/* Target governer & current governer is same */
+		// Target governer & current governer is same 
 		ret = -EINVAL;
 		goto err_out;
 	} else {
@@ -2005,7 +2007,7 @@ err_out:
 	cpufreq_cpu_put(cur_policy);
 	return ret;
 }
-EXPORT_SYMBOL(cpufreq_set_gov);
+EXPORT_SYMBOL(cpufreq_set_gov); */
 
 static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 					unsigned long action, void *hcpu)
