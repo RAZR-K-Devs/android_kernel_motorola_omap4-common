@@ -99,7 +99,9 @@ static int ohci_omap3_bus_resume(struct usb_hcd *hcd)
 
 	oh = omap_hwmod_lookup(USBHS_OHCI_HWMODNAME);
 
+	if (oh)
 	omap_hwmod_disable_ioring_wakeup(oh);
+
 
 	/* Re-enable any external transceiver */
 	pdata = dev->platform_data;
@@ -111,6 +113,8 @@ static int ohci_omap3_bus_resume(struct usb_hcd *hcd)
 
 	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 	enable_irq(hcd->irq);
+
+	*pdata->usbhs_update_sar = 1;
 
 	return ohci_bus_resume(hcd);
 }
@@ -201,12 +205,13 @@ static const struct hc_driver ohci_omap3_hc_driver = {
  */
 static int __devinit ohci_hcd_omap3_probe(struct platform_device *pdev)
 {
-	struct device		*dev = &pdev->dev;
-	struct usb_hcd		*hcd = NULL;
-	void __iomem		*regs = NULL;
-	struct resource		*res;
-	int			ret = -ENODEV;
-	int			irq;
+	struct device				*dev = &pdev->dev;
+	struct ohci_hcd_omap_platform_data	*pdata = dev->platform_data;
+	struct usb_hcd				*hcd = NULL;
+	void __iomem				*regs = NULL;
+	struct resource				*res;
+	int					ret = -ENODEV;
+	int					irq;
 
 	if (usb_disabled())
 		goto err_end;
@@ -248,6 +253,7 @@ static int __devinit ohci_hcd_omap3_probe(struct platform_device *pdev)
 	hcd->regs =  regs;
 
 	pm_runtime_get_sync(dev->parent);
+	*pdata->usbhs_update_sar = 1;
 
 	ohci_hcd_init(hcd_to_ohci(hcd));
 

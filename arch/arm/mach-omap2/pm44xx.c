@@ -79,8 +79,6 @@ static struct clockdomain *tesla_clkdm;
 static struct powerdomain *tesla_pwrdm;
 
 static struct clockdomain *emif_clkdm, *mpuss_clkdm;
-static int need_sar_restore;
-
 static struct clockdomain *abe_clkdm;
 
 /* Yet un-named erratum which requires AUTORET to be disabled for IVA PD
@@ -381,11 +379,8 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 		}
 
 		/* Save the device context to SAR RAM */
-		if (omap4_sar_save()) {
-			need_sar_restore = 0;
+		if (omap4_sar_save())
 			goto abort_device_off;
-		}
-		need_sar_restore = 1;
 		omap4_sar_overwrite();
 		omap4_cm_prepare_off();
 		omap4_dpll_prepare_off();
@@ -934,19 +929,7 @@ static int omap4_pm_suspend(void)
 	if (ret)
 		pr_err("Could not enter target state in pm_suspend\n");
 	else
-		pr_info("Successfully put all powerdomains to target state\n");
-
-	if (off_mode_enabled)
-		omap_voltage_reconfigure_switchers();
-
-	/*
-	 * Restore USB SAR registers only if off mode is enabled
-	 * and we fail to hit OFF mode. Otherwise USB SAR context
-	 * gets corrupted due to the SAR save.
-	 */
-	if (off_mode_enabled && !omap4_device_prev_state_off() &&
-		need_sar_restore)
-		omap4_usb_sar_restore();
+		pr_err("Successfully put all powerdomains to target state\n");
 
 	return 0;
 }
@@ -1719,4 +1702,3 @@ err2:
 	return ret;
 }
 late_initcall(omap4_pm_init);
-
