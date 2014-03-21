@@ -221,6 +221,13 @@ config CPU_FREQ_DEFAULT_GOV_INTELLIDEMAND
 	  Use the CPUFreq governor 'intellidemand' as default. This is
 	  based on Ondemand with browsing detection based on GPU loading
 
+config CPU_FREQ_DEFAULT_GOV_NIGHTMARE
+	bool "nightmare"
+	select CPU_FREQ_GOV_NIGHTMARE
+	help
+	  Use the CPUFreq governor 'nightmare' as default. This is
+	  based on ltoonservative with browsing detection based on GPU loading
+
 config CPU_FREQ_DEFAULT_GOV_ADAPTIVE
 	bool "adaptive"
 	select CPU_FREQ_GOV_ADAPTIVE
@@ -627,6 +634,10 @@ config INTELLI_MAX_INACTIVE_FREQ
 	default	1134000
 	help
 		Set default max inactive frequency for intellidemand
+
+config CPU_FREQ_GOV_NIGHTMARE
+        tristate "'nightmare' cpufreq governor"
+        depends on CPU_FREQ
 
 config CPU_FREQ_GOV_ONDEMAND_2_PHASE
 	tristate "'2-phase' power-efficiency ondemand algorithm"
