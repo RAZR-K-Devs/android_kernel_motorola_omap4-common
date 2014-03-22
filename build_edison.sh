@@ -34,7 +34,7 @@ cd /data/4.4/
 export USE_CCACHE=1
 source build/envsetup.sh
 export PATH=${PATH/\/path\/to\/jdk\/dir:/}
-lunch cm_umts_spyder-userdebug
+lunch cm_edison-userdebug
 
 # built kernel & modules
 echo "Building kernel and modules..."
@@ -55,7 +55,7 @@ echo " "
 while true; do
     read -p "Do you wish to include 10% battery meter? " yn
     case $yn in
-        [Yy]* ) echo "Moving Ramdisk into built path..."; echo " "; cp /data/4.4/out/target/product/umts_spyder/ramdisk.img /home/dtrail/android/built/4.4/3.0/edison/rls/jbx/Applications/ramdisk/; break;;
+        [Yy]* ) echo "Moving Ramdisk into built path..."; echo " "; cp /data/4.4/out/target/product/edison/ramdisk.img /home/dtrail/android/built/4.4/3.0/edison/rls/jbx/Applications/ramdisk/; break;;
         [Nn]* ) break;;
         * ) echo "Please answer yes or no.";;
     esac
@@ -66,8 +66,8 @@ echo " "
 # We don't use the kernel but the modules
 echo "Copying modules to package folder"
 echo " "
-cp -r /data/4.4/out/target/product/umts_spyder/system/lib/modules/* /home/dtrail/android/built/4.4/3.0/edison/rls/system/lib/modules/
-cp /data/4.4/out/target/product/umts_spyder/kernel /home/dtrail/android/built/4.4/3.0/edison/rls/system/etc/kexec/
+cp -r /data/4.4/out/target/product/edison/system/lib/modules/* /home/dtrail/android/built/4.4/3.0/edison/rls/system/lib/modules/
+cp /data/4.4/out/target/product/edison/kernel /home/dtrail/android/built/4.4/3.0/edison/rls/system/etc/kexec/
 
 echo "------------- "
 echo "Done building"
