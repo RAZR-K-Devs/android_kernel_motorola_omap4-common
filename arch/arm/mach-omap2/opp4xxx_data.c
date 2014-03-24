@@ -308,7 +308,7 @@ static struct omap_opp_def __initdata omap443x_opp_def_list[] = {
 	/* IVA OPP3 - OPP-Turbo */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 332000000, OMAP4430_VDD_IVA_OPPTURBO_UV),
 	/* IVA OPP4 - OPP-Nitro */
-	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 430000000, OMAP4430_VDD_IVA_OPPNITRO_UV),
+	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", false, 430000000, OMAP4430_VDD_IVA_OPPNITRO_UV),
 	/* IVA OPP4 - OPP-NitroSB */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 500000000, OMAP4430_VDD_IVA_OPPNITROSB_UV),
 	/* SGX OPP1 - OPP50 */
@@ -333,7 +333,7 @@ static struct omap_opp_def __initdata omap443x_opp_def_list[] = {
 	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", true, 465500000, OMAP4430_VDD_IVA_OPP100_UV),
 	/* DSP OPP3 - OPPTB */
 #ifdef CONFIG_BATTERY_FRIEND
-	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "false", true, 496000000, OMAP4430_VDD_IVA_OPPTURBO_UV),
+	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "false", false, 496000000, OMAP4430_VDD_IVA_OPPTURBO_UV),
 #else
 	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", true, 496000000, OMAP4430_VDD_IVA_OPPTURBO_UV),
 #endif

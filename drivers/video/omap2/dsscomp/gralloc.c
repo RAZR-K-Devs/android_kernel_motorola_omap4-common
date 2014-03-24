@@ -728,11 +728,8 @@ static void dsscomp_early_suspend_cb(void *data, int status)
 	blank_complete = true;
 	wake_up(&early_suspend_wq);
 }
-#if 1 /* HACK */
-void dsscomp_early_suspend(struct early_suspend *h)
-#else 
+
 static void dsscomp_early_suspend(struct early_suspend *h)
-#endif
 {
 	struct dsscomp_setup_dispc_data d = {
 		.num_mgrs = 0,
@@ -884,7 +881,6 @@ void dsscomp_gralloc_init(struct dsscomp_dev *cdev_)
 		if (!gsync_cachep)
 			pr_err("DSSCOMP: %s: can't create cache\n", __func__);
 	}
-
 
 	if (!clone_wq) {
 		clone_wq = create_singlethread_workqueue("dsscomp_clone_wq");
