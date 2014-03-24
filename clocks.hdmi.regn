@@ -1,0 +1,1141 @@
+arch/arm/mach-omap2/board-devkit8000.c:	if (gpio_is_valid(dssdev->reset_gpio))
+arch/arm/mach-omap2/board-devkit8000.c:		gpio_set_value_cansleep(dssdev->reset_gpio, 1);
+arch/arm/mach-omap2/board-devkit8000.c:	if (gpio_is_valid(dssdev->reset_gpio))
+arch/arm/mach-omap2/board-devkit8000.c:		gpio_set_value_cansleep(dssdev->reset_gpio, 0);
+arch/arm/mach-omap2/board-devkit8000.c:	if (gpio_is_valid(dssdev->reset_gpio))
+arch/arm/mach-omap2/board-devkit8000.c:		gpio_set_value_cansleep(dssdev->reset_gpio, 1);
+arch/arm/mach-omap2/board-devkit8000.c:	if (gpio_is_valid(dssdev->reset_gpio))
+arch/arm/mach-omap2/board-devkit8000.c:		gpio_set_value_cansleep(dssdev->reset_gpio, 0);
+arch/arm/mach-omap2/board-mapphone-panel.c:		if (dssdev->panel.panel_id ==
+arch/arm/mach-omap2/board-mapphone-panel.c:	if (!dssdev->phy.dsi.d2l_use_ulps)
+arch/arm/mach-omap2/board-mapphone-panel.c:	if (dssdev->panel.panel_id == MOT_DISP_LVDS_MIPI_VM_1007_1280_800)
+arch/arm/mach-omap2/board-omap3beagle.c:	if (gpio_is_valid(dssdev->reset_gpio))
+arch/arm/mach-omap2/board-omap3beagle.c:		gpio_set_value(dssdev->reset_gpio, 1);
+arch/arm/mach-omap2/board-omap3beagle.c:	if (gpio_is_valid(dssdev->reset_gpio))
+arch/arm/mach-omap2/board-omap3beagle.c:		gpio_set_value(dssdev->reset_gpio, 0);
+arch/arm/mach-omap2/board-omap4panda.c:	gpio_set_value(dssdev->reset_gpio, 1);
+arch/arm/mach-omap2/board-omap4panda.c:	gpio_set_value(dssdev->reset_gpio, 0);
+arch/arm/mach-omap2/board-rx51-video.c:	gpio_set_value(dssdev->reset_gpio, 1);
+arch/arm/mach-omap2/board-rx51-video.c:	gpio_set_value(dssdev->reset_gpio, 0);
+drivers/video/omap/dispc.c:	dispc.dss_ick = clk_get(&dispc.fbdev->dssdev->dev, "ick");
+drivers/video/omap/dispc.c:	dispc.dss1_fck = clk_get(&dispc.fbdev->dssdev->dev, "fck");
+drivers/video/omap/dispc.c:	dispc.dss_54m_fck = clk_get(&dispc.fbdev->dssdev->dev, "tv_clk");
+drivers/video/omap/rfbi.c:	rfbi.dss_ick = clk_get(&rfbi.fbdev->dssdev->dev, "ick");
+drivers/video/omap/rfbi.c:	rfbi.dss1_fck = clk_get(&rfbi.fbdev->dssdev->dev, "fck");
+drivers/video/omap2/displays/panel-acx565akm.c:	else if (md->dssdev->set_backlight)
+drivers/video/omap2/displays/panel-acx565akm.c:		r = md->dssdev->set_backlight(md->dssdev, level);
+drivers/video/omap2/displays/panel-acx565akm.c:	if (!md->has_bc && md->dssdev->set_backlight == NULL)
+drivers/video/omap2/displays/panel-acx565akm.c:	dev_dbg(&dssdev->dev, "%s\n", __func__);
+drivers/video/omap2/displays/panel-acx565akm.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT | OMAP_DSS_LCD_IVS |
+drivers/video/omap2/displays/panel-acx565akm.c:	dssdev->panel.timings = acx_panel_timings;
+drivers/video/omap2/displays/panel-acx565akm.c:	if (dssdev->platform_enable)
+drivers/video/omap2/displays/panel-acx565akm.c:		dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-acx565akm.c:		dev_err(&dssdev->dev, "%s panel detect error\n", __func__);
+drivers/video/omap2/displays/panel-acx565akm.c:		if (!md->enabled && dssdev->platform_disable)
+drivers/video/omap2/displays/panel-acx565akm.c:			dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-acx565akm.c:		if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-acx565akm.c:			dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-acx565akm.c:		max_brightness = dssdev->max_backlight_level;
+drivers/video/omap2/displays/panel-acx565akm.c:	else if (dssdev->get_backlight)
+drivers/video/omap2/displays/panel-acx565akm.c:		brightness = dssdev->get_backlight(dssdev);
+drivers/video/omap2/displays/panel-acx565akm.c:	dev_dbg(&dssdev->dev, "%s\n", __func__);
+drivers/video/omap2/displays/panel-acx565akm.c:	dev_dbg(&dssdev->dev, "%s\n", __func__);
+drivers/video/omap2/displays/panel-acx565akm.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-acx565akm.c:	if (dssdev->platform_enable) {
+drivers/video/omap2/displays/panel-acx565akm.c:		r = dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-acx565akm.c:	dev_dbg(&dssdev->dev, "%s\n", __func__);
+drivers/video/omap2/displays/panel-acx565akm.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-acx565akm.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-acx565akm.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-acx565akm.c:	dev_dbg(&dssdev->dev, "%s\n", __func__);
+drivers/video/omap2/displays/panel-acx565akm.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-acx565akm.c:	dev_dbg(&dssdev->dev, "%s\n", __func__);
+drivers/video/omap2/displays/panel-acx565akm.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-acx565akm.c:	dev_dbg(&dssdev->dev, "%s\n", __func__);
+drivers/video/omap2/displays/panel-acx565akm.c:	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
+drivers/video/omap2/displays/panel-acx565akm.c:	dev_dbg(&dssdev->dev, "%s\n", __func__);
+drivers/video/omap2/displays/panel-acx565akm.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-acx565akm.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-acx565akm.c:	dssdev->panel.timings = *timings;
+drivers/video/omap2/displays/panel-acx565akm.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/displays/panel-acx565akm.c:			dev_err(&dssdev->dev, "%s enable failed\n", __func__);
+drivers/video/omap2/displays/panel-acx565akm.c:	*timings = dssdev->panel.timings;
+drivers/video/omap2/displays/panel-generic-dpi.c:	return (struct panel_generic_dpi_data *) dssdev->data;
+drivers/video/omap2/displays/panel-generic-dpi.c:	struct panel_drv_data *drv_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-generic-dpi.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-generic-dpi.c:	struct panel_drv_data *drv_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-generic-dpi.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-generic-dpi.c:	dev_dbg(&dssdev->dev, "probe\n");
+drivers/video/omap2/displays/panel-generic-dpi.c:	dssdev->panel.config = panel_config->config;
+drivers/video/omap2/displays/panel-generic-dpi.c:	dssdev->panel.timings = panel_config->timings;
+drivers/video/omap2/displays/panel-generic-dpi.c:	dssdev->panel.acb = panel_config->acb;
+drivers/video/omap2/displays/panel-generic-dpi.c:	dssdev->panel.acbi = panel_config->acbi;
+drivers/video/omap2/displays/panel-generic-dpi.c:	dev_set_drvdata(&dssdev->dev, drv_data);
+drivers/video/omap2/displays/panel-generic-dpi.c:	struct panel_drv_data *drv_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-generic-dpi.c:	dev_dbg(&dssdev->dev, "remove\n");
+drivers/video/omap2/displays/panel-generic-dpi.c:	dev_set_drvdata(&dssdev->dev, NULL);
+drivers/video/omap2/displays/panel-generic-dpi.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-generic-dpi.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-generic-dpi.c:	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
+drivers/video/omap2/displays/panel-generic-dpi.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-generic-dpi.c:	*timings = dssdev->panel.timings;
+drivers/video/omap2/displays/panel-ld089wu1.c:	*timings = dssdev->panel.timings;
+drivers/video/omap2/displays/panel-ld089wu1.c:	dev_info(&dssdev->dev, "set_timings() not implemented\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	if (dssdev == NULL || dssdev->reset_gpio == -1)
+drivers/video/omap2/displays/panel-ld089wu1.c:	gpio_set_value(dssdev->reset_gpio, 1);
+drivers/video/omap2/displays/panel-ld089wu1.c:	gpio_set_value(dssdev->reset_gpio, 0);
+drivers/video/omap2/displays/panel-ld089wu1.c:	gpio_set_value(dssdev->reset_gpio, 1);
+drivers/video/omap2/displays/panel-ld089wu1.c:	if (dssdev == NULL || dssdev->reset_gpio == -1)
+drivers/video/omap2/displays/panel-ld089wu1.c:		gpio_set_value(dssdev->reset_gpio, 1);
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_dbg(&dssdev->dev, "ld089wu1_hw_enable\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:		gpio_set_value(dssdev->reset_gpio, 0);
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_dbg(&dssdev->dev, "ld089wu1_hw_disable\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	dev_dbg(&dssdev->dev, "ld089wu1_probe\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT;
+drivers/video/omap2/displays/panel-ld089wu1.c:	ld089wu1_timings = dssdev->panel.timings;
+drivers/video/omap2/displays/panel-ld089wu1.c:	dev_set_drvdata(&dssdev->dev, d2d);
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_err(&dssdev->dev, "failed to get virtual channel0\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_err(&dssdev->dev, "failed to set VC_ID0\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_err(&dssdev->dev, "failed to get virtual channel1\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_err(&dssdev->dev, "failed to set VC_ID1\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	dev_dbg(&dssdev->dev, "ld089wu1_probe done\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	struct ld089wu1_data *d2d = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-ld089wu1.c:	struct ld089wu1_data *d2d = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-ld089wu1.c:	dssdev->first_vsync = false;
+drivers/video/omap2/displays/panel-ld089wu1.c:	dev_dbg(&dssdev->dev, "power_on\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	if (dssdev->platform_enable)
+drivers/video/omap2/displays/panel-ld089wu1.c:		dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_err(&dssdev->dev, "failed to enable DSI\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	switch (dssdev->ctrl.pixel_size) {
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_warn(&dssdev->dev, "not expected pixel size: %d\n",
+drivers/video/omap2/displays/panel-ld089wu1.c:					dssdev->ctrl.pixel_size);
+drivers/video/omap2/displays/panel-ld089wu1.c:	dev_dbg(&dssdev->dev, "power_on done\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-ld089wu1.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-ld089wu1.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-ld089wu1.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_err(&dssdev->dev, "failed to disable LCD\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	struct ld089wu1_data *d2d = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-ld089wu1.c:	dev_dbg(&dssdev->dev, "disable\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/displays/panel-ld089wu1.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-ld089wu1.c:	struct ld089wu1_data *d2d = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-ld089wu1.c:	dev_dbg(&dssdev->dev, "enable\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED)
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_err(&dssdev->dev, "enable failed\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:		dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-ld089wu1.c:		dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-ld089wu1.c:	dev_dbg(&dssdev->dev, "suspend\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:	dev_dbg(&dssdev->dev, "resume\n");
+drivers/video/omap2/displays/panel-ld089wu1.c:		dev_err(&dssdev->dev, "resume failed\n");
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	if (dssdev->platform_enable) {
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:		r = dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT | OMAP_DSS_LCD_IVS |
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	dssdev->panel.timings = lb035q02_timings;
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	dev_set_drvdata(&dssdev->dev, ld);
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	struct lb035q02_data *ld = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	struct lb035q02_data *ld = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	struct lb035q02_data *ld = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	struct lb035q02_data *ld = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	struct lb035q02_data *ld = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-lgphilips-lb035q02.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-mapphone-d2l.c:	if (dssdev->clocks.dsi.regn == 0)
+drivers/video/omap2/displays/panel-mapphone-d2l.c:	d2l_clk = (2 * (dssdev->clocks.dsi.regm) /
+drivers/video/omap2/displays/panel-mapphone-d2l.c:			(dssdev->clocks.dsi.regn) * 26000000 / 1) / 4;
+drivers/video/omap2/displays/panel-mapphone-d2l.c:	tlpx = (dssdev->phy.dsi.hs_timing.tlpx_half
+drivers/video/omap2/displays/panel-mapphone-d2l.c:	ths_prepare = dssdev->phy.dsi.hs_timing.ths_prepare
+drivers/video/omap2/displays/panel-mapphone-d2l.c:		(dssdev->phy.dsi.hs_timing.ths_prepare_ths_zero
+drivers/video/omap2/displays/panel-mapphone-d2l.c:		- dssdev->phy.dsi.hs_timing.ths_prepare)
+drivers/video/omap2/displays/panel-mapphone-d2l.c:	return (struct mapphone_dsi_panel_data *) dssdev->data;
+drivers/video/omap2/displays/panel-mapphone-d2l.c:		if (dssdev->driver->get_dsi_vc_chnls)
+drivers/video/omap2/displays/panel-mapphone-d2l.c:			dssdev->driver->get_dsi_vc_chnls(dssdev, &dsi_vc_cmd,
+drivers/video/omap2/displays/panel-mapphone-d2l.c:		FLD_VAL(dssdev->panel.timings.x_res, 10, 0);
+drivers/video/omap2/displays/panel-mapphone-d2l.c:		FLD_VAL(dssdev->panel.timings.y_res, 10, 0);
+drivers/video/omap2/displays/panel-mapphone-d2l.c:		if (dssdev->driver->get_dsi_vc_chnls)
+drivers/video/omap2/displays/panel-mapphone-d2l.c:			dssdev->driver->get_dsi_vc_chnls(dssdev, &dsi_vc_cmd,
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		u32 max_pclk = hdmi.dssdev->clocks.hdmi.max_pixclk_khz;
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	pi->regn = dssdev->clocks.hdmi.regn;
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	pi->regm2 = dssdev->clocks.hdmi.regm2;
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	dispc_enable_channel(OMAP_DSS_CHANNEL_DIGIT, dssdev->type, 0);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	p = &dssdev->panel.timings;
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	omapfb_fb2dss_timings(&hdmi.cfg.timings, &dssdev->panel.timings);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:						dssdev->phy.hdmi.ds_percent);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	dss_select_dispc_clk_source(dssdev->clocks.dispc.dispc_fclk_src);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	dispc_set_digit_size(dssdev->panel.timings.x_res,
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:			dssdev->panel.timings.y_res);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	dispc_enable_channel(OMAP_DSS_CHANNEL_DIGIT, dssdev->type, 1);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	dispc_enable_channel(OMAP_DSS_CHANNEL_DIGIT, dssdev->type, 0);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	p = &dssdev->panel.timings;
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	omapfb_fb2dss_timings(&hdmi.cfg.timings, &dssdev->panel.timings);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:						dssdev->phy.hdmi.ds_percent);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	dispc_enable_channel(OMAP_DSS_CHANNEL_DIGIT, dssdev->type, 0);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	return gpio_get_value(hdmi.dssdev->hpd_gpio);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		dssdev->driver->disable(dssdev);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		rc = dssdev->driver->enable(dssdev);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	omapfb_dss2fb_timings(&dssdev->panel.timings, &t);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	if (dssdev->platform_enable) {
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		r = dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	if (dssdev->sync_lost_error == 0)
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		if (dssdev->state != OMAP_DSS_DISPLAY_SUSPENDED) {
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		dssdev->driver->disable(dssdev);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		rc = dssdev->driver->enable(dssdev);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		if (dssdev->platform_enable_hpd)
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:			rc = dssdev->platform_enable_hpd(dssdev);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		if (dssdev->platform_disable_hpd)
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:			dssdev->platform_disable_hpd(dssdev);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	if (hdmi.dssdev->set_backlight)
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		hdmi.dssdev->set_backlight(hdmi.dssdev, test);
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	r = request_irq(gpio_to_irq(hdmi.dssdev->hpd_gpio), hpd_irq_handler,
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:			gpio_to_irq(hdmi.dssdev->hpd_gpio));
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:	hdmi.dssdev->phy.hdmi.ds_percent = 100;
+drivers/video/omap2/displays/panel-mapphone-hdmi.c:		free_irq(gpio_to_irq(hdmi.dssdev->hpd_gpio), hpd_irq_handler);
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT |
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	dssdev->panel.timings.x_res = 640;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	dssdev->panel.timings.y_res = 480;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	if (device_create_file(&dssdev->dev, &dev_attr_deepcolor))
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	if (device_create_file(&dssdev->dev, &dev_attr_test))
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:		dssdev->panel.timings.x_res,
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:		dssdev->panel.timings.y_res);
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	device_remove_file(&dssdev->dev, &dev_attr_deepcolor);
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED &&
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	    dssdev->state != OMAP_DSS_DISPLAY_TRANSITION) {
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE ||
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	    dssdev->state == OMAP_DSS_DISPLAY_TRANSITION) {
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:		dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE &&
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	    dssdev->state != OMAP_DSS_DISPLAY_TRANSITION) {
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	if (dssdev->state != OMAP_DSS_DISPLAY_SUSPENDED) {
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:		return sysfs_streq(dssdev->name , "hdmi");
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	HDTVDBG("hpd (%d/%d)\n", state, dssdev->state);
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:		if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE ||
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:		    dssdev->state == OMAP_DSS_DISPLAY_TRANSITION) {
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:			dssdev->driver->disable(dssdev);
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:			dssdev->state = OMAP_DSS_DISPLAY_TRANSITION;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:		} else if ((dssdev->state != OMAP_DSS_DISPLAY_ACTIVE &&
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:			    dssdev->state != OMAP_DSS_DISPLAY_TRANSITION) ||
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:		} else if (hdmi_read_edid(&dssdev->panel.timings)) {
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:			hdmi_get_monspecs(&dssdev->panel.monspecs);
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:					dssdev->panel.monspecs.max_x,
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:					dssdev->panel.monspecs.max_y);
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:			dssdev->panel.width_in_um =
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:					dssdev->panel.monspecs.max_x * 10000;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:			dssdev->panel.height_in_um =
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:					dssdev->panel.monspecs.max_y * 10000;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	*timings = dssdev->panel.timings;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	dssdev->panel.timings = *timings;
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-mapphone-hdmi_panel.c:	struct fb_monspecs *specs = &dssdev->panel.monspecs;
+drivers/video/omap2/displays/panel-mapphone.c:	return (struct mapphone_dsi_panel_data *) dssdev->data;
+drivers/video/omap2/displays/panel-mapphone.c:	struct omap_dss_driver *dssdrv = dssdev->driver;
+drivers/video/omap2/displays/panel-mapphone.c:		dev_err(&dssdev->dev, "Failed to get power mode, r = %d\n", r);
+drivers/video/omap2/displays/panel-mapphone.c:		dev_err(&dssdev->dev,
+drivers/video/omap2/displays/panel-mapphone.c:	dev_err(&dssdev->dev, "ESD: performing LCD reset\n");
+drivers/video/omap2/displays/panel-mapphone.c:	 * dssdev->state and panel_data->state was set to DISABLED/OFF in
+drivers/video/omap2/displays/panel-mapphone.c:	 * dssdev->state and panel->state to ACTIVE/ON, otherwise it causes
+drivers/video/omap2/displays/panel-mapphone.c:		dev_dbg(&dssdev->dev, "enable failed\n");
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_CMD_MODE) {
+drivers/video/omap2/displays/panel-mapphone.c:		(dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_CMD_MODE)) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	*timings = dssdev->panel.timings;
+drivers/video/omap2/displays/panel-mapphone.c:	if (timings->x_res != dssdev->panel.timings.x_res ||
+drivers/video/omap2/displays/panel-mapphone.c:	    timings->y_res != dssdev->panel.timings.y_res)
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:		*xres = dssdev->panel.timings.x_res;
+drivers/video/omap2/displays/panel-mapphone.c:		*yres = dssdev->panel.timings.y_res;
+drivers/video/omap2/displays/panel-mapphone.c:		*yres = dssdev->panel.timings.x_res;
+drivers/video/omap2/displays/panel-mapphone.c:		*xres = dssdev->panel.timings.y_res;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.x_res = timings->x_res;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.y_res = timings->y_res;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.pixel_clock = timings->pixel_clock;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.hsw = timings->hsw;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.hfp = timings->hfp;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.hbp = timings->hbp;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.vsw = timings->vsw;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.vfp = timings->vfp;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.vbp = timings->vbp;
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	u16 x_res = dssdev->panel.timings.x_res;
+drivers/video/omap2/displays/panel-mapphone.c:	u16 y_res = dssdev->panel.timings.y_res;
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.x_res *
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.timings.y_res * 3);
+drivers/video/omap2/displays/panel-mapphone.c:			dev_err(&dssdev->dev, "read error\n");
+drivers/video/omap2/displays/panel-mapphone.c:			dev_err(&dssdev->dev, "short read\n");
+drivers/video/omap2/displays/panel-mapphone.c:			dev_err(&dssdev->dev, "signal pending, "
+drivers/video/omap2/displays/panel-mapphone.c:	switch (dssdev->panel.panel_id) {
+drivers/video/omap2/displays/panel-mapphone.c:		switch (dssdev->panel.panel_id) {
+drivers/video/omap2/displays/panel-mapphone.c:			dssdev->panel.panel_id);
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:		switch (dssdev->panel.panel_id) {
+drivers/video/omap2/displays/panel-mapphone.c:	switch (dssdev->panel.panel_id) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	switch (dssdev->panel.panel_id) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->panel.timings.x_res, dssdev->panel.timings.y_res,
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->panel.width_in_mm, dssdev->panel.height_in_mm);
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->panel.timings.hfp, dssdev->panel.timings.hsw,
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->panel.timings.hbp, dssdev->panel.timings.vfp,
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->panel.timings.vsw, dssdev->panel.timings.vbp);
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->phy.dsi.clk_lane, dssdev->phy.dsi.clk_pol,
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->phy.dsi.data1_lane, dssdev->phy.dsi.data1_pol,
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->phy.dsi.data2_lane, dssdev->phy.dsi.data2_pol);
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->phy.dsi.data3_lane, dssdev->phy.dsi.data3_pol,
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->phy.dsi.data4_lane, dssdev->phy.dsi.data4_pol);
+drivers/video/omap2/displays/panel-mapphone.c:			dssdev->panel.panel_id, dssdev->phy.dsi.type);
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->clocks.dsi.regn, dssdev->clocks.dsi.regm,
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->clocks.dsi.regm_dispc, dssdev->clocks.dsi.regm_dsi,
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->clocks.dsi.lp_clk_div,
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->clocks.dispc.channel.lck_div,
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->clocks.dispc.channel.pck_div);
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.acbi = 0;
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->panel.acb = 40;
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->panel.panel_id == MOT_DISP_MIPI_CM_430_540_960_AMOLED) {
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->platform_enable) {
+drivers/video/omap2/displays/panel-mapphone.c:		r = dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-mapphone.c:		dev_err(&dssdev->dev, "can't create ESD workqueue\n");
+drivers/video/omap2/displays/panel-mapphone.c:	dev_set_drvdata(&dssdev->dev, mp_data);
+drivers/video/omap2/displays/panel-mapphone.c:		if (dssdev->channel == OMAP_DSS_CHANNEL_LCD) {
+drivers/video/omap2/displays/panel-mapphone.c:	r = device_create_file(&dssdev->dev, &dev_attr_supplier_id);
+drivers/video/omap2/displays/panel-mapphone.c:		dev_err(&dssdev->dev, "controller supplier_id create"
+drivers/video/omap2/displays/panel-mapphone.c:	r = device_create_file(&dssdev->dev, &dev_attr_cabc_mode);
+drivers/video/omap2/displays/panel-mapphone.c:		dev_err(&dssdev->dev, "Display CABC create"
+drivers/video/omap2/displays/panel-mapphone.c:	r = device_create_file(&dssdev->dev, &dev_attr_secret_off);
+drivers/video/omap2/displays/panel-mapphone.c:		dev_err(&dssdev->dev, "Display secret off create"
+drivers/video/omap2/displays/panel-mapphone.c:	r = device_create_file(&dssdev->dev, &dev_attr_acl_mode);
+drivers/video/omap2/displays/panel-mapphone.c:		dev_err(&dssdev->dev, "Display ACL create"
+drivers/video/omap2/displays/panel-mapphone.c:	device_remove_file(&dssdev->dev, &dev_attr_secret_off);
+drivers/video/omap2/displays/panel-mapphone.c:	device_remove_file(&dssdev->dev, &dev_attr_cabc_mode);
+drivers/video/omap2/displays/panel-mapphone.c:	device_remove_file(&dssdev->dev, &dev_attr_supplier_id);
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	device_remove_file(&dssdev->dev, &dev_attr_supplier_id);
+drivers/video/omap2/displays/panel-mapphone.c:	device_remove_file(&dssdev->dev, &dev_attr_cabc_mode);
+drivers/video/omap2/displays/panel-mapphone.c:	device_remove_file(&dssdev->dev, &dev_attr_secret_off);
+drivers/video/omap2/displays/panel-mapphone.c:	device_remove_file(&dssdev->dev, &dev_attr_acl_mode);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->panel.panel_id == MOT_DISP_MIPI_CM_370_480_854) {
+drivers/video/omap2/displays/panel-mapphone.c:			dssdev->panel.panel_id = MOT_DISP_MIPI_CM_480_854;
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->panel.panel_id == MOT_DISP_MIPI_CM_480_854)
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->panel.panel_id == MOT_DISP_MIPI_CM_370_480_854)
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	switch (dssdev->panel.panel_id) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (!first_boot && dssdev->phy.dsi.d2l_use_ulps) {
+drivers/video/omap2/displays/panel-mapphone.c:		if (dssdev->platform_enable) {
+drivers/video/omap2/displays/panel-mapphone.c:			ret = dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-mapphone.c:		dev_err(&dssdev->dev, "failed to enable DSI\n");
+drivers/video/omap2/displays/panel-mapphone.c:	if ((skip_first_boot || !first_boot) && !dssdev->phy.dsi.d2l_use_ulps) {
+drivers/video/omap2/displays/panel-mapphone.c:		if (dssdev->platform_enable) {
+drivers/video/omap2/displays/panel-mapphone.c:			ret = dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (!dssdev->phy.dsi.d2l_use_ulps) {
+drivers/video/omap2/displays/panel-mapphone.c:		if (dssdev->platform_enable) {
+drivers/video/omap2/displays/panel-mapphone.c:			ret = dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_VIDEO_MODE &&
+drivers/video/omap2/displays/panel-mapphone.c:	    !dssdev->skip_init) {
+drivers/video/omap2/displays/panel-mapphone.c:	switch (dssdev->panel.panel_id) {
+drivers/video/omap2/displays/panel-mapphone.c:		if (!dssdev->skip_init)
+drivers/video/omap2/displays/panel-mapphone.c:						dssdev->panel.panel_id);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_VIDEO_MODE) {
+drivers/video/omap2/displays/panel-mapphone.c:		if (!dssdev->skip_init)
+drivers/video/omap2/displays/panel-mapphone.c:			dssdev->skip_init = false;
+drivers/video/omap2/displays/panel-mapphone.c:	dev_err(&dssdev->dev, "error while enabling panel, issuing HW reset\n");
+drivers/video/omap2/displays/panel-mapphone.c:	omapdss_dsi_display_disable(dssdev, true, dssdev->phy.dsi.d2l_use_ulps);
+drivers/video/omap2/displays/panel-mapphone.c:		switch (dssdev->panel.panel_id) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:		dev_dbg(&dssdev->dev, "enable failed\n");
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_CMD_MODE)
+drivers/video/omap2/displays/panel-mapphone.c:			dssdev->phy.dsi.d2l_use_ulps);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-mapphone.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	/*TODO: clean up dssdev->state*/
+drivers/video/omap2/displays/panel-mapphone.c:	if ((dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) ||
+drivers/video/omap2/displays/panel-mapphone.c:	    (dssdev->state == OMAP_DSS_DISPLAY_TRANSITION))
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-mapphone.c:		if (dssdev->panel.panel_id ==
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *map_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_CMD_MODE) {
+drivers/video/omap2/displays/panel-mapphone.c:		if ((dssdev->panel.panel_id == MOT_DISP_MIPI_CM_430_480_854) ||
+drivers/video/omap2/displays/panel-mapphone.c:		    (dssdev->panel.panel_id == MOT_DISP_MIPI_CM_370_480_854) ||
+drivers/video/omap2/displays/panel-mapphone.c:		    (dssdev->panel.panel_id == MOT_DISP_MIPI_CM_480_854)) {
+drivers/video/omap2/displays/panel-mapphone.c:				switch (dssdev->panel.panel_id) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if ((dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) ||
+drivers/video/omap2/displays/panel-mapphone.c:		(dssdev->state == OMAP_DSS_DISPLAY_TRANSITION))
+drivers/video/omap2/displays/panel-mapphone.c:	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->state != OMAP_DSS_DISPLAY_SUSPENDED) {
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_VIDEO_MODE) {
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->panel.panel_id == MOT_DISP_LVDS_MIPI_VM_1007_1280_800)
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/displays/panel-mapphone.c:	struct mapphone_data *mp_data = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-mapphone.c:				&dssdev->dev, dssdev,
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	if (!dssdev->set_backlight)
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	return dssdev->set_backlight(dssdev, level);
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT | OMAP_DSS_LCD_IVS |
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	dssdev->panel.timings = nec_8048_panel_timings;
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	dev_set_drvdata(&dssdev->dev, necd);
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	bl = backlight_device_register("nec-8048", &dssdev->dev, dssdev,
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	bl->props.max_brightness = dssdev->max_backlight_level;
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	bl->props.brightness = dssdev->max_backlight_level;
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:		dev_err(&dssdev->dev, "failed to set lcd brightness\n");
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	struct nec_8048_data *necd = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	struct nec_8048_data *necd = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	if (dssdev->platform_enable) {
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:		r = dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:		dev_err(&dssdev->dev, "failed to set lcd brightness\n");
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	struct nec_8048_data *necd = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-nec-nl8048hl11-01b.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	if (!dssdev->set_backlight)
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	return dssdev->set_backlight(dssdev, level);
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT | OMAP_DSS_LCD_IVS |
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	dssdev->panel.acb = 0x28;
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	dssdev->panel.timings = sharp_ls_timings;
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	dev_set_drvdata(&dssdev->dev, sd);
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	props.max_brightness = dssdev->max_backlight_level;
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	bl = backlight_device_register("sharp-ls", &dssdev->dev, dssdev,
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	bl->props.brightness = dssdev->max_backlight_level;
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:		dev_err(&dssdev->dev, "failed to set lcd brightness\n");
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	struct sharp_data *sd = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	if (dssdev->platform_enable) {
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:		r = dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
+drivers/video/omap2/displays/panel-sharp-ls037v7dw01.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-taal.c:		reg = regulator_get(&dssdev->dev, regulators[i].name);
+drivers/video/omap2/displays/panel-taal.c:			dev_err(&dssdev->dev, "failed to get regulator %s\n",
+drivers/video/omap2/displays/panel-taal.c:				dev_err(&dssdev->dev,
+drivers/video/omap2/displays/panel-taal.c:			dev_err(&dssdev->dev, "failed to enable regulator %s\n",
+drivers/video/omap2/displays/panel-taal.c:	return (struct nokia_dsi_panel_data *) dssdev->data;
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_err(&dssdev->dev, "enter ULPS failed");
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "failed to enable DSI\n");
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "failed to re-enable TE");
+drivers/video/omap2/displays/panel-taal.c:	dev_err(&dssdev->dev, "failed to exit ULPS");
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "update brightness to %d\n", level);
+drivers/video/omap2/displays/panel-taal.c:	*timings = dssdev->panel.timings;
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:		*xres = dssdev->panel.timings.x_res;
+drivers/video/omap2/displays/panel-taal.c:		*yres = dssdev->panel.timings.y_res;
+drivers/video/omap2/displays/panel-taal.c:		*yres = dssdev->panel.timings.x_res;
+drivers/video/omap2/displays/panel-taal.c:		*xres = dssdev->panel.timings.y_res;
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "probe\n");
+drivers/video/omap2/displays/panel-taal.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT;
+drivers/video/omap2/displays/panel-taal.c:	dssdev->panel.timings = panel_config->timings;
+drivers/video/omap2/displays/panel-taal.c:	dssdev->ctrl.pixel_size = 24;
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "can't create ESD workqueue\n");
+drivers/video/omap2/displays/panel-taal.c:	dev_set_drvdata(&dssdev->dev, td);
+drivers/video/omap2/displays/panel-taal.c:	bldev = backlight_device_register(dev_name(&dssdev->dev), &dssdev->dev,
+drivers/video/omap2/displays/panel-taal.c:			dev_err(&dssdev->dev, "GPIO request failed\n");
+drivers/video/omap2/displays/panel-taal.c:			dev_err(&dssdev->dev, "IRQ request failed\n");
+drivers/video/omap2/displays/panel-taal.c:		dev_dbg(&dssdev->dev, "Using GPIO TE\n");
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "failed to get virtual channel\n");
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "failed to set VC_ID\n");
+drivers/video/omap2/displays/panel-taal.c:	r = sysfs_create_group(&dssdev->dev.kobj, &taal_attr_group);
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "failed to create sysfs files\n");
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "remove\n");
+drivers/video/omap2/displays/panel-taal.c:	sysfs_remove_group(&dssdev->dev.kobj, &taal_attr_group);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:        dssdev->first_vsync = false;
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "failed to enable DSI\n");
+drivers/video/omap2/displays/panel-taal.c:		dev_info(&dssdev->dev, "%s panel revision %02x.%02x.%02x\n",
+drivers/video/omap2/displays/panel-taal.c:			dev_info(&dssdev->dev,
+drivers/video/omap2/displays/panel-taal.c:	dev_err(&dssdev->dev, "error while enabling panel, issuing HW reset\n");
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev,
+drivers/video/omap2/displays/panel-taal.c:	dev_err(&dssdev->dev, "performing LCD reset\n");
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "enable\n");
+drivers/video/omap2/displays/panel-taal.c:	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED) {
+drivers/video/omap2/displays/panel-taal.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "enable failed\n");
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "disable\n");
+drivers/video/omap2/displays/panel-taal.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/displays/panel-taal.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "suspend\n");
+drivers/video/omap2/displays/panel-taal.c:	if (dssdev->state == OMAP_DSS_DISPLAY_DISABLED) {
+drivers/video/omap2/displays/panel-taal.c:	} else if (dssdev->state == OMAP_DSS_DISPLAY_SUSPENDED) {
+drivers/video/omap2/displays/panel-taal.c:	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "resume\n");
+drivers/video/omap2/displays/panel-taal.c:	if (dssdev->state != OMAP_DSS_DISPLAY_SUSPENDED) {
+drivers/video/omap2/displays/panel-taal.c:		dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-taal.c:		dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "framedone, err %d\n", err);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_err(&dssdev->dev, "start update failed\n");
+drivers/video/omap2/displays/panel-taal.c:	dev_err(&dssdev->dev, "TE not received for 250ms!\n");
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "update %d, %d, %d x %d\n", x, y, w, h);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "sync\n");
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "sync done\n");
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "rotate %d\n", rotate);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	dev_dbg(&dssdev->dev, "mirror %d\n", enable);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-taal.c:			dssdev->panel.timings.x_res *
+drivers/video/omap2/displays/panel-taal.c:			dssdev->panel.timings.y_res * 3);
+drivers/video/omap2/displays/panel-taal.c:			dev_err(&dssdev->dev, "read error\n");
+drivers/video/omap2/displays/panel-taal.c:			dev_err(&dssdev->dev, "short read\n");
+drivers/video/omap2/displays/panel-taal.c:			dev_err(&dssdev->dev, "signal pending, "
+drivers/video/omap2/displays/panel-taal.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE || !td->enabled) {
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "failed to exit ULPS\n");
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "failed to read Taal status\n");
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "failed to run Taal self-diagnostics\n");
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "failed to read Taal status\n");
+drivers/video/omap2/displays/panel-taal.c:		dev_err(&dssdev->dev, "LCD self diagnostics failed\n");
+drivers/video/omap2/displays/panel-taal.c:	dev_err(&dssdev->dev, "performing LCD reset\n");
+drivers/video/omap2/displays/panel-tc358765.c:	struct tc358765_data *d2d = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "0x%x read failed with status %d\n",
+drivers/video/omap2/displays/panel-tc358765.c:	pm_runtime_get_sync(&dssdev->dev);
+drivers/video/omap2/displays/panel-tc358765.c:	pm_runtime_put_sync(&dssdev->dev);
+drivers/video/omap2/displays/panel-tc358765.c:	struct tc358765_data *d2d = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "reg write reg(%x) val(%x) failed: %d\n",
+drivers/video/omap2/displays/panel-tc358765.c:	tc358765_debug.dev = &dssdev->dev;
+drivers/video/omap2/displays/panel-tc358765.c:	return (struct tc358765_board_data *)dssdev->data;
+drivers/video/omap2/displays/panel-tc358765.c:	*timings = dssdev->panel.timings;
+drivers/video/omap2/displays/panel-tc358765.c:	dev_info(&dssdev->dev, "set_timings() not implemented\n");
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev == NULL || dssdev->reset_gpio == -1)
+drivers/video/omap2/displays/panel-tc358765.c:	gpio_set_value(dssdev->reset_gpio, 1);
+drivers/video/omap2/displays/panel-tc358765.c:	gpio_set_value(dssdev->reset_gpio, 0);
+drivers/video/omap2/displays/panel-tc358765.c:	gpio_set_value(dssdev->reset_gpio, 1);
+drivers/video/omap2/displays/panel-tc358765.c:	dev_dbg(&dssdev->dev, "tc358765_probe\n");
+drivers/video/omap2/displays/panel-tc358765.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT;
+drivers/video/omap2/displays/panel-tc358765.c:	tc358765_timings = dssdev->panel.timings;
+drivers/video/omap2/displays/panel-tc358765.c:	dssdev->panel.acbi = 0;
+drivers/video/omap2/displays/panel-tc358765.c:	dssdev->panel.acb = 40;
+drivers/video/omap2/displays/panel-tc358765.c:	dev_set_drvdata(&dssdev->dev, d2d);
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to get virtual channel0\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to set VC_ID0\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to get virtual channel1\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to set VC_ID1\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_warn(&dssdev->dev, "failed to create sysfs files\n");
+drivers/video/omap2/displays/panel-tc358765.c:	dev_dbg(&dssdev->dev, "tc358765_probe done\n");
+drivers/video/omap2/displays/panel-tc358765.c:	struct tc358765_data *d2d = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->phy.dsi.clk_lane)
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->phy.dsi.data1_lane) {
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->phy.dsi.data2_lane) {
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->phy.dsi.data3_lane) {
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->phy.dsi.data4_lane) {
+drivers/video/omap2/displays/panel-tc358765.c:		dev_warn(&dssdev->dev,
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->ctrl.pixel_size == 18) {
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to initialize PPI layer\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to start PPI-TX\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to start DSI-RX\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_warn(&dssdev->dev, "couldn't access LVPHY0, going on with reset value\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to initialize LVDS-PHY\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to initialize video path layer\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_warn(&dssdev->dev,
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to start LVDS transmitter\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to latch video timings\n");
+drivers/video/omap2/displays/panel-tc358765.c:	struct tc358765_data *d2d = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tc358765.c:	dssdev->first_vsync = false;
+drivers/video/omap2/displays/panel-tc358765.c:	dev_dbg(&dssdev->dev, "power_on\n");
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->platform_enable)
+drivers/video/omap2/displays/panel-tc358765.c:		dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-tc358765.c:		dev_err(&dssdev->dev, "failed to enable DSI\n");
+drivers/video/omap2/displays/panel-tc358765.c:	switch (dssdev->ctrl.pixel_size) {
+drivers/video/omap2/displays/panel-tc358765.c:		dev_warn(&dssdev->dev, "not expected pixel size: %d\n",
+drivers/video/omap2/displays/panel-tc358765.c:					dssdev->ctrl.pixel_size);
+drivers/video/omap2/displays/panel-tc358765.c:	dev_dbg(&dssdev->dev, "power_on done\n");
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-tc358765.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-tc358765.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-tc358765.c:	gpio_set_value(dssdev->reset_gpio, 0);
+drivers/video/omap2/displays/panel-tc358765.c:	struct tc358765_data *d2d = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tc358765.c:	dev_dbg(&dssdev->dev, "disable\n");
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/displays/panel-tc358765.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-tc358765.c:	struct tc358765_data *d2d = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tc358765.c:	dev_dbg(&dssdev->dev, "enable\n");
+drivers/video/omap2/displays/panel-tc358765.c:	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED)
+drivers/video/omap2/displays/panel-tc358765.c:		dev_dbg(&dssdev->dev, "enable failed\n");
+drivers/video/omap2/displays/panel-tc358765.c:		dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-tc358765.c:		dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	struct tpo_td043_device *tpo_td043 = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	struct tpo_td043_device *tpo_td043 = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	struct tpo_td043_device *tpo_td043 = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	int nreset_gpio = dssdev->reset_gpio;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	if (dssdev->platform_enable) {
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:		r = dssdev->platform_enable(dssdev);
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	struct tpo_td043_device *tpo_td043 = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	int nreset_gpio = dssdev->reset_gpio;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	if (dssdev->platform_disable)
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dev_dbg(&dssdev->dev, "enable\n");
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dev_dbg(&dssdev->dev, "disable\n");
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	struct tpo_td043_device *tpo_td043 = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	int nreset_gpio = dssdev->reset_gpio;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dev_dbg(&dssdev->dev, "probe\n");
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:		dev_err(&dssdev->dev, "missing tpo_td043_device\n");
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT | OMAP_DSS_LCD_IHS |
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dssdev->panel.timings = tpo_td043_timings;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dssdev->ctrl.pixel_size = 24;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	tpo_td043->vcc_reg = regulator_get(&dssdev->dev, "vcc");
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:		dev_err(&dssdev->dev, "failed to get LCD VCC regulator\n");
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:			dev_err(&dssdev->dev, "couldn't request reset GPIO\n");
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:			dev_err(&dssdev->dev, "couldn't set GPIO direction\n");
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	ret = sysfs_create_group(&dssdev->dev.kobj, &tpo_td043_attr_group);
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:		dev_warn(&dssdev->dev, "failed to create sysfs files\n");
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	struct tpo_td043_device *tpo_td043 = dev_get_drvdata(&dssdev->dev);
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	int nreset_gpio = dssdev->reset_gpio;
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dev_dbg(&dssdev->dev, "remove\n");
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	sysfs_remove_group(&dssdev->dev.kobj, &tpo_td043_attr_group);
+drivers/video/omap2/displays/panel-tpo-td043mtea1.c:	dev_set_drvdata(&dssdev->dev, tpo_td043);
+drivers/video/omap2/dss/core.c:		if (def_disp_name && strcmp(def_disp_name, dssdev->name) == 0)
+drivers/video/omap2/dss/core.c:				dssdev->name ?: "unnamed", r);
+drivers/video/omap2/dss/core.c://		if (def_disp_name && strcmp(def_disp_name, dssdev->name) == 0)
+drivers/video/omap2/dss/core.c:			dev_name(dev), dssdev->driver_name, driver->name);
+drivers/video/omap2/dss/core.c:	return strcmp(dssdev->driver_name, driver->name) == 0;
+drivers/video/omap2/dss/core.c:			dssdev->name ?
+drivers/video/omap2/dss/core.c:			dssdev->name : "");
+drivers/video/omap2/dss/core.c:				dev_name(dev), dssdev->driver_name,
+drivers/video/omap2/dss/core.c:	dssdev->driver = dssdrv;
+drivers/video/omap2/dss/core.c:			dssdev->driver_name);
+drivers/video/omap2/dss/core.c:	dssdev->driver = NULL;
+drivers/video/omap2/dss/core.c:	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED)
+drivers/video/omap2/dss/core.c:		blocking_notifier_call_chain(&dssdev->state_notifiers,
+drivers/video/omap2/dss/core.c:	dssdev->driver->disable_orig(dssdev);
+drivers/video/omap2/dss/core.c:	dssdev->first_vsync = false;
+drivers/video/omap2/dss/core.c:	int r = dssdev->driver->enable_orig(dssdev);
+drivers/video/omap2/dss/core.c:	if (!r && dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/dss/core.c:		blocking_notifier_call_chain(&dssdev->state_notifiers,
+drivers/video/omap2/dss/core.c:	if (dssdev->manual_power_control != OMAP_DSS_MPC_DISABLED)
+drivers/video/omap2/dss/core.c:	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED)
+drivers/video/omap2/dss/core.c:		blocking_notifier_call_chain(&dssdev->state_notifiers,
+drivers/video/omap2/dss/core.c:	r = dssdev->driver->suspend_orig(dssdev);
+drivers/video/omap2/dss/core.c:	dssdev->first_vsync = false;
+drivers/video/omap2/dss/core.c:	if (dssdev->manual_power_control != OMAP_DSS_MPC_DISABLED)
+drivers/video/omap2/dss/core.c:	r = dssdev->driver->resume_orig(dssdev);
+drivers/video/omap2/dss/core.c:	if (!r && dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/dss/core.c:		blocking_notifier_call_chain(&dssdev->state_notifiers,
+drivers/video/omap2/dss/core.c:	WARN_ON(!dssdev->driver_name);
+drivers/video/omap2/dss/core.c:	reset_device(&dssdev->dev, 1);
+drivers/video/omap2/dss/core.c:	dssdev->dev.bus = &dss_bus_type;
+drivers/video/omap2/dss/core.c:	dssdev->dev.parent = &dss_bus;
+drivers/video/omap2/dss/core.c:	dssdev->dev.release = omap_dss_dev_release;
+drivers/video/omap2/dss/core.c:	dev_set_name(&dssdev->dev, "display%d", dev_num++);
+drivers/video/omap2/dss/core.c:	return device_register(&dssdev->dev);
+drivers/video/omap2/dss/core.c:	device_unregister(&dssdev->dev);
+drivers/video/omap2/dss/dispc.c:				dssdev->driver->enable(dssdev);
+drivers/video/omap2/dss/dispc.c:				dssdev->driver->enable(dssdev);
+drivers/video/omap2/dss/dispc.c:				dssdev->driver->enable(dssdev);
+drivers/video/omap2/dss/display.c:	bool enabled = dssdev->state != OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/dss/display.c:	if (enabled != (dssdev->state != OMAP_DSS_DISPLAY_DISABLED)) {
+drivers/video/omap2/dss/display.c:			r = dssdev->driver->enable(dssdev);
+drivers/video/omap2/dss/display.c:			dssdev->driver->disable(dssdev);
+drivers/video/omap2/dss/display.c:	if (dssdev->driver->get_update_mode)
+drivers/video/omap2/dss/display.c:		mode = dssdev->driver->get_update_mode(dssdev);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->set_update_mode)
+drivers/video/omap2/dss/display.c:	r = dssdev->driver->set_update_mode(dssdev, mode);
+drivers/video/omap2/dss/display.c:			dssdev->driver->get_te ?
+drivers/video/omap2/dss/display.c:			dssdev->driver->get_te(dssdev) : 0);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->enable_te || !dssdev->driver->get_te)
+drivers/video/omap2/dss/display.c:	r = dssdev->driver->enable_te(dssdev, te);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->get_timings)
+drivers/video/omap2/dss/display.c:	dssdev->driver->get_timings(dssdev, &t);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->set_timings || !dssdev->driver->check_timings)
+drivers/video/omap2/dss/display.c:	r = dssdev->driver->check_timings(dssdev, &t);
+drivers/video/omap2/dss/display.c:	dssdev->driver->set_timings(dssdev, &t);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->get_rotate)
+drivers/video/omap2/dss/display.c:	rotate = dssdev->driver->get_rotate(dssdev);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->set_rotate || !dssdev->driver->get_rotate)
+drivers/video/omap2/dss/display.c:	r = dssdev->driver->set_rotate(dssdev, rot);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->get_mirror)
+drivers/video/omap2/dss/display.c:	mirror = dssdev->driver->get_mirror(dssdev);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->set_mirror || !dssdev->driver->get_mirror)
+drivers/video/omap2/dss/display.c:	r = dssdev->driver->set_mirror(dssdev, mirror);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->get_wss)
+drivers/video/omap2/dss/display.c:	wss = dssdev->driver->get_wss(dssdev);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->get_wss || !dssdev->driver->set_wss)
+drivers/video/omap2/dss/display.c:	r = dssdev->driver->set_wss(dssdev, wss);
+drivers/video/omap2/dss/display.c:	*xres = dssdev->panel.timings.x_res;
+drivers/video/omap2/dss/display.c:	*yres = dssdev->panel.timings.y_res;
+drivers/video/omap2/dss/display.c:	if (dssdev->driver->get_dimensions) {
+drivers/video/omap2/dss/display.c:		dssdev->driver->get_dimensions(dssdev,
+drivers/video/omap2/dss/display.c:		*width_in_um = dssdev->panel.width_in_um;
+drivers/video/omap2/dss/display.c:		*height_in_um = dssdev->panel.height_in_um;
+drivers/video/omap2/dss/display.c:	switch (dssdev->type) {
+drivers/video/omap2/dss/display.c:		if (dssdev->phy.dpi.data_lines == 24)
+drivers/video/omap2/dss/display.c:		if (dssdev->ctrl.pixel_size == 24)
+drivers/video/omap2/dss/display.c:	if (dssdev->type == OMAP_DISPLAY_TYPE_DPI &&
+drivers/video/omap2/dss/display.c:			(dssdev->panel.config & OMAP_DSS_LCD_TFT) == 0)
+drivers/video/omap2/dss/display.c:	switch (dssdev->type) {
+drivers/video/omap2/dss/display.c:		bpp = dssdev->phy.dpi.data_lines;
+drivers/video/omap2/dss/display.c:		bpp = dssdev->ctrl.pixel_size;
+drivers/video/omap2/dss/display.c:	switch (dssdev->type) {
+drivers/video/omap2/dss/display.c:				dssdev->name);
+drivers/video/omap2/dss/display.c:		DSSERR("failed to init display %s\n", dssdev->name);
+drivers/video/omap2/dss/display.c:	BLOCKING_INIT_NOTIFIER_HEAD(&dssdev->state_notifiers);
+drivers/video/omap2/dss/display.c:		r = device_create_file(&dssdev->dev, attr);
+drivers/video/omap2/dss/display.c:	r = sysfs_create_link(&pdev->dev.kobj, &dssdev->dev.kobj,
+drivers/video/omap2/dss/display.c:			dev_name(&dssdev->dev));
+drivers/video/omap2/dss/display.c:	sysfs_remove_link(&pdev->dev.kobj, dev_name(&dssdev->dev));
+drivers/video/omap2/dss/display.c:		device_remove_file(&dssdev->dev, attr);
+drivers/video/omap2/dss/display.c:	if (dssdev->manager)
+drivers/video/omap2/dss/display.c:		dssdev->manager->unset_device(dssdev->manager);
+drivers/video/omap2/dss/display.c:	if (dssdev->manual_power_control != OMAP_DSS_MPC_DISABLED)
+drivers/video/omap2/dss/display.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/dss/display.c:		dssdev->activate_after_resume = false;
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver->suspend) {
+drivers/video/omap2/dss/display.c:				dssdev->name);
+drivers/video/omap2/dss/display.c:	r = dssdev->driver->suspend(dssdev);
+drivers/video/omap2/dss/display.c:	dssdev->activate_after_resume = true;
+drivers/video/omap2/dss/display.c:	if (dssdev->manual_power_control != OMAP_DSS_MPC_DISABLED)
+drivers/video/omap2/dss/display.c:	if (dssdev->activate_after_resume && dssdev->driver->resume) {
+drivers/video/omap2/dss/display.c:		r = dssdev->driver->resume(dssdev);
+drivers/video/omap2/dss/display.c:	dssdev->activate_after_resume = false;
+drivers/video/omap2/dss/display.c:	if (dssdev->state == OMAP_DSS_DISPLAY_DISABLED ||
+drivers/video/omap2/dss/display.c:			dssdev->state == OMAP_DSS_DISPLAY_SUSPENDED)
+drivers/video/omap2/dss/display.c:	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED)
+drivers/video/omap2/dss/display.c:		dssdev->driver->disable(dssdev);
+drivers/video/omap2/dss/display.c:	get_device(&dssdev->dev);
+drivers/video/omap2/dss/display.c:	put_device(&dssdev->dev);
+drivers/video/omap2/dss/display.c:	if (!dssdev->driver) {
+drivers/video/omap2/dss/display.c:	if (!try_module_get(dssdev->dev.driver->owner)) {
+drivers/video/omap2/dss/display.c:	module_put(dssdev->dev.driver->owner);
+drivers/video/omap2/dss/dpi.c:	if (dssdev->clocks.dispc.dispc_fclk_src ==
+drivers/video/omap2/dss/dpi.c:			dssdev->clocks.dispc.dispc_fclk_src ==
+drivers/video/omap2/dss/dpi.c:			dssdev->clocks.dispc.channel.lcd_clk_src ==
+drivers/video/omap2/dss/dpi.c:			dssdev->clocks.dispc.channel.lcd_clk_src ==
+drivers/video/omap2/dss/dpi.c:	dss_select_dispc_clk_source(dssdev->clocks.dispc.dispc_fclk_src);
+drivers/video/omap2/dss/dpi.c:	r = dispc_set_clock_div(dssdev->manager->id, &dispc_cinfo);
+drivers/video/omap2/dss/dpi.c:	r = dispc_set_clock_div(dssdev->manager->id, &dispc_cinfo);
+drivers/video/omap2/dss/dpi.c:	struct omap_video_timings *t = &dssdev->panel.timings;
+drivers/video/omap2/dss/dpi.c:	dispc_set_pol_freq(dssdev->manager->id, dssdev->panel.config,
+drivers/video/omap2/dss/dpi.c:			dssdev->panel.acbi, dssdev->panel.acb);
+drivers/video/omap2/dss/dpi.c:	is_tft = (dssdev->panel.config & OMAP_DSS_LCD_TFT) != 0;
+drivers/video/omap2/dss/dpi.c:	dispc_set_lcd_timings(dssdev->manager->id, t);
+drivers/video/omap2/dss/dpi.c:	is_tft = (dssdev->panel.config & OMAP_DSS_LCD_TFT) != 0;
+drivers/video/omap2/dss/dpi.c:	dispc_set_parallel_interface_mode(dssdev->manager->id,
+drivers/video/omap2/dss/dpi.c:	dispc_set_lcd_display_type(dssdev->manager->id, is_tft ?
+drivers/video/omap2/dss/dpi.c:	dispc_set_tft_data_lines(dssdev->manager->id,
+drivers/video/omap2/dss/dpi.c:			dssdev->phy.dpi.data_lines);
+drivers/video/omap2/dss/dpi.c:	dssdev->manager->enable(dssdev->manager);
+drivers/video/omap2/dss/dpi.c:	dssdev->manager->disable(dssdev->manager);
+drivers/video/omap2/dss/dpi.c:	dssdev->panel.timings = *timings;
+drivers/video/omap2/dss/dpi.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/dss/dpi.c:		dispc_go(dssdev->manager->id);
+drivers/video/omap2/dss/dpi.c:	is_tft = (dssdev->panel.config & OMAP_DSS_LCD_TFT) != 0;
+drivers/video/omap2/dss/dpi.c:			dssdev->clocks.dispc.dispc_fclk_src;
+drivers/video/omap2/dss/dsi.c:	return dsi_pdev_map[dssdev->phy.dsi.module];
+drivers/video/omap2/dss/dsi.c:	lp_clk_div = dssdev->clocks.dsi.lp_clk_div;
+drivers/video/omap2/dss/dsi.c:		cinfo->clkin = dispc_pclk_rate(dssdev->manager->id);
+drivers/video/omap2/dss/dsi.c:	if (dsi->vc[0].dssdev->skip_init)
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.data1_lane != 0)
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.data2_lane != 0)
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.data3_lane != 0)
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.data4_lane != 0)
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.data4_lane != 0) {
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.data3_lane != 0) {
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.data2_lane != 0) {
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.data1_lane != 0) {
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.clk_lane != 0) {
+drivers/video/omap2/dss/dsi.c:	int clk_lane   = dssdev->phy.dsi.clk_lane;
+drivers/video/omap2/dss/dsi.c:	int data1_lane = dssdev->phy.dsi.data1_lane;
+drivers/video/omap2/dss/dsi.c:	int data2_lane = dssdev->phy.dsi.data2_lane;
+drivers/video/omap2/dss/dsi.c:	int clk_pol    = dssdev->phy.dsi.clk_pol;
+drivers/video/omap2/dss/dsi.c:	int data1_pol  = dssdev->phy.dsi.data1_pol;
+drivers/video/omap2/dss/dsi.c:	int data2_pol  = dssdev->phy.dsi.data2_pol;
+drivers/video/omap2/dss/dsi.c:		int data3_lane  = dssdev->phy.dsi.data3_lane;
+drivers/video/omap2/dss/dsi.c:		int data3_pol  = dssdev->phy.dsi.data3_pol;
+drivers/video/omap2/dss/dsi.c:		int data4_lane  = dssdev->phy.dsi.data4_lane;
+drivers/video/omap2/dss/dsi.c:		int data4_pol  = dssdev->phy.dsi.data4_pol;
+drivers/video/omap2/dss/dsi.c:	dssdev->phy.dsi.hs_timing.ths_prepare = ths_prepare;
+drivers/video/omap2/dss/dsi.c:	dssdev->phy.dsi.hs_timing.ths_prepare_ths_zero =
+drivers/video/omap2/dss/dsi.c:	dssdev->phy.dsi.hs_timing.ths_trail = ths_trail;
+drivers/video/omap2/dss/dsi.c:	dssdev->phy.dsi.hs_timing.ths_exit = ths_exit;
+drivers/video/omap2/dss/dsi.c:	dssdev->phy.dsi.hs_timing.tlpx_half = tlpx_half;
+drivers/video/omap2/dss/dsi.c:	dssdev->phy.dsi.hs_timing.tclk_trail = tclk_trail;
+drivers/video/omap2/dss/dsi.c:	dssdev->phy.dsi.hs_timing.tclk_prepare = tclk_prepare;
+drivers/video/omap2/dss/dsi.c:	dssdev->phy.dsi.hs_timing.tclk_zero = tclk_zero;
+drivers/video/omap2/dss/dsi.c:	int clk_lane   = dssdev->phy.dsi.clk_lane;
+drivers/video/omap2/dss/dsi.c:	int data1_lane = dssdev->phy.dsi.data1_lane;
+drivers/video/omap2/dss/dsi.c:	int data2_lane = dssdev->phy.dsi.data2_lane;
+drivers/video/omap2/dss/dsi.c:	int data3_lane = dssdev->phy.dsi.data3_lane;
+drivers/video/omap2/dss/dsi.c:	int data4_lane = dssdev->phy.dsi.data4_lane;
+drivers/video/omap2/dss/dsi.c:	int clk_pol    = dssdev->phy.dsi.clk_pol;
+drivers/video/omap2/dss/dsi.c:	int data1_pol  = dssdev->phy.dsi.data1_pol;
+drivers/video/omap2/dss/dsi.c:	int data2_pol  = dssdev->phy.dsi.data2_pol;
+drivers/video/omap2/dss/dsi.c:	int data3_pol  = dssdev->phy.dsi.data3_pol;
+drivers/video/omap2/dss/dsi.c:	int data4_pol  = dssdev->phy.dsi.data4_pol;
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.clk_lane != 0)
+drivers/video/omap2/dss/dsi.c:		in_use[dssdev->phy.dsi.clk_lane - 1] = true;
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.data1_lane != 0)
+drivers/video/omap2/dss/dsi.c:		in_use[dssdev->phy.dsi.data1_lane - 1] = true;
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.data2_lane != 0)
+drivers/video/omap2/dss/dsi.c:		in_use[dssdev->phy.dsi.data2_lane - 1] = true;
+drivers/video/omap2/dss/dsi.c:		if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_VIDEO_MODE) {
+drivers/video/omap2/dss/dsi.c:			if (dssdev->clocks.dsi.offset_ddr_clk > 0)
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_VIDEO_MODE)
+drivers/video/omap2/dss/dsi.c:		if (dsi->vc[0].dssdev->phy.dsi.type ==
+drivers/video/omap2/dss/dsi.c:	if (dsi->vc[0].dssdev->phy.dsi.type ==
+drivers/video/omap2/dss/dsi.c:	switch (dssdev->ctrl.pixel_size) {
+drivers/video/omap2/dss/dsi.c:	switch (dssdev->ctrl.pixel_size) {
+drivers/video/omap2/dss/dsi.c:	if (dssdev->clocks.dsi.offset_ddr_clk > 0)
+drivers/video/omap2/dss/dsi.c:	if (!dssdev->skip_init) {
+drivers/video/omap2/dss/dsi.c:	r = FLD_VAL(dssdev->phy.dsi.vm_timing.hbp, 11, 0) |
+drivers/video/omap2/dss/dsi.c:		FLD_VAL(dssdev->phy.dsi.vm_timing.hfp, 23, 12) |
+drivers/video/omap2/dss/dsi.c:		FLD_VAL(dssdev->phy.dsi.vm_timing.hsa, 31, 24);
+drivers/video/omap2/dss/dsi.c:	r = FLD_VAL(dssdev->phy.dsi.vm_timing.vbp, 7, 0) |
+drivers/video/omap2/dss/dsi.c:		FLD_VAL(dssdev->phy.dsi.vm_timing.vfp, 15, 8) |
+drivers/video/omap2/dss/dsi.c:		FLD_VAL(dssdev->phy.dsi.vm_timing.vsa, 23, 16) |
+drivers/video/omap2/dss/dsi.c:		dssdev->phy.dsi.vm_timing.hbp, dssdev->phy.dsi.vm_timing.hfp,
+drivers/video/omap2/dss/dsi.c:		dssdev->phy.dsi.vm_timing.hsa, dssdev->phy.dsi.vm_timing.vbp,
+drivers/video/omap2/dss/dsi.c:		dssdev->phy.dsi.vm_timing.vfp, dssdev->phy.dsi.vm_timing.vsa,
+drivers/video/omap2/dss/dsi.c:	width_bytes = DIV_ROUND_UP(dssdev->panel.timings.x_res *
+drivers/video/omap2/dss/dsi.c:				   dssdev->ctrl.pixel_size, 8);
+drivers/video/omap2/dss/dsi.c:		dssdev->phy.dsi.vm_timing.hfp +
+drivers/video/omap2/dss/dsi.c:		dssdev->phy.dsi.vm_timing.hbp + dssdev->phy.dsi.vm_timing.hsa;
+drivers/video/omap2/dss/dsi.c:	r = FLD_VAL(dssdev->panel.timings.y_res, 15, 0) |
+drivers/video/omap2/dss/dsi.c:		dssdev->panel.timings.hsw, dssdev->panel.timings.hbp,
+drivers/video/omap2/dss/dsi.c:		dssdev->panel.timings.x_res, dssdev->panel.timings.hfp);
+drivers/video/omap2/dss/dsi.c:		dssdev->ctrl.pixel_size, num_data_lines,
+drivers/video/omap2/dss/dsi.c:		dssdev->panel.timings.x_res, vm_tl);
+drivers/video/omap2/dss/dsi.c:	r = FLD_MOD(r, (dssdev->phy.dsi.vm_timing.hsa > transition) ?
+drivers/video/omap2/dss/dsi.c:	    (dssdev->phy.dsi.vm_timing.hsa - transition) : 0, 23, 16);
+drivers/video/omap2/dss/dsi.c:	r = FLD_MOD(r, (dssdev->phy.dsi.vm_timing.hfp > transition) ?
+drivers/video/omap2/dss/dsi.c:	    (dssdev->phy.dsi.vm_timing.hfp - transition) : 0, 15, 8);
+drivers/video/omap2/dss/dsi.c:	r = FLD_MOD(r, (dssdev->phy.dsi.vm_timing.hbp > transition) ?
+drivers/video/omap2/dss/dsi.c:		(dssdev->phy.dsi.vm_timing.hbp - transition) : 0, 7, 0);
+drivers/video/omap2/dss/dsi.c:	bllpblank = dssdev->phy.dsi.vm_timing.hbp +
+drivers/video/omap2/dss/dsi.c:		    dssdev->phy.dsi.vm_timing.hfp + ((6 + width_bytes) /
+drivers/video/omap2/dss/dsi.c:	word_count = dssdev->panel.timings.x_res * 3;
+drivers/video/omap2/dss/dsi.c:	dssdev->manager->enable(dssdev->manager);
+drivers/video/omap2/dss/dsi.c:	dssdev->manager->disable(dssdev->manager);
+drivers/video/omap2/dss/dsi.c:	offset_ddr_clk = dssdev->clocks.dsi.offset_ddr_clk;
+drivers/video/omap2/dss/dsi.c:	int bytespp = dssdev->ctrl.pixel_size / 8;
+drivers/video/omap2/dss/dsi.c:	ovl = dssdev->manager->overlays[0];
+drivers/video/omap2/dss/dsi.c:	if (dssdev->ctrl.pixel_size != 24)
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_VIDEO_MODE) {
+drivers/video/omap2/dss/dsi.c:	bytespp	= dssdev->ctrl.pixel_size / 8;
+drivers/video/omap2/dss/dsi.c:	if (dsi->vc[0].dssdev->phy.dsi.type ==
+drivers/video/omap2/dss/dsi.c:	if (dsi->vc[0].dssdev->phy.dsi.type ==
+drivers/video/omap2/dss/dsi.c:	dssdev->driver->get_resolution(dssdev, &dw, &dh);
+drivers/video/omap2/dss/dsi.c:	if (dssdev->manager->caps & OMAP_DSS_OVL_MGR_CAP_DISPC) {
+drivers/video/omap2/dss/dsi.c:			dispc_set_lcd_size(dssdev->manager->id, *w, *h);
+drivers/video/omap2/dss/dsi.c:	if (dssdev->manager->caps & OMAP_DSS_OVL_MGR_CAP_DISPC) {
+drivers/video/omap2/dss/dsi.c:		if (dssdev->phy.dsi.type != OMAP_DSS_DSI_TYPE_VIDEO_MODE)
+drivers/video/omap2/dss/dsi.c:	irq = dssdev->manager->id == OMAP_DSS_CHANNEL_LCD ?
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_CMD_MODE) {
+drivers/video/omap2/dss/dsi.c:		dispc_set_parallel_interface_mode(dssdev->manager->id,
+drivers/video/omap2/dss/dsi.c:		dispc_enable_fifohandcheck(dssdev->manager->id, 1);
+drivers/video/omap2/dss/dsi.c:		dispc_set_parallel_interface_mode(dssdev->manager->id,
+drivers/video/omap2/dss/dsi.c:		dispc_enable_fifohandcheck(dssdev->manager->id, 0);
+drivers/video/omap2/dss/dsi.c:	dispc_set_lcd_display_type(dssdev->manager->id,
+drivers/video/omap2/dss/dsi.c:	dispc_set_tft_data_lines(dssdev->manager->id, dssdev->ctrl.pixel_size);
+drivers/video/omap2/dss/dsi.c:	if(dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_CMD_MODE) {
+drivers/video/omap2/dss/dsi.c:		dispc_set_lcd_timings(dssdev->manager->id, &timings);
+drivers/video/omap2/dss/dsi.c:		dispc_set_lcd_timings(dssdev->manager->id,
+drivers/video/omap2/dss/dsi.c:				       &dssdev->panel.timings);
+drivers/video/omap2/dss/dsi.c:	irq = dssdev->manager->id == OMAP_DSS_CHANNEL_LCD ?
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_CMD_MODE)
+drivers/video/omap2/dss/dsi.c:	cinfo.regn  = dssdev->clocks.dsi.regn;
+drivers/video/omap2/dss/dsi.c:	cinfo.regm  = dssdev->clocks.dsi.regm;
+drivers/video/omap2/dss/dsi.c:	cinfo.regm_dispc = dssdev->clocks.dsi.regm_dispc;
+drivers/video/omap2/dss/dsi.c:	cinfo.regm_dsi = dssdev->clocks.dsi.regm_dsi;
+drivers/video/omap2/dss/dsi.c:	dispc_cinfo.lck_div = dssdev->clocks.dispc.channel.lck_div;
+drivers/video/omap2/dss/dsi.c:	dispc_cinfo.pck_div = dssdev->clocks.dispc.channel.pck_div;
+drivers/video/omap2/dss/dsi.c:	r = dispc_set_clock_div(dssdev->manager->id, &dispc_cinfo);
+drivers/video/omap2/dss/dsi.c:	dss_select_dispc_clk_source(dssdev->clocks.dispc.dispc_fclk_src);
+drivers/video/omap2/dss/dsi.c:	dss_select_dsi_clk_source(dsi_module, dssdev->clocks.dsi.dsi_fclk_src);
+drivers/video/omap2/dss/dsi.c:	dss_select_lcd_clk_source(dssdev->manager->id,
+drivers/video/omap2/dss/dsi.c:			dssdev->clocks.dispc.channel.lcd_clk_src);
+drivers/video/omap2/dss/dsi.c:	if (!dssdev->skip_init) {
+drivers/video/omap2/dss/dsi.c:	if (!dssdev->skip_init) {
+drivers/video/omap2/dss/dsi.c:	if(dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_CMD_MODE)
+drivers/video/omap2/dss/dsi.c:	if (!dssdev->skip_init) {
+drivers/video/omap2/dss/dsi.c:	dssdev->state = OMAP_DSS_DISPLAY_TRANSITION;
+drivers/video/omap2/dss/dsi.c:	dss_plat_data->device_scale(&dssdev->dev,
+drivers/video/omap2/dss/dsi.c:			dssdev->panel.timings.pixel_clock * 1000);
+drivers/video/omap2/dss/dsi.c:	if (!dssdev->skip_init)
+drivers/video/omap2/dss/dsi.c:		if (dssdev->driver->get_dsi_vc_chnls) {
+drivers/video/omap2/dss/dsi.c:			dssdev->driver->get_dsi_vc_chnls(dssdev,
+drivers/video/omap2/dss/dsi.c:	dss_plat_data->device_scale(&dssdev->dev,
+drivers/video/omap2/dss/dsi.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_VIDEO_MODE)
+drivers/video/omap2/dss/dsi.c:		dispc_enable_channel(dssdev->channel, dssdev->type, false);
+drivers/video/omap2/dss/dsi.c:	if (dssdev->phy.dsi.d2l_use_ulps) {
+drivers/video/omap2/dss/dsi.c:		dss_plat_data->device_scale(&dssdev->dev,
+drivers/video/omap2/dss/dsi.c:	if(dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_CMD_MODE) {
+drivers/video/omap2/dss/dsi.c:		dssdev->caps = OMAP_DSS_DISPLAY_CAP_MANUAL_UPDATE |
+drivers/video/omap2/dss/dsi.c:		dssdev->caps = 0;
+drivers/video/omap2/dss/dsi.c:	DSSERR("cannot get VC for display %s", dssdev->name);
+drivers/video/omap2/dss/dsi.c:			dssdev->name);
+drivers/video/omap2/dss/hdmi.c:		u32 max_pclk = hdmi.dssdev->clocks.hdmi.max_pixclk_khz;
+drivers/video/omap2/dss/hdmi.c:	if (dssdev->clocks.hdmi.regn == 0)
+drivers/video/omap2/dss/hdmi.c:		pi->regn = dssdev->clocks.hdmi.regn;
+drivers/video/omap2/dss/hdmi.c:	if (dssdev->clocks.hdmi.regm2 == 0)
+drivers/video/omap2/dss/hdmi.c:		pi->regm2 = dssdev->clocks.hdmi.regm2;
+drivers/video/omap2/dss/hdmi.c:	dispc_enable_channel(OMAP_DSS_CHANNEL_DIGIT, dssdev->type, 0);
+drivers/video/omap2/dss/hdmi.c:	p = &dssdev->panel.timings;
+drivers/video/omap2/dss/hdmi.c:		dssdev->panel.timings.x_res,
+drivers/video/omap2/dss/hdmi.c:		dssdev->panel.timings.y_res);
+drivers/video/omap2/dss/hdmi.c:		cea_code = dssdev->panel.hdmi_default_cea_code;
+drivers/video/omap2/dss/hdmi.c:	omapfb_fb2dss_timings(&hdmi.cfg.timings, &dssdev->panel.timings);
+drivers/video/omap2/dss/hdmi.c:	dss_select_dispc_clk_source(dssdev->clocks.dispc.dispc_fclk_src);
+drivers/video/omap2/dss/hdmi.c:	dispc_set_digit_size(dssdev->panel.timings.x_res,
+drivers/video/omap2/dss/hdmi.c:			dssdev->panel.timings.y_res);
+drivers/video/omap2/dss/hdmi.c:	dispc_enable_channel(OMAP_DSS_CHANNEL_DIGIT, dssdev->type, 1);
+drivers/video/omap2/dss/hdmi.c:	dispc_enable_channel(OMAP_DSS_CHANNEL_DIGIT, dssdev->type, 0);
+drivers/video/omap2/dss/hdmi.c:	if (dssdev->sync_lost_error)
+drivers/video/omap2/dss/hdmi.c:	return gpio_get_value(hdmi.dssdev->hpd_gpio);
+drivers/video/omap2/dss/hdmi.c:	dssdev->driver->disable(dssdev);
+drivers/video/omap2/dss/hdmi.c:	r2 = dssdev->driver->enable(dssdev);
+drivers/video/omap2/dss/hdmi.c:	omapfb_dss2fb_timings(&dssdev->panel.timings, &t);
+drivers/video/omap2/dss/hdmi.c:	if (dssdev->platform_enable) {
+drivers/video/omap2/dss/hdmi.c:		r = dssdev->platform_enable(dssdev);
+drivers/video/omap2/dss/hdmi.c:	if (dssdev->platform_disable)
+drivers/video/omap2/dss/hdmi.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/dss/hdmi.c:	if (dssdev->sync_lost_error == 0)
+drivers/video/omap2/dss/hdmi.c:		if (dssdev->state != OMAP_DSS_DISPLAY_SUSPENDED) {
+drivers/video/omap2/dss/hdmi.c:	if (dssdev->platform_disable)
+drivers/video/omap2/dss/hdmi.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/dss/hdmi.c:	r = request_irq(gpio_to_irq(hdmi.dssdev->hpd_gpio), hpd_irq_handler,
+drivers/video/omap2/dss/hdmi.c:			gpio_to_irq(hdmi.dssdev->hpd_gpio));
+drivers/video/omap2/dss/hdmi.c:	hdmi.dssdev->phy.hdmi.phy = 100;
+drivers/video/omap2/dss/hdmi.c:	if (hdmi.dssdev->platform_enable_hpd)
+drivers/video/omap2/dss/hdmi.c:		r = hdmi.dssdev->platform_enable_hpd(hdmi.dssdev);
+drivers/video/omap2/dss/hdmi.c:	if (hdmi.dssdev->platform_disable_hpd)
+drivers/video/omap2/dss/hdmi.c:		hdmi.dssdev->platform_disable_hpd(hdmi.dssdev);
+drivers/video/omap2/dss/hdmi.c:		free_irq(gpio_to_irq(hdmi.dssdev->hpd_gpio), hpd_irq_handler);
+drivers/video/omap2/dss/hdmi_panel.c:	dssdev->panel.config = OMAP_DSS_LCD_TFT |
+drivers/video/omap2/dss/hdmi_panel.c:	if (dssdev->panel.timings.x_res == 0)
+drivers/video/omap2/dss/hdmi_panel.c:		dssdev->panel.timings = (struct omap_video_timings)
+drivers/video/omap2/dss/hdmi_panel.c:	if (sysfs_create_group(&dssdev->dev.kobj, &hdmi_panel_attr_group))
+drivers/video/omap2/dss/hdmi_panel.c:		dssdev->panel.timings.x_res,
+drivers/video/omap2/dss/hdmi_panel.c:		dssdev->panel.timings.y_res);
+drivers/video/omap2/dss/hdmi_panel.c:	sysfs_remove_group(&dssdev->dev.kobj, &hdmi_panel_attr_group);
+drivers/video/omap2/dss/hdmi_panel.c:	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED) {
+drivers/video/omap2/dss/hdmi_panel.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/dss/hdmi_panel.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/dss/hdmi_panel.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/dss/hdmi_panel.c:	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/dss/hdmi_panel.c:		dssdev->activate_after_resume = true;
+drivers/video/omap2/dss/hdmi_panel.c:	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
+drivers/video/omap2/dss/hdmi_panel.c:	if (dssdev->state != OMAP_DSS_DISPLAY_SUSPENDED)
+drivers/video/omap2/dss/hdmi_panel.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/dss/hdmi_panel.c:		return sysfs_streq(dssdev->name , "hdmi");
+drivers/video/omap2/dss/hdmi_panel.c:	pr_err("in hpd work %d, state=%d\n", state, dssdev->state);
+drivers/video/omap2/dss/hdmi_panel.c:		if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/dss/hdmi_panel.c:			dssdev->driver->disable(dssdev);
+drivers/video/omap2/dss/hdmi_panel.c:			dssdev->driver->enable(dssdev);
+drivers/video/omap2/dss/hdmi_panel.c:		} else if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE ||
+drivers/video/omap2/dss/hdmi_panel.c:		} else if (hdmi_read_edid(&dssdev->panel.timings)) {
+drivers/video/omap2/dss/hdmi_panel.c:			hdmi_get_monspecs(&dssdev->panel.monspecs);
+drivers/video/omap2/dss/hdmi_panel.c:					dssdev->panel.monspecs.max_x,
+drivers/video/omap2/dss/hdmi_panel.c:					dssdev->panel.monspecs.max_y);
+drivers/video/omap2/dss/hdmi_panel.c:			dssdev->panel.width_in_um =
+drivers/video/omap2/dss/hdmi_panel.c:					dssdev->panel.monspecs.max_x * 10000;
+drivers/video/omap2/dss/hdmi_panel.c:			dssdev->panel.height_in_um =
+drivers/video/omap2/dss/hdmi_panel.c:					dssdev->panel.monspecs.max_y * 10000;
+drivers/video/omap2/dss/hdmi_panel.c:	*timings = dssdev->panel.timings;
+drivers/video/omap2/dss/hdmi_panel.c:	dssdev->panel.timings = *timings;
+drivers/video/omap2/dss/hdmi_panel.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/dss/hdmi_panel.c:	struct fb_monspecs *specs = &dssdev->panel.monspecs;
+drivers/video/omap2/dss/hdmi_panel.c:	*xres = dssdev->panel.timings.x_res;
+drivers/video/omap2/dss/hdmi_panel.c:	*yres = dssdev->panel.timings.y_res;
+drivers/video/omap2/dss/manager.c:		return sysfs_streq(dssdev->name, str);
+drivers/video/omap2/dss/manager.c:		DSSDBG("display %s found\n", dssdev->name);
+drivers/video/omap2/dss/manager.c:	if (dssdev->manager) {
+drivers/video/omap2/dss/manager.c:			       dssdev->name, dssdev->manager->name);
+drivers/video/omap2/dss/manager.c:	if ((mgr->supported_displays & dssdev->type) == 0) {
+drivers/video/omap2/dss/manager.c:			       dssdev->name, mgr->name);
+drivers/video/omap2/dss/manager.c:	dssdev->manager = mgr;
+drivers/video/omap2/dss/manager.c:	if (dssdev->type == OMAP_DISPLAY_TYPE_DSI &&
+drivers/video/omap2/dss/manager.c:	    !(dssdev->caps & OMAP_DSS_DISPLAY_CAP_MANUAL_UPDATE))
+drivers/video/omap2/dss/manager.c:	if (!dssdev || dssdev->state != OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/dss/manager.c:	if (dssdev->type == OMAP_DISPLAY_TYPE_VENC
+drivers/video/omap2/dss/manager.c:			|| dssdev->type == OMAP_DISPLAY_TYPE_HDMI) {
+drivers/video/omap2/dss/manager.c:		if (dssdev->caps & OMAP_DSS_DISPLAY_CAP_MANUAL_UPDATE) {
+drivers/video/omap2/dss/manager.c:			mode = dssdev->driver->get_update_mode(dssdev);
+drivers/video/omap2/dss/manager.c:			irq = (dssdev->manager->id == OMAP_DSS_CHANNEL_LCD) ?
+drivers/video/omap2/dss/manager.c:			irq = (dssdev->manager->id == OMAP_DSS_CHANNEL_LCD) ?
+drivers/video/omap2/dss/manager.c:	if (!dssdev || dssdev->state != OMAP_DSS_DISPLAY_ACTIVE)
+drivers/video/omap2/dss/manager.c:	if (dssdev->type == OMAP_DISPLAY_TYPE_VENC
+drivers/video/omap2/dss/manager.c:			|| dssdev->type == OMAP_DISPLAY_TYPE_HDMI) {
+drivers/video/omap2/dss/manager.c:		if (dssdev->caps & OMAP_DSS_DISPLAY_CAP_MANUAL_UPDATE) {
+drivers/video/omap2/dss/manager.c:			mode = dssdev->driver->get_update_mode(dssdev);
+drivers/video/omap2/dss/manager.c:			irq = (dssdev->manager->id == OMAP_DSS_CHANNEL_LCD) ?
+drivers/video/omap2/dss/manager.c:			irq = (dssdev->manager->id == OMAP_DSS_CHANNEL_LCD) ?
+drivers/video/omap2/dss/manager.c:	mgr = dssdev->manager;
+drivers/video/omap2/dss/manager.c:	mgr = dssdev->manager;
+drivers/video/omap2/dss/manager.c:	dssdev->manager->enable(dssdev->manager);
+drivers/video/omap2/dss/manager.c:		oc->ilace = dssdev->type == OMAP_DISPLAY_TYPE_VENC;
+drivers/video/omap2/dss/manager.c:			dssdev->caps & OMAP_DSS_DISPLAY_CAP_MANUAL_UPDATE &&
+drivers/video/omap2/dss/manager.c:			dssdev->driver->get_update_mode(dssdev) !=
+drivers/video/omap2/dss/manager.c:		dssdev->caps & OMAP_DSS_DISPLAY_CAP_MANUAL_UPDATE;
+drivers/video/omap2/dss/manager.c:		dssdev->caps & OMAP_DSS_DISPLAY_CAP_MANUAL_UPDATE &&
+drivers/video/omap2/dss/manager.c:		dssdev->driver->get_update_mode(dssdev) !=
+drivers/video/omap2/dss/manager.c:	mc->skip_init = dssdev->skip_init;
+drivers/video/omap2/dss/manager.c:		switch (dssdev->type) {
+drivers/video/omap2/dss/overlay.c:	dssdev->driver->get_resolution(dssdev, &dw, &dh);
+drivers/video/omap2/dss/overlay.c:		if (dssdev->type == OMAP_DISPLAY_TYPE_DSI &&
+drivers/video/omap2/dss/overlay.c:			dssdev->phy.dsi.type == OMAP_DSS_DSI_TYPE_CMD_MODE &&
+drivers/video/omap2/dss/overlay.c:	if (dssdev->channel == OMAP_DSS_CHANNEL_LCD2) {
+drivers/video/omap2/dss/overlay.c:	} else if (dssdev->type != OMAP_DISPLAY_TYPE_VENC
+drivers/video/omap2/dss/overlay.c:			&& dssdev->type != OMAP_DISPLAY_TYPE_HDMI) {
+drivers/video/omap2/dss/overlay.c:	if (dssdev->type == OMAP_DISPLAY_TYPE_VENC
+drivers/video/omap2/dss/overlay.c:			|| dssdev->type == OMAP_DISPLAY_TYPE_HDMI) {
+drivers/video/omap2/dss/rfbi.c:	dispc_set_lcd_size(dssdev->manager->id, width, height);
+drivers/video/omap2/dss/rfbi.c:	dispc_enable_channel(dssdev->manager->id, true);
+drivers/video/omap2/dss/rfbi.c:	return rfbi_configure(dssdev->phy.rfbi.channel, pixel_size, data_lines);
+drivers/video/omap2/dss/rfbi.c:	dssdev->driver->get_resolution(dssdev, &dw, &dh);
+drivers/video/omap2/dss/rfbi.c:	if (dssdev->manager->caps & OMAP_DSS_OVL_MGR_CAP_DISPC) {
+drivers/video/omap2/dss/rfbi.c:		dispc_set_lcd_size(dssdev->manager->id, *w, *h);
+drivers/video/omap2/dss/rfbi.c:	if (dssdev->manager->caps & OMAP_DSS_OVL_MGR_CAP_DISPC) {
+drivers/video/omap2/dss/rfbi.c:		ovl = dssdev->manager->overlays[0];
+drivers/video/omap2/dss/rfbi.c:	dispc_set_lcd_display_type(dssdev->manager->id,
+drivers/video/omap2/dss/rfbi.c:	dispc_set_parallel_interface_mode(dssdev->manager->id,
+drivers/video/omap2/dss/rfbi.c:	dispc_set_tft_data_lines(dssdev->manager->id, dssdev->ctrl.pixel_size);
+drivers/video/omap2/dss/rfbi.c:	rfbi_configure(dssdev->phy.rfbi.channel,
+drivers/video/omap2/dss/rfbi.c:			       dssdev->ctrl.pixel_size,
+drivers/video/omap2/dss/rfbi.c:			       dssdev->phy.rfbi.data_lines);
+drivers/video/omap2/dss/rfbi.c:	rfbi_set_timings(dssdev->phy.rfbi.channel,
+drivers/video/omap2/dss/rfbi.c:			 &dssdev->ctrl.rfbi_timings);
+drivers/video/omap2/dss/rfbi.c:	rfbi.dssdev[dssdev->phy.rfbi.channel] = dssdev;
+drivers/video/omap2/dss/rfbi.c:	dssdev->caps = OMAP_DSS_DISPLAY_CAP_MANUAL_UPDATE;
+drivers/video/omap2/dss/sdi.c:	dispc_set_parallel_interface_mode(dssdev->manager->id,
+drivers/video/omap2/dss/sdi.c:	dispc_set_lcd_display_type(dssdev->manager->id,
+drivers/video/omap2/dss/sdi.c:	dispc_set_tft_data_lines(dssdev->manager->id, 24);
+drivers/video/omap2/dss/sdi.c:	struct omap_video_timings *t = &dssdev->panel.timings;
+drivers/video/omap2/dss/sdi.c:	dssdev->panel.config |= OMAP_DSS_LCD_RF | OMAP_DSS_LCD_ONOFF;
+drivers/video/omap2/dss/sdi.c:	dispc_set_pol_freq(dssdev->manager->id, dssdev->panel.config,
+drivers/video/omap2/dss/sdi.c:			dssdev->panel.acbi, dssdev->panel.acb);
+drivers/video/omap2/dss/sdi.c:	dispc_set_lcd_timings(dssdev->manager->id, t);
+drivers/video/omap2/dss/sdi.c:	r = dispc_set_clock_div(dssdev->manager->id, &dispc_cinfo);
+drivers/video/omap2/dss/sdi.c:	dss_sdi_init(dssdev->phy.sdi.datapairs);
+drivers/video/omap2/dss/sdi.c:	dssdev->manager->enable(dssdev->manager);
+drivers/video/omap2/dss/sdi.c:	dssdev->manager->disable(dssdev->manager);
+drivers/video/omap2/dss/venc.c:	venc_write_config(venc_timings_to_config(&dssdev->panel.timings));
+drivers/video/omap2/dss/venc.c:	dss_set_venc_output(dssdev->phy.venc.type);
+drivers/video/omap2/dss/venc.c:	if (dssdev->phy.venc.type == OMAP_DSS_VENC_TYPE_COMPOSITE)
+drivers/video/omap2/dss/venc.c:	if (dssdev->phy.venc.invert_polarity == false)
+drivers/video/omap2/dss/venc.c:	dispc_set_digit_size(dssdev->panel.timings.x_res,
+drivers/video/omap2/dss/venc.c:			dssdev->panel.timings.y_res/2);
+drivers/video/omap2/dss/venc.c:	if (dssdev->platform_enable)
+drivers/video/omap2/dss/venc.c:		dssdev->platform_enable(dssdev);
+drivers/video/omap2/dss/venc.c:	dssdev->manager->enable(dssdev->manager);
+drivers/video/omap2/dss/venc.c:	dssdev->manager->disable(dssdev->manager);
+drivers/video/omap2/dss/venc.c:	if (dssdev->platform_disable)
+drivers/video/omap2/dss/venc.c:		dssdev->platform_disable(dssdev);
+drivers/video/omap2/dss/venc.c:	dssdev->panel.timings = omap_dss_pal_timings;
+drivers/video/omap2/dss/venc.c:	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED) {
+drivers/video/omap2/dss/venc.c:	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+drivers/video/omap2/dss/venc.c:	if (dssdev->state == OMAP_DSS_DISPLAY_DISABLED)
+drivers/video/omap2/dss/venc.c:	if (dssdev->state == OMAP_DSS_DISPLAY_SUSPENDED) {
+drivers/video/omap2/dss/venc.c:		dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/dss/venc.c:	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
+drivers/video/omap2/dss/venc.c:	*timings = dssdev->panel.timings;
+drivers/video/omap2/dss/venc.c:	if (memcmp(&dssdev->panel.timings, timings, sizeof(*timings)))
+drivers/video/omap2/dss/venc.c:	dssdev->panel.timings = *timings;
+drivers/video/omap2/dss/venc.c:	if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/dss/venc.c:	config = venc_timings_to_config(&dssdev->panel.timings);
+drivers/video/omap2/dsscomp/device.c:		const char *name = dev_name(&dssdev->dev);
+drivers/video/omap2/dsscomp/device.c:		dev_dbg(DEV(cdev), "display%lu=%s\n", i, dssdev->driver_name);
+drivers/video/omap2/dsscomp/device.c:		blocking_notifier_chain_register(&dssdev->state_notifiers,
+drivers/video/omap2/dsscomp/gralloc.c:		if (dssdev && dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) {
+drivers/video/omap2/dsscomp/gralloc.c:			dssdev->manager->blank(dssdev->manager, false);
+drivers/video/omap2/dsscomp/queue.c:	drv = dssdev->driver;
+drivers/video/omap2/dsscomp/queue.c:	mgr = dssdev->manager;
+drivers/video/omap2/dsscomp/queue.c:		d->win.w = dssdev->panel.timings.x_res - d->win.x;
+drivers/video/omap2/dsscomp/queue.c:		d->win.h = dssdev->panel.timings.y_res - d->win.y;
+drivers/video/omap2/dsscomp/queue.c:	struct omap_overlay_manager *mgr = dssdev->manager;
+drivers/video/omap2/omapfb/omapfb-main.c:		dssdev->panel.fb_xres = pfb_opt->width;
+drivers/video/omap2/omapfb/omapfb-main.c:		dssdev->panel.fb_yres = pfb_opt->height;
+drivers/video/omap2/omapfb/omapfb-main.c:		dssdev->panel.fb_xres = dssdev->panel.timings.x_res;
+drivers/video/omap2/omapfb/omapfb-main.c:		dssdev->panel.fb_yres = dssdev->panel.timings.y_res;
+drivers/video/omap2/omapfb/omapfb-main.c:	DBG("init dev %s dev-%d:w-%d:h-%d\n", dssdev->name, display_ix,
+drivers/video/omap2/omapfb/omapfb-main.c:			dssdev->panel.fb_xres, dssdev->panel.fb_yres);
+drivers/video/omap2/omapfb/omapfb-main.c:	*xres = dssdev->panel.fb_xres;
+drivers/video/omap2/omapfb/omapfb-main.c:	*yres = dssdev->panel.fb_yres;
+drivers/video/omap2/omapfb/omapfb-main.c:	DBG("%s %s %d x %d", __func__, dssdev->name, *xres, *yres);
+drivers/video/omap2/omapfb/omapfb-main.c:	if (!dssdev || !dssdev->driver)
+drivers/video/omap2/omapfb/omapfb-main.c:	dssdrv = dssdev->driver;
+drivers/video/omap2/omapfb/omapfb-main.c:	BUG_ON(dssdev->driver->get_recommended_bpp == NULL);
+drivers/video/omap2/omapfb/omapfb-main.c:	return dssdev->driver->get_recommended_bpp(dssdev);
+drivers/video/omap2/omapfb/omapfb-main.c:	struct omap_dss_driver *dssdrv = dssdev->driver;
+drivers/video/omap2/omapfb/omapfb-main.c:	if (dssdev->state == OMAP_DSS_DISPLAY_DISABLED) {
+drivers/video/omap2/omapfb/omapfb-main.c:					dssdev->name);
+drivers/video/omap2/omapfb/omapfb-main.c:	if (dssdev->caps & OMAP_DSS_DISPLAY_CAP_MANUAL_UPDATE) {
+drivers/video/omap2/omapfb/omapfb-main.c:		if (!dssdev->driver) {
+sound/soc/codecs/omap-hdmi-codec.c:	return sysfs_streq(dssdev->name , "hdmi");
+sound/soc/codecs/omap-hdmi-codec.c:	blocking_notifier_chain_register(&hdmi_data.dssdev->state_notifiers,
+sound/soc/codecs/omap-hdmi-codec.c:	blocking_notifier_chain_unregister(&priv->dssdev->state_notifiers,
