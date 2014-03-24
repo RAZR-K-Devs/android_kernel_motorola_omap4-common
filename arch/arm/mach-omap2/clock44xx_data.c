@@ -470,10 +470,8 @@ static struct clk dpll_core_ck = {
 	.speculate	= &omap2_clksel_speculate,
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	.round_rate     = &omap2_dpll_round_rate,
 	.set_rate       = &omap4_core_dpll_set_rate,
-	}
 #endif
 };
 

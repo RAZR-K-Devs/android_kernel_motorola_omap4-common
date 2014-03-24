@@ -43,6 +43,7 @@
 #include <linux/debugfs.h>
 #include <linux/opp.h>
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
+extern bool dpll_active;
 #include <linux/earlysuspend.h>
 #include <mach/omap4-common.h>
 #endif
@@ -1179,7 +1180,6 @@ static const struct snd_soc_dapm_widget abe_dapm_widgets[] = {
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
 	/* Frontend AIFs */
-if (likely(dpll_active)) {	
 	SND_SOC_DAPM_AIF_IN_E("TONES_DL", "Tones Playback", 0,
 			W_AIF_TONES_DL, ABE_OPP_25, 0,
 			abe_fe_event,
@@ -1222,31 +1222,6 @@ if (likely(dpll_active)) {
 			W_AIF_MODEM_UL, ABE_OPP_50, 0,
 			abe_fe_event,
 			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
-	} else {	
-
-	/* Frontend AIFs */
-	SND_SOC_DAPM_AIF_IN("TONES_DL", "Tones Playback", 0,
-			W_AIF_TONES_DL, ABE_OPP_25, 0),
-	SND_SOC_DAPM_AIF_IN("VX_DL", "Voice Playback", 0,
-			W_AIF_VX_DL, ABE_OPP_50, 0),
-	SND_SOC_DAPM_AIF_OUT("VX_UL", "Voice Capture", 0,
-			W_AIF_VX_UL, ABE_OPP_50, 0),
-	/* the MM_UL mapping is intentional */
-	SND_SOC_DAPM_AIF_OUT("MM_UL1", "MultiMedia1 Capture", 0,
-			W_AIF_MM_UL1, ABE_OPP_100, 0),
-	SND_SOC_DAPM_AIF_OUT("MM_UL2", "MultiMedia2 Capture", 0,
-			W_AIF_MM_UL2, ABE_OPP_50, 0),
-	SND_SOC_DAPM_AIF_IN("MM_DL", " MultiMedia1 Playback", 0,
-			W_AIF_MM_DL, ABE_OPP_25, 0),
-	SND_SOC_DAPM_AIF_IN("MM_DL_LP", " MultiMedia1 LP Playback", 0,
-			W_AIF_MM_DL_LP, ABE_OPP_25, 0),
-	SND_SOC_DAPM_AIF_IN("VIB_DL", "Vibra Playback", 0,
-			W_AIF_VIB_DL, ABE_OPP_100, 0),
-	SND_SOC_DAPM_AIF_IN("MODEM_DL", "MODEM Playback", 0,
-			W_AIF_MODEM_DL, ABE_OPP_50, 0),
-	SND_SOC_DAPM_AIF_OUT("MODEM_UL", "MODEM Capture", 0,
-			W_AIF_MODEM_UL, ABE_OPP_50, 0),
-	}
 #else
 	/* Frontend AIFs */
 	SND_SOC_DAPM_AIF_IN("TONES_DL", "Tones Playback", 0,
