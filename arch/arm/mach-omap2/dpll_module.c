@@ -25,7 +25,7 @@
 
 static DEFINE_MUTEX(dpll_mutex);
 //#if defined(CONFIG_MAPPHONE_EDISON) || defined(CONFIG_MAPPHONE_TARGA)
-bool dpll_active = true;
+bool dpll_active __read_mostly = true;
 //#else
 //bool dpll_active __read_mostly = true;
 //#endif

@@ -48,13 +48,10 @@ extern bool dpll_active;
 					  /* cycle */
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) 
-{
 struct hsi_dpll_cascading_blocker {
 	bool lock_dpll_cascading;
 	struct device *dev;
 	struct work_struct dpll_blocker_work;
-	}	
 };
 
 static struct hsi_dpll_cascading_blocker dpll_blocker = {

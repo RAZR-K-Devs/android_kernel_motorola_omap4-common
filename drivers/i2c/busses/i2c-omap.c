@@ -855,10 +855,8 @@ omap_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	int i;
 	int r;
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	struct platform_device *pdev;
 	struct omap_i2c_bus_platform_data *pdata;
-	}
 #endif
 
 	if (dev == NULL)
@@ -868,7 +866,7 @@ if (likely(dpll_active)) {
 if (likely(dpll_active)) {
 	pdev = container_of(dev->dev, struct platform_device, dev);
 	pdata = pdev->dev.platform_data;
-	}
+} else
 #endif
 
 	r = omap_i2c_hwspinlock_lock(dev);

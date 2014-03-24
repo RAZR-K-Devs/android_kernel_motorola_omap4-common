@@ -33,7 +33,7 @@
 #include <linux/live_oc.h>
 #endif
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-extern bool dpll_Active;
+extern bool dpll_active;
 #include <mach/omap4-common.h>
 #endif
 
@@ -923,7 +923,7 @@ int omap_device_scale(struct device *req_dev, struct device *target_dev,
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
 //	if (omap4_is_in_dpll_cascading()) {
 //		mutex_unlock(&omap_dvfs_lock);
-if (likely(dpll_Active)) {
+if (likely(dpll_active)) {
 	if (omap4_is_in_dpll_cascading())
 		return -EBUSY;
 	}

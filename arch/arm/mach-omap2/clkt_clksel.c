@@ -48,6 +48,10 @@
 
 #include "clock.h"
 
+#ifdef CONFIG_OMAP4_DPLL_CASCADING
+extern bool dpll_active;
+#endif
+
 /* Private functions */
 
 /**

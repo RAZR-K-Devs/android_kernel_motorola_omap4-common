@@ -23,7 +23,9 @@
 #include <linux/list.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
-
+#ifdef CONFIG_OMAP4_DPLL_CASCADING
+extern bool dpll_active;
+#endif
 /* Interface documentation is in mach/omap-pm.h */
 #include <plat/omap-pm.h>
 #include <plat/omap_device.h>
@@ -295,9 +297,7 @@ int omap_pm_apply_min_bus_tput_helper_l(void)
 	ret = omap_device_scale(&dummy_l3_dev, l3_dev, target_level);
 	if (ret)
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-extern bool dpll_active;
-
-	if (likely(dpll_active))
+if (likely(dpll_active))
 		pr_debug("Failed: change interconnect bandwidth to %ld\n",
 		     target_level);
 else

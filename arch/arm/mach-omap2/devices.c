@@ -25,7 +25,7 @@
 #include <asm/pmu.h>
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-extern bool dpll_Active;
+extern bool dpll_active;
 #include <mach/omap4-common.h>
 #endif
 

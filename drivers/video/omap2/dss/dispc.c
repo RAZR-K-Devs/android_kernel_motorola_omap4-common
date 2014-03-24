@@ -2581,7 +2581,7 @@ static void dispc_enable_digit_out(enum omap_display_type type, bool enable)
 		num_irqs = 1;
 	} else {
 		irq_mask = DISPC_IRQ_EVSYNC_EVEN | DISPC_IRQ_EVSYNC_ODD
-						| DISPC_IRQ_FRAMEDONETV);
+						| DISPC_IRQ_FRAMEDONETV;
 		/* XXX I understand from TRM that we should only wait for the
 		 * current field to complete. But it seems we have to wait for
 		 * both fields */
