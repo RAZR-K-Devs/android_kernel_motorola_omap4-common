@@ -543,14 +543,14 @@ static int hdmi_power_on(struct omap_dss_device *dssdev)
 	dispc_set_digit_size(dssdev->panel.timings.x_res,
 			dssdev->panel.timings.y_res);
 
-	dispc_enable_channel(OMAP_DSS_CHANNEL_DIGIT, dssdev->type, 1);
-
 	hdmi_ti_4xxx_wp_video_start(&hdmi.hdmi_data, 1);
 
 	if (hdmi.hdmi_start_frame_cb &&
 	    hdmi.custom_set &&
 	    hdmi.wp_reset_done)
 		(*hdmi.hdmi_start_frame_cb)();
+
+	dispc_enable_channel(OMAP_DSS_CHANNEL_DIGIT, dssdev->type, 1);
 
 	return 0;
 err:
