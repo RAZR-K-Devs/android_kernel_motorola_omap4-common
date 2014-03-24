@@ -103,8 +103,7 @@ enum fw_resource_type {
 	RSC_TRACE	= 4,
 	RSC_BOOTADDR	= 5,
 	RSC_CRASHDUMP	= 6,
-	RSC_SUSPENDADDR	= 7,
-	RSC_END		= 8,
+	RSC_END		= 7,
 };
 
 /**
@@ -161,7 +160,6 @@ struct rproc_ops {
 	int (*watchdog_init)(struct rproc *, int (*)(struct rproc *));
 	int (*watchdog_exit)(struct rproc *);
 	void (*dump_registers)(struct rproc *);
-	int (*pm_init)(struct rproc *rproc, u64 suspaddr);
 };
 
 /*
@@ -302,8 +300,6 @@ int rproc_register(struct device *, const char *, const struct rproc_ops *,
 		unsigned int timeout);
 int rproc_unregister(const char *);
 void rproc_last_busy(struct rproc *);
-int rproc_da_to_pa(struct rproc *, u64, phys_addr_t *);
-int rproc_pa_to_da(struct rproc *, phys_addr_t, u64 *);
 #ifdef CONFIG_REMOTE_PROC_AUTOSUSPEND
 extern const struct dev_pm_ops rproc_gen_pm_ops;
 #define GENERIC_RPROC_PM_OPS	(&rproc_gen_pm_ops)

@@ -42,7 +42,6 @@ struct omap_rproc_priv {
 	struct iommu *iommu;
 	int (*iommu_cb)(struct rproc *, u64, u32);
 	int (*wdt_cb)(struct rproc *);
-	u64 bootaddr;
 #ifdef CONFIG_REMOTE_PROC_AUTOSUSPEND
 	struct omap_mbox *mbox;
 	void __iomem *idle;
@@ -71,7 +70,7 @@ static int _suspend(struct omap_rproc_priv *rpp)
 		schedule();
 	}
 
-	return -EAGAIN;
+	return -EIO;
 }
 
 static int omap_suspend(struct rproc *rproc, bool force)
@@ -444,20 +443,6 @@ static irqreturn_t omap_rproc_watchdog_isr(int irq, void *p)
 	return IRQ_HANDLED;
 }
 #endif
-
-static int omap_rproc_pm_init(struct rproc *rproc, u64 susp_addr)
-{
-	struct omap_rproc_pdata *pdata = rproc->dev->platform_data;
-	phys_addr_t pa;
-	int ret;
-
-	ret = rproc_da_to_pa(rproc, susp_addr, &pa);
-	if (!ret)
-		pdata->suspend_addr = (u32)pa;
-
-	return ret;
-}
-
 static inline int omap_rproc_start(struct rproc *rproc, u64 bootaddr)
 {
 	struct device *dev = rproc->dev;
@@ -566,11 +551,6 @@ err:
 
 static int omap_rproc_set_lat(struct rproc *rproc, long val)
 {
-#ifdef CONFIG_OMAP_IPU_DEEPIDLE
- 	if (val == 40)
-      	     val = 1500;
-#endif 
-
 	pm_qos_update_request(rproc->qos_request, val);
 	return 0;
 }
@@ -606,7 +586,6 @@ static struct rproc_ops omap_rproc_ops = {
 	.watchdog_exit = omap_rproc_watchdog_exit,
 #endif
 	.dump_registers = omap_rproc_dump_registers,
-	.pm_init = omap_rproc_pm_init,
 };
 
 static int omap_rproc_probe(struct platform_device *pdev)

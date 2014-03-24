@@ -242,7 +242,7 @@ static void rpmsg_omx_cb(struct rpmsg_channel *rpdev, void *data, int len,
 			break;
 		}
 		rsp = (struct omx_conn_rsp *) hdr->data;
-		dev_dbg(&rpdev->dev, "conn rsp: status %d addr %d\n",
+		dev_info(&rpdev->dev, "conn rsp: status %d addr %d\n",
 			       rsp->status, rsp->addr);
 		omx->dst = rsp->addr;
 		if (rsp->status)
@@ -486,7 +486,7 @@ static int rpmsg_omx_open(struct inode *inode, struct file *filp)
 	list_add(&omx->next, &omxserv->list);
 	mutex_unlock(&omxserv->lock);
 
-	dev_dbg(omxserv->dev, "local addr assigned: 0x%x\n", omx->ept->addr);
+	dev_info(omxserv->dev, "local addr assigned: 0x%x\n", omx->ept->addr);
 
 	return 0;
 }
@@ -508,24 +508,24 @@ static int rpmsg_omx_release(struct inode *inode, struct file *filp)
 	if (omx->state == OMX_FAIL)
 		goto out;
 
-  if (omx->state == OMX_CONNECTED) {
-    /* send a disconnect msg with the OMX instance addr */
-    hdr->type = OMX_DISCONNECT;
-    hdr->flags = 0;
-    hdr->len = sizeof(struct omx_disc_req);
-    disc_req->addr = omx->dst;
-    use = sizeof(*hdr) + hdr->len;
+	if (omx->state == OMX_CONNECTED) {
+		/* send a disconnect msg with the OMX instance addr */
+		hdr->type = OMX_DISCONNECT;
+		hdr->flags = 0;
+		hdr->len = sizeof(struct omx_disc_req);
+		disc_req->addr = omx->dst;
+		use = sizeof(*hdr) + hdr->len;
 
-    dev_dbg(omxserv->dev, "Disconnecting from OMX service at %d\n",
-      omx->dst);
+		dev_info(omxserv->dev, "Disconnecting from OMX service at %d\n",
+			omx->dst);
 
-    /* send the msg to the remote OMX connection service */
-    ret = rpmsg_send_offchannel(omxserv->rpdev, omx->ept->addr,
-            omxserv->rpdev->dst, kbuf, use);
-    if (ret) {
-      dev_err(omxserv->dev, "rpmsg_send failed: %d\n", ret);
-      return ret;
-    }
+		/* send the msg to the remote OMX connection service */
+		ret = rpmsg_send_offchannel(omxserv->rpdev, omx->ept->addr,
+						omxserv->rpdev->dst, kbuf, use);
+		if (ret) {
+			dev_err(omxserv->dev, "rpmsg_send failed: %d\n", ret);
+			return ret;
+		}
 	}
 	rpmsg_destroy_ept(omx->ept);
 out:
