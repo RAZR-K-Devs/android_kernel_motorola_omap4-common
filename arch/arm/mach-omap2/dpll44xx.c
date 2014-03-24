@@ -1517,10 +1517,8 @@ if (likely(dpll_active))
 	int ret = 0;
 
 #ifdef CONFIG_OMAP4_ONLY_OMAP4430_DPLL_CASCADING
-if (likely(dpll_active))
-{
 	if (!cpu_is_omap443x())
-}		return ret;
+	return ret;
 #endif
 	if (!dev)
 		return -EINVAL;
@@ -1572,10 +1570,8 @@ if (likely(dpll_active))
 	int found = 0;
 
 #ifdef CONFIG_OMAP4_ONLY_OMAP4430_DPLL_CASCADING
-if (likely(dpll_active))
-{
 	if (!cpu_is_omap443x())
-}		return ret;
+		return ret;
 #endif
 	if (!dev)
 		return -EINVAL;
