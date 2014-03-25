@@ -948,6 +948,15 @@ static int omap4_pm_suspend(void)
 		need_sar_restore)
 		omap4_usb_sar_restore();
 
+	/*
+	 * Restore USB SAR registers only if off mode is enabled
+	 * and we fail to hit OFF mode. Otherwise USB SAR context
+	 * gets corrupted due to the SAR save.
+	 */
+	if (off_mode_enabled && !omap4_device_prev_state_off() &&
+		need_sar_restore)
+		omap4_usb_sar_restore();
+
 	return 0;
 }
 
