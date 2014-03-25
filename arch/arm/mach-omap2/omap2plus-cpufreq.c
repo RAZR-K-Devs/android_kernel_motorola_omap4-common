@@ -207,36 +207,15 @@ int omap_cpufreq_scale(struct device *req_dev, unsigned int target_freq)
 	pr_info("cpufreq-omap: transition: %u --> %u\n", freqs.old, freqs.new);
 #endif
 
+	if (target_freq > cur_freq)
+		omap_cpufreq_lpj_recalculate(freqs.new, freqs.old);
+
 	ret = omap_device_scale(req_dev, mpu_dev, freqs.new * 1000);
 
 	freqs.new = omap_getspeed(0);
 
-
-#ifdef CONFIG_SMP
-	/*
-	 * Note that loops_per_jiffy is not updated on SMP systems in
-	 * cpufreq driver. So, update the per-CPU loops_per_jiffy value
-	 * on frequency transition. We need to update all dependent CPUs.
-	 */
-	for_each_possible_cpu(i) {
-		struct lpj_info *lpj = &per_cpu(lpj_ref, i);
-		if (!lpj->freq) {
-			lpj->ref = per_cpu(cpu_data, i).loops_per_jiffy;
-			lpj->freq = freqs.old;
-		}
-
-		per_cpu(cpu_data, i).loops_per_jiffy =
-			cpufreq_scale(lpj->ref, lpj->freq, freqs.new);
-	}
-
-	/* And don't forget to adjust the global one */
-	if (!global_lpj_ref.freq) {
-		global_lpj_ref.ref = loops_per_jiffy;
-		global_lpj_ref.freq = freqs.old;
-	}
-	loops_per_jiffy = cpufreq_scale(global_lpj_ref.ref, global_lpj_ref.freq,
-					freqs.new);
-#endif
+	if (target_freq < cur_freq)
+		omap_cpufreq_lpj_recalculate(freqs.new, freqs.old);
 
 	/* notifiers */
 	for_each_online_cpu(freqs.cpu)
