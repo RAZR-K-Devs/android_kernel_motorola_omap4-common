@@ -175,7 +175,8 @@ static void omap_cpufreq_lpj_recalculate(unsigned int target_freq,
 #endif
 }
 
-int omap_cpufreq_scale(struct device *req_dev, unsigned int target_freq)
+int omap_cpufreq_scale(struct device *req_dev, unsigned int target_freq,
+						unsigned int cur_freq)
 {
 	unsigned int i;
 	int ret;
