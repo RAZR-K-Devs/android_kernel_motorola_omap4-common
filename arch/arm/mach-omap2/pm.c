@@ -264,11 +264,7 @@ int omap_set_pwrdm_state(struct powerdomain *pwrdm, u32 state)
 	}
 
 	cur_state = pwrdm_read_next_pwrst(pwrdm);
-#ifndef CONFIG_MODEM_BACKPORT
 	if (cur_state == state)
-#else
-	if (cur_state == state && state == pwrdm_read_pwrst(pwrdm))
-#endif
 		return ret;
 
 	if (pwrdm_read_pwrst(pwrdm) < PWRDM_POWER_ON) {
