@@ -72,7 +72,7 @@ struct ehci_hcd_omap_platform_data {
 	 * for low power mode entry
 	 */
 	struct clk			*transceiver_clk[OMAP3_HS_USB_PORTS];
-#ifndef CONFIG_MAPPHONE_EDISON
+#ifndef CONFIG_MODEM_BACKPORT
 	int				*usbhs_update_sar;
 #endif
 	/* Set this if Vbus pin of the HS USB PHY is open */
@@ -82,7 +82,7 @@ struct ehci_hcd_omap_platform_data {
 struct ohci_hcd_omap_platform_data {
 	enum usbhs_omap_port_mode	port_mode[OMAP3_HS_USB_PORTS];
 	unsigned			es2_compatibility:1;
-#ifndef CONFIG_MAPPHONE_EDISON
+#ifndef CONFIG_MODEM_BACKPORT
 	int				*usbhs_update_sar;
 #endif
 	/* Suspend Functions for USB PHYs */
@@ -158,7 +158,7 @@ extern int omap4430_phy_init(struct device *dev);
 extern int omap4430_phy_exit(struct device *dev);
 extern int omap4_charger_detect(void);
 extern int omap4430_phy_suspend(struct device *dev, int suspend);
-#ifndef CONFIG_MAPPHONE_EDISON
+#ifndef CONFIG_MODEM_BACKPORT
 extern int omap4430_usbhs_update_sar(void);
 #endif
 #endif
@@ -353,7 +353,7 @@ extern void omap4_trigger_ioctrl(void);
 #define USBHS_OHCI_HWMODNAME    "usbhs_ohci"
 
 #endif	/* __ASM_ARCH_OMAP_USB_H */
-#ifdef CONFIG_MAPPHONE_EDISON
+#ifdef CONFIG_MODEM_BACKPORT
 extern int sar_needs_ehci_saving;
 #define save_usb_sar_regs() do {sar_needs_ehci_saving = 1; } while (0);
 #endif
