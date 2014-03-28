@@ -32,6 +32,10 @@
 
 #include <video/hdmi_ti_4xxx_ip.h>
 
+#ifdef CONFIG_HDMI_TOGGLE
+extern bool hdmi_active;
+#endif
+
 /*#define HDTV_DEBUG*/
 #ifdef HDTV_DEBUG
 #define HDTVDBG(format, ...) \
@@ -444,6 +448,7 @@ static int hdmi_set_hpd(struct omap_dss_device *dssdev, bool enable)
 	mutex_lock(&hdmi.hdmi_lock);
 
 	sHpdEnabled = enable;
+
 	rc = omapdss_set_hdmi_hpd(dssdev, enable);
 
 	mutex_unlock(&hdmi.hdmi_lock);

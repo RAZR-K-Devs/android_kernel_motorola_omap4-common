@@ -31,6 +31,10 @@
 
 #include <video/hdmi_ti_4xxx_ip.h>
 
+#ifdef CONFIG_HDMI_TOGGLE
+extern bool hdmi_active;
+#endif
+
 static struct {
 	struct mutex hdmi_lock;
 	struct switch_dev hpd_switch;
@@ -171,7 +175,6 @@ static struct attribute_group hdmi_panel_attr_group = {
 static int hdmi_panel_probe(struct omap_dss_device *dssdev)
 {
 	DSSDBG("ENTER hdmi_panel_probe\n");
-
 	dssdev->panel.config = OMAP_DSS_LCD_TFT |
 			OMAP_DSS_LCD_IVS | OMAP_DSS_LCD_IHS;
 

@@ -39,6 +39,10 @@
 
 #define DRV_NAME "hdmi-audio-dai"
 
+#ifdef CONFIG_HDMI_TOGGLE
+extern bool hdmi_active;
+#endif
+
 static struct omap_pcm_dma_data omap_hdmi_dai_dma_params = {
 	.name = "HDMI playback",
 	.sync_mode = OMAP_DMA_SYNC_PACKET,
@@ -48,6 +52,7 @@ static int omap_hdmi_dai_startup(struct snd_pcm_substream *substream,
 				  struct snd_soc_dai *dai)
 {
 	int err;
+
 	/*
 	 * Make sure that the period bytes are multiple of the DMA packet size.
 	 * Largest packet size we use is 32 32-bit words = 128 bytes
@@ -157,6 +162,7 @@ static struct platform_driver hdmi_dai_driver = {
 static int __init hdmi_dai_init(void)
 {
 	return platform_driver_register(&hdmi_dai_driver);
+
 }
 module_init(hdmi_dai_init);
 

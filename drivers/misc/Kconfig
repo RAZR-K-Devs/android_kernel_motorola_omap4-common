@@ -743,4 +743,10 @@ config SUSPEND_GOV
         help
           Say Y here to enable Suspend Governor Control 
 
+config HDMI_TOGGLE
+        bool "Support toggling hdmi by userspace"
+        default y
+        help
+          Say Y here to enable HDMI toggle Feature 
+
 endif # MISC_DEVICES
