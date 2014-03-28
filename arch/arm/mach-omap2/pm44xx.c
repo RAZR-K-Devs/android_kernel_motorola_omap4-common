@@ -21,6 +21,9 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/irq.h>
+#ifdef CONFIG_MODEM_BACKPORT
+#include <linux/regulator/driver.h>
+#endif
 #include <linux/regulator/machine.h>
 
 #include <asm/hardware/gic.h>
@@ -33,7 +36,9 @@
 #include <plat/omap-pm.h>
 #include <plat/gpmc.h>
 #include <plat/dma.h>
+#ifndef CONFIG_MODEM_BACKPORT
 #include <plat/omap_device.h>
+#endif
 
 #include <mach/omap_fiq_debugger.h>
 
@@ -114,6 +119,7 @@ static struct clockdomain *abe_clkdm;
  * dynamic dependency set. Allows dynamic dependency to be used
  * in all active usecases and get all the power savings accordingly.
  */
+#ifndef CONFIG_MODEM_BACKPORT
 #define OMAP4_PM_ERRATUM_MPU_EMIF_NO_DYNDEP_IDLE_i745	BIT(4)
 
 /*
@@ -192,10 +198,15 @@ static struct clockdomain *abe_clkdm;
 static int iva_toggle_wa_applied;
 
 u16 pm44xx_errata;
+#else
+#define OMAP4_PM_ERRATUM_MPU_EMIF_NO_DYNDEP_IDLE_iXXX	BIT(4)
+
+u8 pm44xx_errata;
+#endif
 #define is_pm44xx_erratum(erratum) (pm44xx_errata & OMAP4_PM_ERRATUM_##erratum)
 
 #define MAX_IOPAD_LATCH_TIME 1000
-
+#ifndef CONFIG_MODEM_BACKPORT
 void syscontrol_lpddr_clk_io_errata(bool enable)
 {
 	u32 v = 0;
@@ -217,7 +228,7 @@ void syscontrol_lpddr_clk_io_errata(bool enable)
 		v |= LPDDR_WD_PULL_DOWN << OMAP4_LPDDR2IO1_GR10_WD_SHIFT;
 	omap4_ctrl_pad_writel(v, OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO2_2);
 }
-
+#endif
 void omap4_trigger_ioctrl(void)
 {
 	int i = 0;
@@ -295,8 +306,11 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 	ret = omap2_gpio_prepare_for_idle(omap4_device_next_state_off(), suspend);
 	if (ret)
 		goto abort_gpio;
-
+#ifndef CONFIG_MODEM_BACKPORT
 	if (is_pm44xx_erratum(MPU_EMIF_NO_DYNDEP_IDLE_i745) &&
+#else
+	if (is_pm44xx_erratum(MPU_EMIF_NO_DYNDEP_IDLE_iXXX) &&
+#endif
 			mpu_next_state <= PWRDM_POWER_INACTIVE) {
 		/* Configures MEMIF clockdomain in SW_WKUP */
 		if (clkdm_wakeup(emif_clkdm)) {
@@ -322,9 +336,11 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 		omap_vc_set_auto_trans(mpu_voltdm,
 			OMAP_VC_CHANNEL_AUTO_TRANSITION_RETENTION);
 	}
-
+#ifndef CONFIG_MODEM_BACKPORT
 	if (core_next_state < PWRDM_POWER_ON) {
-//	if (core_next_state < PWRDM_POWER_INACTIVE) {
+#else
+	if (core_next_state < PWRDM_POWER_INACTIVE) {
+#endif
 		/*
 		 * Note: IVA can hit RET outside of cpuidle and hence this is
 		 * not the right optimal place to enable IVA AUTO RET. But since
@@ -337,7 +353,7 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 			goto abort_device_off;
 		omap_vc_set_auto_trans(core_voltdm,
 			OMAP_VC_CHANNEL_AUTO_TRANSITION_RETENTION);
-
+#ifndef CONFIG_MODEM_BACKPORT
 		/*
 		* Do not enable IVA AUTO-RET if device targets OFF mode.
 		* In such case, purpose of IVA AUTO-RET WA is to ensure
@@ -360,10 +376,15 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 				omap_vc_set_auto_trans(iva_voltdm,
 				OMAP_VC_CHANNEL_AUTO_TRANSITION_RETENTION);
 			}
+#endif
 		}
 
 		omap_temp_sensor_prepare_idle();
+#ifndef CONFIG_MODEM_BACKPORT
 //		omap4_trigger_ioctrl();
+#else
+		omap4_trigger_ioctrl();
+#endif
 	}
 
 	if (omap4_device_next_state_off()) {
@@ -375,12 +396,13 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 		omap4_pm_suspend_save_regs();
 
 	if (omap4_device_next_state_off()) {
+#ifndef CONFIG_MODEM_BACKPORT
 		/* Proceed with OFF mode sequence only if WA is applied */
 		if (is_pm44xx_erratum(IVA_AUTO_RET_IDLE_iXXX)) {
 			if (!iva_toggle_wa_applied)
 				goto abort_device_off;
 		}
-
+#endif
 		/* Save the device context to SAR RAM */
 #ifndef CONFIG_MODEM_BACKPORT
 		if (omap4_sar_save())
@@ -402,15 +424,15 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 			OMAP4430_ISOOVR_EXTEND_MASK, OMAP4430_PRM_PARTITION,
 			OMAP4430_PRM_DEVICE_INST, OMAP4_PRM_IO_PMCTRL_OFFSET);
 	}
-
+#ifndef CONFIG_MODEM_BACKPORT
 	if (suspend)
 		syscontrol_lpddr_clk_io_errata(false);
-
+#endif
 	omap4_enter_lowpower(cpu, power_state);
-
+#ifndef CONFIG_MODEM_BACKPORT
 	if (suspend)
 		syscontrol_lpddr_clk_io_errata(true);
-
+#endif
 	if (omap4_device_prev_state_off()) {
 		/* Reconfigure the trim settings as well */
 		omap4_ldo_trim_configure();
@@ -422,12 +444,15 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 	}
 
 abort_device_off:
+#ifndef CONFIG_MODEM_BACKPORT
 	if (core_next_state < PWRDM_POWER_ON) {
-//	if (core_next_state < PWRDM_POWER_INACTIVE) {
+#else
+	if (core_next_state < PWRDM_POWER_INACTIVE) {
+#endif
 		/* See note above */
 		omap_vc_set_auto_trans(core_voltdm,
 				OMAP_VC_CHANNEL_AUTO_TRANSITION_DISABLE);
-
+#ifndef CONFIG_MODEM_BACKPORT
 		if (is_pm44xx_erratum(IVA_AUTO_RET_IDLE_iXXX)) {
 			if (omap_vc_set_auto_trans(iva_voltdm,
 				OMAP_VC_CHANNEL_AUTO_TRANSITION_DISABLE)){
@@ -464,10 +489,13 @@ abort_device_off:
 			* (now only before OFF). Code is kept and maintained for
 			* reference until Errata is updated.
 			*/
-			if (!is_pm44xx_erratum(IVA_AUTO_RET_iXXX)) {
-				omap_vc_set_auto_trans(iva_voltdm,
+#endif
+		if (!is_pm44xx_erratum(IVA_AUTO_RET_iXXX)) {
+			omap_vc_set_auto_trans(iva_voltdm,
 				OMAP_VC_CHANNEL_AUTO_TRANSITION_DISABLE);
+#ifndef CONFIG_MODEM_BACKPORT
 			}
+#endif
 		}
 
 		omap_temp_sensor_resume_idle();
@@ -502,7 +530,11 @@ abort_device_off:
 	 * NOTE: is_pm44xx_erratum is not strictly required, but retained for
 	 * code context redability.
 	 */
+#ifndef CONFIG_MODEM_BACKPORT
 	if (is_pm44xx_erratum(MPU_EMIF_NO_DYNDEP_IDLE_i745) &&
+#else
+	if (is_pm44xx_erratum(MPU_EMIF_NO_DYNDEP_IDLE_iXXX) &&
+#endif
 			staticdep_wa_applied) {
 		/* Configures MEMIF clockdomain in SW_WKUP */
 		if (clkdm_wakeup(emif_clkdm))
@@ -837,18 +869,45 @@ static void omap4_configure_pwrst(bool is_off_mode)
 static int omap4_restore_pwdms_after_suspend(void)
 {
 	struct power_state *pwrst;
+#ifndef CONFIG_MODEM_BACKPORT
 	int cstate, pstate, ret = 0;
+#else
+	int cstate, pstate, state, ret = 0;
 
+	/* Print the previous power domain states */
+	pr_info("Read Powerdomain states as ...\n");
+	pr_info("0 : OFF, 1 : RETENTION, 2 : ON-INACTIVE, 3 : ON-ACTIVE\n");
+#endif
 	/* Restore next powerdomain state */
 	list_for_each_entry(pwrst, &pwrst_list, node) {
 		cstate = pwrdm_read_pwrst(pwrst->pwrdm);
 		pstate = pwrdm_read_prev_pwrst(pwrst->pwrdm);
+#ifdef CONFIG_MODEM_BACKPORT
+		if (pstate == -EINVAL) {
+			state = cstate;
+			pr_info("Powerdomain (%s) is in state %d\n",
+				pwrst->pwrdm->name, state);
+		} else {
+			state = pstate;
+			pr_info("Powerdomain (%s) entered state %d\n",
+				pwrst->pwrdm->name, state);
+		}
+
+		if (state > pwrst->next_state) {
+#else
 		if (pstate > pwrst->next_state) {
+#endif
+#ifdef CONFIG_MODEM_BACKPORT
+#if 0
+#endif
 			pr_info("Powerdomain (%s) didn't enter "
 			       "target state %d Vs achieved state %d. "
 			       "current state %d\n",
 			       pwrst->pwrdm->name, pwrst->next_state,
 			       pstate, cstate);
+#ifdef CONFIG_MODEM_BACKPORT
+#endif
+#endif
 			ret = -1;
 		}
 
@@ -856,11 +915,11 @@ static int omap4_restore_pwdms_after_suspend(void)
 			pwrdm_set_logic_retst(pwrst->pwrdm, PWRDM_POWER_RET);
 			continue;
 		}
-
+#ifndef CONFIG_MODEM_BACKPORT
 		/* If state already ON due to h/w dep, don't do anything */
 		if (cstate == PWRDM_POWER_ON)
 			continue;
-
+#endif
 		/* If we have already achieved saved state, nothing to do */
 		if (cstate == pwrst->saved_state)
 			continue;
@@ -880,10 +939,13 @@ static int omap4_restore_pwdms_after_suspend(void)
 		 */
 		if (pwrst->saved_state > cstate)
 			continue;
-
+#ifndef CONFIG_MODEM_BACKPORT
 //		if (pwrst->pwrdm->pwrsts)
 //			omap_set_pwrdm_state(pwrst->pwrdm, pwrst->saved_state);
-
+#else
+		if (pwrst->pwrdm->pwrsts)
+			omap_set_pwrdm_state(pwrst->pwrdm, pwrst->saved_state);
+#endif
 		if (pwrst->pwrdm->pwrsts_logic_ret)
 			pwrdm_set_logic_retst(pwrst->pwrdm,
 						pwrst->saved_logic_state);
@@ -931,6 +993,11 @@ static int omap4_pm_suspend(void)
 	omap4_enter_sleep(0, PWRDM_POWER_OFF, true);
 	omap4_print_wakeirq();
 	prcmdebug_dump(PRCMDEBUG_LASTSLEEP);
+#ifdef CONFIG_MODEM_BACKPORT
+#ifdef CONFIG_PM_DEBUG
+	regulator_show_state_noirq(enable_regulator_dump);
+#endif
+#endif
 
 	/* Disable Device OFF state*/
 	if (off_mode_enabled)
@@ -1088,7 +1155,6 @@ static int __init pwrdms_setup(struct powerdomain *pwrdm, void *unused)
 #endif
 
 	pwrst->pwrdm = pwrdm;
-
 	if ((!strcmp(pwrdm->name, "mpu_pwrdm")) ||
 			(!strcmp(pwrdm->name, "core_pwrdm")) ||
 			(!strcmp(pwrdm->name, "cpu0_pwrdm")) ||
@@ -1151,16 +1217,34 @@ static void __init syscontrol_setup_regs(void)
 	v = omap4_ctrl_pad_readl(OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO1_3);
 	v &= ~(OMAP4_LPDDR21_VREF_EN_CA_MASK | OMAP4_LPDDR21_VREF_EN_DQ_MASK);
 	v |= OMAP4_LPDDR21_VREF_AUTO_EN_CA_MASK | OMAP4_LPDDR21_VREF_AUTO_EN_DQ_MASK;
+#ifndef CONFIG_MODEM_BACKPORT
 	omap4_ctrl_pad_writel(v,
 		OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO1_3);
-
+#else
+        omap4_ctrl_pad_writel(v, OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO1_3);
+#endif
 	v = omap4_ctrl_pad_readl(OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO2_3);
 	v &= ~(OMAP4_LPDDR21_VREF_EN_CA_MASK | OMAP4_LPDDR21_VREF_EN_DQ_MASK);
 	v |= OMAP4_LPDDR21_VREF_AUTO_EN_CA_MASK | OMAP4_LPDDR21_VREF_AUTO_EN_DQ_MASK;
+#ifndef CONFIG_MODEM_BACKPORT
 	omap4_ctrl_pad_writel(v,
 		OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO2_3);
-
+		
 	syscontrol_lpddr_clk_io_errata(true);
+#else
+        omap4_ctrl_pad_writel(v, OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO2_3);
+
+	/*
+	 * Workaround for CK differential IO PADn, PADp values due to bug in
+	 * EMIF CMD phy.
+	 */
+	v = omap4_ctrl_pad_readl(OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO1_2);
+	v &= ~OMAP4_LPDDR2IO1_GR10_WD_MASK;
+	omap4_ctrl_pad_writel(v, OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO1_2);
+	v = omap4_ctrl_pad_readl(OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO2_2);
+	v &= ~OMAP4_LPDDR2IO2_GR10_WD_MASK;
+	omap4_ctrl_pad_writel(v, OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_LPDDR2IO2_2);
+#endif
 }
 
 static void __init prcm_setup_regs(void)
@@ -1269,10 +1353,11 @@ no_32k:
 	 */
 	omap4_prminst_write_inst_reg(0x3, OMAP4430_PRM_PARTITION,
 		OMAP4430_PRM_DEVICE_INST, OMAP4_PRM_PWRREQCTRL_OFFSET);
-
+#ifndef CONFIG_MODEM_BACKPORT
 	/* Handle errata i612 */
 	if (is_pm44xx_erratum(IO_WAKEUP_CLOCK_NOT_RECYCLED_i612))
 		omap4_trigger_ioctrl();
+#endif
 }
 
 
@@ -1359,27 +1444,47 @@ void omap_pm_clear_dsp_wake_up(void)
 static irqreturn_t prcm_interrupt_handler (int irq, void *dev_id)
 {
 	u32 irqenable_mpu, irqstatus_mpu;
+#ifdef CONFIG_MODEM_BACKPORT
+	int hsi_port;
+#endif
 
 	irqenable_mpu = omap4_prm_read_inst_reg(OMAP4430_PRM_OCP_SOCKET_INST,
 					 OMAP4_PRM_IRQENABLE_MPU_OFFSET);
 	irqstatus_mpu = omap4_prm_read_inst_reg(OMAP4430_PRM_OCP_SOCKET_INST,
 					 OMAP4_PRM_IRQSTATUS_MPU_OFFSET);
-
+#ifndef CONFIG_MODEM_BACKPORT
 	/* Clear the interrupt status before clearing the source events */
 	irqstatus_mpu &= irqenable_mpu;
 	omap4_prm_write_inst_reg(irqstatus_mpu, OMAP4430_PRM_OCP_SOCKET_INST,
 					OMAP4_PRM_IRQSTATUS_MPU_OFFSET);
-
+#endif
 	/* Check if a IO_ST interrupt */
 	if (irqstatus_mpu & OMAP4430_IO_ST_MASK) {
 		/* Check if HSI caused the IO wakeup */
+#ifndef CONFIG_MODEM_BACKPORT
 		omap_hsi_io_wakeup_check();
 		omap_uart_resume_idle();
 		usbhs_wakeup();
 		omap_debug_uart_resume_idle();
 		omap4_trigger_ioctrl();
 	}
+#else
+		if (omap_hsi_is_io_wakeup_from_hsi(&hsi_port)) {
+			omap_hsi_wakeup(hsi_port);
+		}
+		omap_uart_resume_idle();
+#ifndef CONFIG_USB_OOBWAKE
+		usbhs_wakeup();
+#endif
+		omap_debug_uart_resume_idle();
+		omap4_trigger_ioctrl();
+	}
 
+	/* Clear the interrupt */
+	irqstatus_mpu &= irqenable_mpu;
+	omap4_prm_write_inst_reg(irqstatus_mpu, OMAP4430_PRM_OCP_SOCKET_INST,
+					OMAP4_PRM_IRQSTATUS_MPU_OFFSET);
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -1412,7 +1517,11 @@ static void omap_default_idle(void)
 void omap4_device_set_state_off(u8 enable)
 {
 #ifdef CONFIG_OMAP_ALLOW_OSWR
+#ifndef CONFIG_MODEM_BACKPORT
 	if (enable && !(is_pm44xx_erratum(WUGEN_LOST_i625)))
+#else
+	if (enable)
+#endif
 		omap4_prminst_write_inst_reg(0x1 <<
 				OMAP4430_DEVICE_OFF_ENABLE_SHIFT,
 		OMAP4430_PRM_PARTITION, OMAP4430_PRM_DEVICE_INST,
@@ -1474,6 +1583,7 @@ static void __init omap4_pm_setup_errata(void)
 	 * all OMAP4 silica
 	 */
 	if (cpu_is_omap44xx())
+#ifndef CONFIG_MODEM_BACKPORT
 		pm44xx_errata |= OMAP4_PM_ERRATUM_IVA_AUTO_RET_IDLE_iXXX |
 				 OMAP4_PM_ERRATUM_HSI_SWAKEUP_iXXX |
 				 OMAP4_PM_ERRATUM_LPDDR_CLK_IO_i736;
@@ -1497,6 +1607,15 @@ static void __init omap4_pm_setup_errata(void)
 	if (cpu_is_omap443x() && (omap_type() == OMAP2_DEVICE_TYPE_GP) &&
 			(omap_rev() < OMAP4430_REV_ES2_3))
 		pm44xx_errata |= OMAP4_PM_ERRATUM_WUGEN_LOST_i625;
+#else
+		pm44xx_errata |= OMAP4_PM_ERRATUM_IVA_AUTO_RET_iXXX |
+				 OMAP4_PM_ERRATUM_HSI_SWAKEUP_iXXX;
+	/* Dynamic Dependency errata for all silicon !=443x */
+	if (cpu_is_omap443x())
+		pm44xx_errata |= OMAP4_PM_ERRATUM_MPU_EMIF_NO_DYNDEP_i688;
+	else
+		pm44xx_errata |= OMAP4_PM_ERRATUM_MPU_EMIF_NO_DYNDEP_IDLE_iXXX;
+#endif
 }
 
 /**
@@ -1508,10 +1627,15 @@ static void __init omap4_pm_setup_errata(void)
 static int __init omap4_pm_init(void)
 {
 	int ret = 0;
+#ifndef CONFIG_MODEM_BACKPORT
 	struct clockdomain *l3_1_clkdm, *l4wkup;
 	struct clockdomain *ducati_clkdm, *l3_2_clkdm, *l4_per, *l4_cfg;
 	char *init_devices[] = {"mpu", "iva"};
 	int i;
+#else
+	struct clockdomain *l3_1_clkdm;
+	struct clockdomain *ducati_clkdm, *l3_2_clkdm, *l4_per, *l4_cfg;
+#endif
 
 	if (!cpu_is_omap44xx())
 		return -ENODEV;
@@ -1527,7 +1651,10 @@ static int __init omap4_pm_init(void)
 	omap4_pm_setup_errata();
 
 	prcm_setup_regs();
-	syscontrol_setup_regs();
+#ifdef CONFIG_MODEM_BACKPORT
+	if (cpu_is_omap446x())
+#endif
+		syscontrol_setup_regs();
 
 	ret = request_irq(OMAP44XX_IRQ_PRCM,
 			  (irq_handler_t)prcm_interrupt_handler,
@@ -1566,16 +1693,23 @@ static int __init omap4_pm_init(void)
 	 */
 	mpuss_clkdm = clkdm_lookup("mpuss_clkdm");
 	emif_clkdm = clkdm_lookup("l3_emif_clkdm");
+#ifndef CONFIG_MODEM_BACKPORT
 	abe_clkdm = clkdm_lookup("abe_clkdm");
+#endif
 	l3_1_clkdm = clkdm_lookup("l3_1_clkdm");
 	l3_2_clkdm = clkdm_lookup("l3_2_clkdm");
 	ducati_clkdm = clkdm_lookup("ducati_clkdm");
 	l4_per = clkdm_lookup("l4_per_clkdm");
 	l4_cfg = clkdm_lookup("l4_cfg_clkdm");
+#ifndef CONFIG_MODEM_BACKPORT
 	l4wkup = clkdm_lookup("l4_wkup_clkdm");
 	if ((!mpuss_clkdm) || (!emif_clkdm) || (!l3_1_clkdm) || (!l4wkup) ||
 		(!l3_2_clkdm) || (!ducati_clkdm) || (!l4_per) || (!l4_cfg) ||
 		(!abe_clkdm))
+#else
+	if ((!mpuss_clkdm) || (!emif_clkdm) || (!l3_1_clkdm) ||
+		(!l3_2_clkdm) || (!ducati_clkdm) || (!l4_per) || (!l4_cfg))
+#endif
 		goto err2;
 
 	/* if we cannot ever enable static dependency. */
@@ -1591,7 +1725,9 @@ static int __init omap4_pm_init(void)
 		ret |= clkdm_add_wkdep(mpuss_clkdm, l4_cfg);
 		ret |= clkdm_add_wkdep(ducati_clkdm, l4_per);
 		ret |= clkdm_add_wkdep(ducati_clkdm, l4_cfg);
+#ifndef CONFIG_MODEM_BACKPORT
 		ret |= clkdm_add_wkdep(mpuss_clkdm, l4wkup);
+#endif
 		if (ret) {
 			pr_err("Failed to add MPUSS -> L3/EMIF, DUCATI -> L3"
 			       " and MPUSS -> L4* wakeup dependency\n");
@@ -1602,6 +1738,7 @@ static int __init omap4_pm_init(void)
 			" MPUSS <-> L3_MAIN_1.\n");
 		pr_info("OMAP4 PM: Static dependency added between"
 			" DUCATI <-> L4_PER/CFG and DUCATI <-> L3.\n");
+#ifndef CONFIG_MODEM_BACKPORT
 	} else if (cpu_is_omap446x() || cpu_is_omap447x()) {
 		/*
 		 * Static dependency between mpuss and emif can only be
@@ -1609,13 +1746,18 @@ static int __init omap4_pm_init(void)
 		 * when mpuss enters OSWR
 		 */
 		/*ret |= clkdm_add_wkdep(mpuss_clkdm, emif_clkdm);*/
+#else
+	} else if (cpu_is_omap446x()) {
+#endif
 		ret |= clkdm_add_wkdep(mpuss_clkdm, l4_per);
 		ret |= clkdm_add_wkdep(mpuss_clkdm, l4_cfg);
 
 		/* There appears to be a problem between the MPUSS and L3_1 */
 		ret |= clkdm_add_wkdep(mpuss_clkdm, l3_1_clkdm);
 		ret |= clkdm_add_wkdep(mpuss_clkdm, l3_2_clkdm);
+#ifndef CONFIG_MODEM_BACKPORT
 		ret |= clkdm_add_wkdep(mpuss_clkdm, l4wkup);
+#endif
 
 		/* There appears to be a problem between the Ducati and L3/L4 */
 		ret |= clkdm_add_wkdep(ducati_clkdm, l3_1_clkdm);
@@ -1692,7 +1834,7 @@ static int __init omap4_pm_init(void)
 	omap_pm_is_ready_status = true;
 	/* let the other CPU know as well */
 	smp_wmb();
-
+#ifndef CONFIG_MODEM_BACKPORT
 	/* Setup the scales for every init device appropriately */
 	for (i = 0; i < ARRAY_SIZE(init_devices); i++) {
 		struct omap_hwmod *oh = omap_hwmod_lookup(init_devices[i]);
@@ -1725,7 +1867,7 @@ static int __init omap4_pm_init(void)
 
 	/* apply any pending bus throughput requests */
 	omap_pm_apply_min_bus_tput();
-
+#endif
 err2:
 	return ret;
 }

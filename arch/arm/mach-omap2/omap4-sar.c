@@ -1310,11 +1310,11 @@ int omap4_sar_save(void)
 		pwrdm_enable_hdwr_sar(l3init_pwrdm);
 	clk_enable(usb_tll_ck);
 #endif
-#ifdef #ifdef CONFIG_MODEM_BACKPORT
+#ifdef CONFIG_MODEM_BACKPORT
 	pwrdm_enable_hdwr_sar(l3init_pwrdm);
 #endif
 	clk_enable(usb_host_ck);
-#ifdef #ifdef CONFIG_MODEM_BACKPORT
+#ifdef CONFIG_MODEM_BACKPORT
 	clk_enable(usb_tll_ck);
 #endif
 
@@ -1326,13 +1326,13 @@ int omap4_sar_save(void)
 		sar_save(ARRAY_SIZE(omap447x_sar_ram1_layout), SAR_BANK1_OFFSET,
 			 omap447x_sar_ram1_layout);
 	else
-#ifndef #ifdef CONFIG_MODEM_BACKPORT
+#ifndef CONFIG_MODEM_BACKPORT
 		sar_save((ARRAY_SIZE(omap443x_sar_ram1_layout) -
 			(uhh_save ? 0 : OMAP4430_USBHOST_CTX_NUM)),
 			SAR_BANK1_OFFSET, omap443x_sar_ram1_layout);
 #endif
 #ifdef CONFIG_MODEM_BACKPORT
-	sar_save(ARRAY_SIZE(omap443x_sar_ram1_layout), SAR_BANK1_OFFSET,
+		sar_save(ARRAY_SIZE(omap443x_sar_ram1_layout), SAR_BANK1_OFFSET,
 			 omap443x_sar_ram1_layout);
 #endif
 	clk_disable(usb_host_ck);
@@ -1412,8 +1412,12 @@ void omap4_sar_overwrite(void)
 	__raw_writel(val, sar_ram_base + SAR_BANK1_OFFSET + 0x100);
 	/* CM1 CM_SHADOW_FREQ_CONFIG1, Enable FREQ UPDATE */
 	val = __raw_readl(OMAP4430_CM_SHADOW_FREQ_CONFIG1);
+#ifndef CONFIG_MODEM_BACKPORT
 	val |= (1 << OMAP4430_FREQ_UPDATE_SHIFT) |
 		(1 << OMAP4430_DLL_RESET_SHIFT);
+#else
+	val |= 1 << OMAP4430_FREQ_UPDATE_SHIFT;
+#endif
 	val &= ~OMAP4430_DLL_OVERRIDE_MASK;
 	__raw_writel(val, sar_ram_base + SAR_BANK1_OFFSET + 0x104);
 	/* CM2 MEMIF_CLKTRCTRL = HW_AUTO, after FREQ UPDATE */
