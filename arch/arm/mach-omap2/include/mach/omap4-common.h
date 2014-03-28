@@ -182,7 +182,7 @@ extern int omap4_prcm_freq_update(void);
 
 #ifdef CONFIG_PM
 extern int omap4_sar_save(void);
-#ifdef CONFIG_308_MODEM
+#ifdef CONFIG_MODEM_BACKPORT
 extern void omap4_usb_sar_restore(void);
 #endif
 extern void omap4_sar_overwrite(void);
@@ -191,7 +191,7 @@ extern void omap4_sar_usbhost_init(u32 fck_source);
 void omap4_sar_save(void)
 {
 }
-#ifdef CONFIG_308_MODEM
+#ifdef CONFIG_MODEM_BACKPORT
 void omap4_usb_sar_restore(void)
 {
 }
