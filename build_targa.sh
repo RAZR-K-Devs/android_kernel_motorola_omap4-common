@@ -47,7 +47,18 @@ export CROSS_COMPILE=arm-eabi-
 
 # export TARGET_KERNEL_CUSTOM_TOOLCHAIN=arm-unknown-linux-gnueabi-standard_4.7.2
 export LOCALVERSION="-JBX-3.0-Hybrid-Bionic-4.4"
-make -j8 TARGET_KERNEL_SOURCE=/home/dtrail/android/android_kernel_motorola_omap4-common/ TARGET_KERNEL_CONFIG=mapphone_OCTarga_defconfig $OUT/boot.img
+# Choose build option
+cd /data/4.4
+while true; do
+    read -p "Do you want to build with HDMI support? " yn
+    case $yn in
+        [Yy]* ) echo "Starting..."; make -j4 TARGET_KERNEL_SOURCE=/home/dtrail/android/android_kernel_motorola_omap4-common/ TARGET_KERNEL_CONFIG=mapphone_OCTarga_defconfig $OUT/boot.img; break;;
+        [Nn]* ) make -j4 TARGET_KERNEL_SOURCE=/home/dtrail/android/android_kernel_motorola_omap4-common/ TARGET_KERNEL_CONFIG=NO_HDMI_OCTarga_defconfig $OUT/boot.img; break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+
+echo " "
 
 # Ramdisk needs addition to fix 10% battery
 cd /data/4.4/out/target/product/targa
