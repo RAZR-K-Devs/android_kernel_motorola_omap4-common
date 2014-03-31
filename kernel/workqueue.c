@@ -59,12 +59,13 @@ enum {
 	WORKER_DIE		= 1 << 1,	/* die die die */
 	WORKER_IDLE		= 1 << 2,	/* is idle */
 	WORKER_PREP		= 1 << 3,	/* preparing to run works */
+	WORKER_ROGUE		= 1 << 4,	/* not bound to any cpu */
 	WORKER_REBIND		= 1 << 5,	/* mom is home, come back */
 	WORKER_CPU_INTENSIVE	= 1 << 6,	/* cpu intensive */
 	WORKER_UNBOUND		= 1 << 7,	/* worker is unbound */
 
-	WORKER_NOT_RUNNING	= WORKER_PREP | WORKER_REBIND | WORKER_UNBOUND
-				  WORKER_CPU_INTENSIVE,
+	WORKER_NOT_RUNNING	= WORKER_PREP | WORKER_ROGUE | WORKER_REBIND |
+				  WORKER_CPU_INTENSIVE | WORKER_UNBOUND,
 
 	/* gcwq->trustee_state */
 	TRUSTEE_START		= 0,		/* start */
@@ -1167,7 +1168,7 @@ static void worker_enter_idle(struct worker *worker)
 	/* idle_list is LIFO */
 	list_add(&worker->entry, &gcwq->idle_list);
 
-	if (likely(gcwq->trustee_state != TRUSTEE_DONE))) {
+	if (likely(!(worker->flags & WORKER_ROGUE))) {
 		if (too_many_workers(gcwq) && !timer_pending(&gcwq->idle_timer))
 			mod_timer(&gcwq->idle_timer,
 				  jiffies + IDLE_WORKER_TIMEOUT);
@@ -3276,10 +3277,10 @@ static int __cpuinit trustee_thread(void *__gcwq)
 	gcwq->flags |= GCWQ_MANAGING_WORKERS;
 
 	list_for_each_entry(worker, &gcwq->idle_list, entry)
-		worker->flags |= WORKER_UNBOUND;
+		worker->flags |= WORKER_ROGUE;
 
 	for_each_busy_worker(worker, i, pos, gcwq)
-		worker->flags |= WORKER_UNBOUND;
+		worker->flags |= WORKER_ROGUE;
 
 	gcwq->flags |= GCWQ_DISASSOCIATED;
 
@@ -3345,7 +3346,7 @@ static int __cpuinit trustee_thread(void *__gcwq)
 			worker = create_worker(gcwq, false);
 			spin_lock_irq(&gcwq->lock);
 			if (worker) {
-				worker->flags |= WORKER_UNBOUND;
+				worker->flags |= WORKER_ROGUE;
 				start_worker(worker);
 			}
 		}
@@ -3385,7 +3386,7 @@ static int __cpuinit trustee_thread(void *__gcwq)
 		 * rebinding is scheduled.
 		 */
 		worker->flags |= WORKER_REBIND;
-		worker_flags &= ~WORKER_UNBOUND;
+		worker->flags &= ~WORKER_ROGUE;
 
 		/* queue rebind_work, wq doesn't matter, use the default one */
 		if (test_and_set_bit(WORK_STRUCT_PENDING_BIT,
