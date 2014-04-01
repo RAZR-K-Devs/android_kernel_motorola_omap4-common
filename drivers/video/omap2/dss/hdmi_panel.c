@@ -32,6 +32,7 @@
 #include <video/hdmi_ti_4xxx_ip.h>
 
 #ifdef CONFIG_HDMI_TOGGLE
+#include <linux/hdmi_toggle.h>
 extern bool hdmi_active;
 #endif
 
@@ -213,7 +214,16 @@ static int hdmi_panel_enable(struct omap_dss_device *dssdev)
 		r = -EINVAL;
 		goto err;
 	}
+#ifdef CONFIG_HDMI_TOGGLE
+if (unlikely(hdmi_active))
+	{
+	hdmi_panel_disable(dssdev);
+	pr_info("HDMI_TOGGLE: Panel OFF\n");
 
+	return 0;
+	} 
+else if (likely(hdmi_active))
+#endif
 	r = omapdss_hdmi_display_enable(dssdev);
 	if (r) {
 		DSSERR("failed to power on\n");
@@ -227,8 +237,10 @@ err:
 
 	return r;
 }
-
-static void hdmi_panel_disable(struct omap_dss_device *dssdev)
+#ifndef CONFIG_HDMI_TOGGLE
+static 
+#endif
+void hdmi_panel_disable(struct omap_dss_device *dssdev)
 {
 	mutex_lock(&hdmi.hdmi_lock);
 	hdmi_inform_power_on_to_cec(false);
@@ -297,7 +309,10 @@ static void hdmi_hotplug_detect_worker(struct work_struct *work)
 	struct hpd_worker_data *d = container_of(work, typeof(*d), dwork.work);
 	struct omap_dss_device *dssdev = NULL;
 	int state = atomic_read(&d->state);
-
+#ifdef CONFIG_HDMI_TOGGLE
+if (likely(hdmi_active))
+{
+#endif
 	int match(struct omap_dss_device *dssdev, void *arg)
 	{
 		return sysfs_streq(dssdev->name , "hdmi");
@@ -350,6 +365,15 @@ static void hdmi_hotplug_detect_worker(struct work_struct *work)
 	}
 done:
 	mutex_unlock(&hdmi.hdmi_lock);
+#ifdef CONFIG_HDMI_TOGGLE
+	}
+else
+{	
+	hdmi_panel_disable(dssdev);
+	pr_info("HDMI_TOGGLE: Panel disabled\n");
+	return 0;
+}
+#endif
 }
 
 int hdmi_panel_hpd_handler(int hpd)

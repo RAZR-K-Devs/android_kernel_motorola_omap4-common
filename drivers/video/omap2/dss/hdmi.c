@@ -44,6 +44,7 @@
 #include "dss_features.h"
 
 #ifdef CONFIG_HDMI_TOGGLE
+#include <linux/hdmi_toggle.h>
 extern bool hdmi_active;
 #endif
 
@@ -793,7 +794,8 @@ int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev)
 if (likely(hdmi_active))
 	hdmi.enabled = true;
 else
-	hdmi.enabled = false;
+	omapdss_hdmi_display_disable(dssdev);
+	return 0;
 #else
 	hdmi.enabled = true;
 #endif

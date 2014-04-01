@@ -38,6 +38,11 @@
 #include "pm.h"
 /*#define DISABLED_FOR_BRINGUP*/
 /*#define DEBUG*/
+#ifdef CONFIG_HDMI_TOGGLE
+#include <linux/hdmi_toggle.h>
+extern bool hdmi_active;
+#endif
+
 #ifdef DEBUG
 static unsigned int board_panel_debug;
 #define PANELDBG(format, ...) \
@@ -218,7 +223,10 @@ struct regulator *mapphone_hdmi_dac_reg;
 struct regulator *mapphone_hdmi_5v_reg;
 
 static int  mapphone_panel_hdmi_5v_enable(void);
-static int  mapphone_panel_hdmi_5v_disable(void);
+#ifndef CONFIG_HDMI_TOGGLE
+static
+#endif
+int  mapphone_panel_hdmi_5v_disable(void);
 static int  mapphone_panel_enable_hdtv(struct omap_dss_device *dssdev);
 static void mapphone_panel_disable_hdtv(struct omap_dss_device *dssdev);
 static int  mapphone_panel_enable_hpd_hdtv(struct omap_dss_device *dssdev);
@@ -308,7 +316,10 @@ static struct platform_device *hdmi_regulator_devices[] = {
 static int  mapphone_panel_hdmi_5v_enable(void)
 {
 	int rc = -1;
-
+#ifdef CONFIG_HDMI_TOGGLE
+if (likely(hdmi_active))
+{
+#endif
 	if (!mapphone_hdmi_5v_enable && !mapphone_hdmi_5v_force_off) {
 		if (!mapphone_hdmi_5v_reg) {
 			mapphone_hdmi_5v_reg =
@@ -326,11 +337,20 @@ static int  mapphone_panel_hdmi_5v_enable(void)
 			mapphone_hdmi_5v_enable = 1;
 		}
 	}
-
+#ifdef CONFIG_HDMI_TOGGLE
+}
+if (unlikely(hdmi_active))
+{
+	mapphone_hdmi_5v_enable = 0;
+	pr_info("HDMI_TOGGLE: Panel v5 DISABLED\n");
+}
+#endif
 	return rc;
 }
-
-static int mapphone_panel_hdmi_5v_disable(void)
+#ifndef CONFIG_HDMI_TOGGLE
+static
+#endif
+int mapphone_panel_hdmi_5v_disable(void)
 {
 	int rc = 0;
 
@@ -1448,6 +1468,10 @@ void __init mapphone_panel_init(void)
 	}
 
 	if (mapphone_feature_hdmi) {
+#ifdef CONFIG_HDMI_TOGGLE
+if (likely(hdmi_active))
+{
+#endif
 		/* Set the bits to disable "internal pullups" for the DDC
 		 * clk and data lines.  This is required for ES2.3 parts
 		 * and beyond.  If these are not set EDID reads fails.
@@ -1461,6 +1485,13 @@ void __init mapphone_panel_init(void)
 		/* Remove HDTV from the DSS device list */
 		mapphone_dss_data.num_devices--;
 	}
+#ifdef CONFIG_HDMI_TOGGLE
+}
+else if (unlikely(hdmi_active))
+{
+	mapphone_dss_data.num_devices--;
+}
+#endif
 
 	platform_device_register(&omap_panel_device);
 	omap_display_init(&mapphone_dss_data);

@@ -42,6 +42,10 @@
 #include "../../../drivers/video/omap2/dss/dss_features.h"
 #include "../../../drivers/video/omap2/dss/dss.h"
 
+#ifdef CONFIG_HDMI_TOGGLE
+extern bool hdmi_active;
+#endif
+
 #define HDMI_WP		0x0
 #define HDMI_CORE_SYS	0x400
 #define HDMI_CORE_AV	0x900
@@ -357,7 +361,10 @@ static int hdmi_probe(struct snd_soc_codec *codec)
 	struct platform_device *pdev = to_platform_device(codec->dev);
 	struct resource *hdmi_rsrc;
 	int ret = 0;
-
+#ifdef CONFIG_HDMI_TOGGLE
+if (likely(hdmi_active))
+	{
+#endif
 	snd_soc_codec_set_drvdata(codec, &hdmi_data);
 
 	hdmi_rsrc = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -409,12 +416,27 @@ static int hdmi_probe(struct snd_soc_codec *codec)
 	INIT_DELAYED_WORK(&hdmi_data.delayed_work, hdmi_audio_work);
 
 	return 0;
+#ifdef CONFIG_HDMI_TOGGLE
+	}
+if (unlikely(hdmi_active))
+	{
+	struct snd_soc_codec *codec;
+	struct hdmi_codec_data *priv = snd_soc_codec_get_drvdata(codec);
+	
+	pr_info("HDMI_TOGGLE: SOUND_CODEC: OFF\n");
+	
+	blocking_notifier_chain_unregister(&priv->dssdev->state_notifiers,
+						&priv->notifier);
+	iounmap(priv->ip_data.base_wp);
+	kfree(priv);
 
+	return 0;
+	}
+#endif
 dssdev_err:
 	iounmap(hdmi_data.ip_data.base_wp);
 res_err:
 	return ret;
-
 }
 
 static int hdmi_remove(struct snd_soc_codec *codec)

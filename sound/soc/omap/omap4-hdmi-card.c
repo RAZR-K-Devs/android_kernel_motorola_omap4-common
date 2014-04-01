@@ -30,6 +30,7 @@
 #define DRV_NAME "omap4-hdmi-audio"
 
 #ifdef CONFIG_HDMI_TOGGLE
+#include <linux/hdmi_toggle.h>
 extern bool hdmi_active;
 #endif
 
@@ -39,10 +40,7 @@ static int omap4_hdmi_dai_hw_params(struct snd_pcm_substream *substream,
 	int i, count = 0;
 	struct omap_overlay_manager *mgr = NULL;
 	struct device *dev = substream->pcm->card->dev;
-#ifdef CONFIG_HDMI_TOGGLE
-if (unlikely(hdmi_active))
-	return 0;
-#endif
+
 	/* Find DSS HDMI device */
 	for (i = 0; i < omap_dss_get_num_overlay_managers(); i++) {
 		mgr = omap_dss_get_overlay_manager(i);
