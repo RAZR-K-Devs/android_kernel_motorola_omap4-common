@@ -79,7 +79,7 @@ static struct clockdomain *tesla_clkdm;
 static struct powerdomain *tesla_pwrdm;
 
 static struct clockdomain *emif_clkdm, *mpuss_clkdm;
-#ifdef CONFIG_MAPPHONE_EDISON
+#ifdef CONFIG_MAPPHONE_MODEM_PORT
 static int need_sar_restore;
 #endif
 static struct clockdomain *abe_clkdm;
@@ -382,14 +382,14 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 		}
 
 		/* Save the device context to SAR RAM */
-#ifndef CONFIG_MAPPHONE_EDISON
+#ifndef CONFIG_MAPPHONE_MODEM_PORT
 		if (omap4_sar_save())
 #else
 		if (omap4_sar_save()) {
 			need_sar_restore = 0;
 #endif
 			goto abort_device_off;
-#ifdef CONFIG_MAPPHONE_EDISON
+#ifdef CONFIG_MAPPHONE_MODEM_PORT
 		}
 		need_sar_restore = 1;
 #endif
@@ -941,7 +941,7 @@ static int omap4_pm_suspend(void)
 	if (ret)
 		pr_err("Could not enter target state in pm_suspend\n");
 	else
-#ifndef CONFIG_MAPPHONE_EDISON
+#ifndef CONFIG_MAPPHONE_MODEM_PORT
 		pr_err("Successfully put all powerdomains to target state\n");
 #else
 		pr_info("Successfully put all powerdomains to target state\n");

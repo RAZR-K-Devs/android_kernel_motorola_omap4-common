@@ -566,7 +566,7 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 	}
 
 	pm_runtime_get_sync(dev->parent);
-#ifndef CONFIG_MAPPHONE_EDISON
+#ifndef CONFIG_MAPPHONE_MODEM_PORT
 	*pdata->usbhs_update_sar = 1;
 #endif
 	/*
@@ -712,7 +712,7 @@ static int ehci_omap_bus_suspend(struct usb_hcd *hcd)
 
 	if (hcd->self.connection_change) {
 		dev_err(dev, "Connection state changed\n");
-#ifdef CONFIG_MAPPHONE_EDISON
+#ifdef CONFIG_MAPPHONE_MODEM_PORT
 		save_usb_sar_regs();
 #endif
 		hcd->self.connection_change = 0;
@@ -789,7 +789,7 @@ static int ehci_omap_bus_resume(struct usb_hcd *hcd)
 
 	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 	enable_irq(hcd->irq);
-#ifndef CONFIG_MAPPHONE_EDISON
+#ifndef CONFIG_MAPPHONE_MODEM_PORT
 	*pdata->usbhs_update_sar = 1;
 #endif
 	return ehci_bus_resume(hcd);
