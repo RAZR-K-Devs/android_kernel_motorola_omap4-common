@@ -316,10 +316,7 @@ static struct platform_device *hdmi_regulator_devices[] = {
 static int  mapphone_panel_hdmi_5v_enable(void)
 {
 	int rc = -1;
-#ifdef CONFIG_HDMI_TOGGLE
-if (likely(hdmi_active))
-{
-#endif
+
 	if (!mapphone_hdmi_5v_enable && !mapphone_hdmi_5v_force_off) {
 		if (!mapphone_hdmi_5v_reg) {
 			mapphone_hdmi_5v_reg =
@@ -337,14 +334,7 @@ if (likely(hdmi_active))
 			mapphone_hdmi_5v_enable = 1;
 		}
 	}
-#ifdef CONFIG_HDMI_TOGGLE
-}
-if (unlikely(hdmi_active))
-{
-	mapphone_hdmi_5v_enable = 0;
-	pr_info("HDMI_TOGGLE: Panel v5 DISABLED\n");
-}
-#endif
+
 	return rc;
 }
 #ifndef CONFIG_HDMI_TOGGLE

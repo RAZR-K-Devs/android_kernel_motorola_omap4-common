@@ -749,7 +749,9 @@ int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev)
 	int r = 0;
 
 	DSSINFO("ENTER hdmi_display_enable\n");
-
+#ifdef CONFIG_HDMI_TOGGLE
+if (likely(hdmi_active)) {
+#endif
 	mutex_lock(&hdmi.lock);
 
 	if (hdmi.enabled)
@@ -790,15 +792,9 @@ int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev)
 		DSSERR("failed to power on device\n");
 		goto err4;
 	}
-#ifdef CONFIG_HDMI_TOGGLE
-if (likely(hdmi_active))
+
 	hdmi.enabled = true;
-else
-	omapdss_hdmi_display_disable(dssdev);
-	return 0;
-#else
-	hdmi.enabled = true;
-#endif
+
 	mutex_unlock(&hdmi.lock);
 	return 0;
 
@@ -816,6 +812,14 @@ err1:
 err0:
 	mutex_unlock(&hdmi.lock);
 	return r;
+#ifdef CONFIG_HDMI_TOGGLE
+}
+else if (unlikely(hdmi_active)) {
+
+	omapdss_hdmi_display_disable(dssdev);
+	return 0;
+	}
+#else
 }
 
 void omapdss_hdmi_display_disable(struct omap_dss_device *dssdev)

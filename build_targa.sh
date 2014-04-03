@@ -62,7 +62,7 @@ echo " "
 
 # Ramdisk needs addition to fix 10% battery
 cd /data/4.4/out/target/product/targa
-rm ramdisk.img
+# rm ramdisk.img
 cd ramdisk
 gzip -dc ../ramdisk.img | cpio -i
 

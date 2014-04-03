@@ -418,7 +418,7 @@ if (likely(hdmi_active))
 	return 0;
 #ifdef CONFIG_HDMI_TOGGLE
 	}
-if (unlikely(hdmi_active))
+else if (unlikely(hdmi_active))
 	{
 	struct snd_soc_codec *codec;
 	struct hdmi_codec_data *priv = snd_soc_codec_get_drvdata(codec);

@@ -214,16 +214,7 @@ static int hdmi_panel_enable(struct omap_dss_device *dssdev)
 		r = -EINVAL;
 		goto err;
 	}
-#ifdef CONFIG_HDMI_TOGGLE
-if (unlikely(hdmi_active))
-	{
-	hdmi_panel_disable(dssdev);
-	pr_info("HDMI_TOGGLE: Panel OFF\n");
 
-	return 0;
-	} 
-else if (likely(hdmi_active))
-#endif
 	r = omapdss_hdmi_display_enable(dssdev);
 	if (r) {
 		DSSERR("failed to power on\n");
@@ -367,7 +358,7 @@ done:
 	mutex_unlock(&hdmi.hdmi_lock);
 #ifdef CONFIG_HDMI_TOGGLE
 	}
-else
+else if (unlikely(hdmi_active))
 {	
 	hdmi_panel_disable(dssdev);
 	pr_info("HDMI_TOGGLE: Panel disabled\n");

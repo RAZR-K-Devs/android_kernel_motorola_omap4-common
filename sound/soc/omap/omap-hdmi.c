@@ -67,7 +67,7 @@ if (likely(hdmi_active))
 		return err;
 #ifdef CONFIG_HDMI_TOGGLE
 	}
-if (unlikely(hdmi_active))
+else if (unlikely(hdmi_active))
 	{
 	hdmi_lib_stop_acr_wa();
 	pr_info("HDMI_TOGGLE: Playback Disabled\n");
