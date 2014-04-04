@@ -228,10 +228,8 @@ err:
 
 	return r;
 }
-#ifndef CONFIG_HDMI_TOGGLE
-static 
-#endif
-void hdmi_panel_disable(struct omap_dss_device *dssdev)
+
+static void hdmi_panel_disable(struct omap_dss_device *dssdev)
 {
 	mutex_lock(&hdmi.hdmi_lock);
 	hdmi_inform_power_on_to_cec(false);
@@ -300,10 +298,7 @@ static void hdmi_hotplug_detect_worker(struct work_struct *work)
 	struct hpd_worker_data *d = container_of(work, typeof(*d), dwork.work);
 	struct omap_dss_device *dssdev = NULL;
 	int state = atomic_read(&d->state);
-#ifdef CONFIG_HDMI_TOGGLE
-if (likely(hdmi_active))
-{
-#endif
+
 	int match(struct omap_dss_device *dssdev, void *arg)
 	{
 		return sysfs_streq(dssdev->name , "hdmi");
@@ -315,6 +310,18 @@ if (likely(hdmi_active))
 		return;
 
 	mutex_lock(&hdmi.hdmi_lock);
+#ifdef CONFIG_HDMI_TOGGLE
+if (unlikely(hdmi_active))
+	{	
+	pr_info("HDMI_TOGGLE: Panel disabled\n");
+	mutex_unlock(&hdmi.hdmi_lock);
+	dssdev->driver->disable(dssdev);
+	omapdss_hdmi_enable_s3d(false);
+	mutex_lock(&hdmi.hdmi_lock);
+		goto done;
+	}
+else
+#endif
 	if (state == HPD_STATE_OFF) {
 		switch_set_state(&hdmi.hpd_switch, 0);
 		hdmi_inform_hpd_to_cec(false);
@@ -356,15 +363,6 @@ if (likely(hdmi_active))
 	}
 done:
 	mutex_unlock(&hdmi.hdmi_lock);
-#ifdef CONFIG_HDMI_TOGGLE
-	}
-else if (unlikely(hdmi_active))
-{	
-	hdmi_panel_disable(dssdev);
-	pr_info("HDMI_TOGGLE: Panel disabled\n");
-	return 0;
-}
-#endif
 }
 
 int hdmi_panel_hpd_handler(int hpd)

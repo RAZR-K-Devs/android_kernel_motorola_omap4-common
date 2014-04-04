@@ -39,11 +39,6 @@
 
 #define DRV_NAME "hdmi-audio-dai"
 
-#ifdef CONFIG_HDMI_TOGGLE
-#include <linux/hdmi_toggle.h>
-extern bool hdmi_active;
-#endif
-
 static struct omap_pcm_dma_data omap_hdmi_dai_dma_params = {
 	.name = "HDMI playback",
 	.sync_mode = OMAP_DMA_SYNC_PACKET,
@@ -53,10 +48,7 @@ static int omap_hdmi_dai_startup(struct snd_pcm_substream *substream,
 				  struct snd_soc_dai *dai)
 {
 	int err;
-#ifdef CONFIG_HDMI_TOGGLE
-if (likely(hdmi_active))
-	{
-#endif
+
 	/*
 	 * Make sure that the period bytes are multiple of the DMA packet size.
 	 * Largest packet size we use is 32 32-bit words = 128 bytes
@@ -65,14 +57,7 @@ if (likely(hdmi_active))
 				 SNDRV_PCM_HW_PARAM_PERIOD_BYTES, 128);
 	if (err < 0)
 		return err;
-#ifdef CONFIG_HDMI_TOGGLE
-	}
-else if (unlikely(hdmi_active))
-	{
-	hdmi_lib_stop_acr_wa();
-	pr_info("HDMI_TOGGLE: Playback Disabled\n");
-	}
-#endif
+
 	return 0;
 }
 

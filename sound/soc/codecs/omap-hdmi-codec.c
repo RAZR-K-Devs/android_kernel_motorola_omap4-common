@@ -261,7 +261,15 @@ int hdmi_audio_notifier_callback(struct notifier_block *nb,
 				unsigned long arg, void *ptr)
 {
 	enum omap_dss_display_state state = arg;
-
+#ifdef CONFIG_HDMI_TOGGLE
+if (unlikely(hdmi_active))
+	{
+	pr_info("HDMI_TOGGLE: SOUND_CODEC: OFF\n");
+	cancel_delayed_work(&hdmi_data.delayed_work);
+		return 0;
+	}
+else
+#endif
 	if (state == OMAP_DSS_DISPLAY_ACTIVE) {
 		/* this happens just after hdmi_power_on */
 		hdmi_audio_set_configuration(&hdmi_data);
@@ -361,10 +369,7 @@ static int hdmi_probe(struct snd_soc_codec *codec)
 	struct platform_device *pdev = to_platform_device(codec->dev);
 	struct resource *hdmi_rsrc;
 	int ret = 0;
-#ifdef CONFIG_HDMI_TOGGLE
-if (likely(hdmi_active))
-	{
-#endif
+
 	snd_soc_codec_set_drvdata(codec, &hdmi_data);
 
 	hdmi_rsrc = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -416,23 +421,7 @@ if (likely(hdmi_active))
 	INIT_DELAYED_WORK(&hdmi_data.delayed_work, hdmi_audio_work);
 
 	return 0;
-#ifdef CONFIG_HDMI_TOGGLE
-	}
-else if (unlikely(hdmi_active))
-	{
-	struct snd_soc_codec *codec;
-	struct hdmi_codec_data *priv = snd_soc_codec_get_drvdata(codec);
-	
-	pr_info("HDMI_TOGGLE: SOUND_CODEC: OFF\n");
-	
-	blocking_notifier_chain_unregister(&priv->dssdev->state_notifiers,
-						&priv->notifier);
-	iounmap(priv->ip_data.base_wp);
-	kfree(priv);
 
-	return 0;
-	}
-#endif
 dssdev_err:
 	iounmap(hdmi_data.ip_data.base_wp);
 res_err:

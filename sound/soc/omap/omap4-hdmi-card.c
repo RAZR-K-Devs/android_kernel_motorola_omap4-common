@@ -29,11 +29,6 @@
 
 #define DRV_NAME "omap4-hdmi-audio"
 
-#ifdef CONFIG_HDMI_TOGGLE
-#include <linux/hdmi_toggle.h>
-extern bool hdmi_active;
-#endif
-
 static int omap4_hdmi_dai_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params)
 {

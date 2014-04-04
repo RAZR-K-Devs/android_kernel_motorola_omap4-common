@@ -260,7 +260,17 @@ static void hdmi_hotplug_detect_worker(struct work_struct *work)
 	HDTVDBG("hpd (%d/%d)\n", state, dssdev->state);
 	if (dssdev == NULL)
 		return;
-
+#ifdef CONFIG_HDMI_TOGGLE
+if (unlikely(hdmi_active))
+	{
+	pr_info("HDMI_TOGGLE: Panel disabled\n");
+	mutex_unlock(&hdmi.hdmi_lock);
+	dssdev->driver->disable(dssdev);
+	mutex_lock(&hdmi.hdmi_lock);
+		goto done;
+	}
+else
+#endif
 	mutex_lock(&hdmi.hdmi_lock);
 	if (state == HPD_STATE_OFF) {
 		switch_set_state(&hdmi.hpd_switch, 0);
