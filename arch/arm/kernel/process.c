@@ -226,10 +226,12 @@ void cpu_idle(void)
 		idle_notifier_call_chain(IDLE_START);
 		tick_nohz_stop_sched_tick(1);
 		while (!need_resched()) {
+/*
 #ifdef CONFIG_HOTPLUG_CPU
 			if (cpu_is_offline(smp_processor_id()))
 				cpu_die();
 #endif
+*/
 
 			local_irq_disable();
 #ifdef CONFIG_PL310_ERRATA_769419
@@ -253,9 +255,11 @@ void cpu_idle(void)
 		}
 		tick_nohz_restart_sched_tick();
 		idle_notifier_call_chain(IDLE_END);
-		preempt_enable_no_resched();
-		schedule();
-		preempt_disable();
+		schedule_preempt_disabled();
+#ifdef CONFIG_HOTPLUG_CPU
+		if (cpu_is_offline(smp_processor_id()))
+			cpu_die();
+#endif
 	}
 }
 
