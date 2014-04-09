@@ -792,7 +792,14 @@ int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev)
 	}
 #ifdef CONFIG_HDMI_TOGGLE
 if (unlikely(hdmi_active))
+	{
+	pr_info("HDMI_TOGGLE: disabled by user\n");
 	omapdss_hdmi_display_disable(dssdev);
+	}
+else
+	{
+	hdmi.enabled = true;
+	}
 #else
 	hdmi.enabled = true;
 #endif
