@@ -255,7 +255,9 @@ void cpu_idle(void)
 		}
 		tick_nohz_restart_sched_tick();
 		idle_notifier_call_chain(IDLE_END);
-		schedule_preempt_disabled();
+		preempt_enable_no_resched();
+		schedule();
+		preempt_disable();
 #ifdef CONFIG_HOTPLUG_CPU
 		if (cpu_is_offline(smp_processor_id()))
 			cpu_die();
