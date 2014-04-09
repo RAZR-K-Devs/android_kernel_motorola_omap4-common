@@ -59,12 +59,11 @@ enum {
 	WORKER_DIE		= 1 << 1,	/* die die die */
 	WORKER_IDLE		= 1 << 2,	/* is idle */
 	WORKER_PREP		= 1 << 3,	/* preparing to run works */
-	WORKER_ROGUE		= 1 << 4,	/* not bound to any cpu */
 	WORKER_REBIND		= 1 << 5,	/* mom is home, come back */
 	WORKER_CPU_INTENSIVE	= 1 << 6,	/* cpu intensive */
 	WORKER_UNBOUND		= 1 << 7,	/* worker is unbound */
 
-	WORKER_NOT_RUNNING	= WORKER_PREP | WORKER_ROGUE | WORKER_REBIND |
+	WORKER_NOT_RUNNING	= WORKER_PREP | WORKER_REBIND |
 				  WORKER_CPU_INTENSIVE | WORKER_UNBOUND,
 
 	/* gcwq->trustee_state */
@@ -1168,7 +1167,7 @@ static void worker_enter_idle(struct worker *worker)
 	/* idle_list is LIFO */
 	list_add(&worker->entry, &gcwq->idle_list);
 
-	if (likely(!(worker->flags & WORKER_ROGUE))) {
+	if (likely(gcwq->trustee_state != TRUSTEE_DONE)) {
 		if (too_many_workers(gcwq) && !timer_pending(&gcwq->idle_timer))
 			mod_timer(&gcwq->idle_timer,
 				  jiffies + IDLE_WORKER_TIMEOUT);
@@ -1266,10 +1265,10 @@ __acquires(&gcwq->lock)
 }
 
 /*
- * Function for worker->rebind_work used to rebind rogue busy workers
- * to the associated cpu which is coming back online.  This is
- * scheduled by cpu up but can race with other cpu hotplug operations
- * and may be executed twice without intervening cpu down.
+ * Function for worker->rebind_work used to rebind unbound busy workers to
+ * the associated cpu which is coming back online.  This is scheduled by
+ * cpu up but can race with other cpu hotplug operations and may be
+ * executed twice without intervening cpu down.
  */
 static void worker_rebind_fn(struct work_struct *work)
 {
@@ -1346,9 +1345,8 @@ static struct worker *create_worker(struct global_cwq *gcwq, bool bind)
 		goto fail;
 
 	/*
-	 * A rogue worker will become a regular one if CPU comes
-	 * online later on.  Make sure every worker has
-	 * PF_THREAD_BOUND set.
+	 * An unbound worker will become a regular one if CPU comes online
+	 * later on.  Make sure every worker has PF_THREAD_BOUND set.
 	 */
 	if (bind && !on_unbound_cpu)
 		kthread_bind(worker->task, gcwq->cpu);
@@ -3155,11 +3153,10 @@ EXPORT_SYMBOL_GPL(work_busy);
  * gcwqs serve mix of short, long and very long running works making
  * blocked draining impractical.
  *
- * This is solved by allowing a gcwq to be detached from CPU, running
- * it with unbound (rogue) workers and allowing it to be reattached
- * later if the cpu comes back online.  A separate thread is created
- * to govern a gcwq in such state and is called the trustee of the
- * gcwq.
+ * This is solved by allowing a gcwq to be detached from CPU, running it
+ * with unbound workers and allowing it to be reattached later if the cpu
+ * comes back online.  A separate thread is created to govern a gcwq in
+ * such state and is called the trustee of the gcwq.
  *
  * Trustee states and their descriptions.
  *
@@ -3277,18 +3274,17 @@ static int __cpuinit trustee_thread(void *__gcwq)
 	gcwq->flags |= GCWQ_MANAGING_WORKERS;
 
 	list_for_each_entry(worker, &gcwq->idle_list, entry)
-		worker->flags |= WORKER_ROGUE;
+		worker->flags |= WORKER_UNBOUND;
 
 	for_each_busy_worker(worker, i, pos, gcwq)
-		worker->flags |= WORKER_ROGUE;
+		worker->flags |= WORKER_UNBOUND;
 
 	gcwq->flags |= GCWQ_DISASSOCIATED;
 
 	/*
-	 * Call schedule() so that we cross rq->lock and thus can
-	 * guarantee sched callbacks see the rogue flag.  This is
-	 * necessary as scheduler callbacks may be invoked from other
-	 * cpus.
+	 * Call schedule() so that we cross rq->lock and thus can guarantee
+	 * sched callbacks see the unbound flag.  This is necessary as
+	 * scheduler callbacks may be invoked from other cpus.
 	 */
 	spin_unlock_irq(&gcwq->lock);
 	schedule();
@@ -3346,7 +3342,7 @@ static int __cpuinit trustee_thread(void *__gcwq)
 			worker = create_worker(gcwq, false);
 			spin_lock_irq(&gcwq->lock);
 			if (worker) {
-				worker->flags |= WORKER_ROGUE;
+				worker->flags |= WORKER_UNBOUND;
 				start_worker(worker);
 			}
 		}
@@ -3386,7 +3382,7 @@ static int __cpuinit trustee_thread(void *__gcwq)
 		 * rebinding is scheduled.
 		 */
 		worker->flags |= WORKER_REBIND;
-		worker->flags &= ~WORKER_ROGUE;
+		worker->flags &= ~WORKER_UNBOUND;
 
 		/* queue rebind_work, wq doesn't matter, use the default one */
 		if (test_and_set_bit(WORK_STRUCT_PENDING_BIT,
