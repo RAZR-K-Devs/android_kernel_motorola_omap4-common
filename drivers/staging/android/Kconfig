@@ -12,6 +12,15 @@ config ANDROID_BINDER_IPC
 	bool "Android Binder IPC Driver"
 	default n
 
+config ASHMEM
+	bool "Enable the Anonymous Shared Memory Subsystem"
+	default n
+	depends on SHMEM || TINY_SHMEM
+	help
+	  The ashmem subsystem is a new shared memory allocator, similar to
+	  POSIX SHM but with different behavior and sporting a simpler
+	  file-based API.
+
 config ANDROID_LOGGER
 	tristate "Android log driver"
 	default n
@@ -75,6 +84,26 @@ config ANDROID_RAM_CONSOLE_EARLY_SIZE
 	default 0
 	depends on ANDROID_RAM_CONSOLE_EARLY_INIT
 
+config ANDROID_RAM_CONSOLE
+	bool "Android RAM buffer console"
+	depends on !S390 && !UML && HAVE_MEMBLOCK
+	select ANDROID_PERSISTENT_RAM
+	default n
+
+config PERSISTENT_TRACER
+	bool "Persistent function tracer"
+	depends on HAVE_FUNCTION_TRACER
+	select FUNCTION_TRACER
+	select ANDROID_PERSISTENT_RAM
+	help
+	  persistent_trace traces function calls into a persistent ram
+	  buffer that can be decoded and dumped after reboot through
+	  /sys/kernel/debug/persistent_trace.  It can be used to
+	  determine what function was last called before a reset or
+	  panic.
+
+	  If unsure, say N.
+
 config ANDROID_TIMED_OUTPUT
 	bool "Timed output class driver"
 	default y
@@ -98,6 +127,17 @@ config ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 	  Detect oom_adj values written to
 	  /sys/module/lowmemorykiller/parameters/adj and convert them
 	  to oom_score_adj values.
+
+source "drivers/staging/android/switch/Kconfig"
+
+config ANDROID_INTF_ALARM_DEV
+	bool "Android alarm driver"
+	depends on RTC_CLASS
+	default n
+	help
+	  Provides non-wakeup and rtc backed wakeup alarms based on rtc or
+	  elapsed realtime, and a non-wakeup alarm on the monotonic clock.
+	  Also exports the alarm interface to user-space.
 
 endif # if ANDROID
 
