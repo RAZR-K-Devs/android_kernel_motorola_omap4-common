@@ -55,32 +55,32 @@
 
 #define OMAP4_MAX_STATES	4
 
-static bool disallow_smp_idle __read_mostly;
+static bool disallow_smp_idle;
 module_param(disallow_smp_idle, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(disallow_smp_idle,
 	"Don't enter idle if multiple cpus are active");
 
-static bool skip_off __read_mostly;
+static bool skip_off;
 module_param(skip_off, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(skip_off,
 	"Do everything except actually enter the low power state (debugging)");
 
-static bool keep_core_on __read_mostly;
+static bool keep_core_on;
 module_param(keep_core_on, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(keep_core_on,
 	"Prevent core powerdomain from entering any low power states (debugging)");
 
-static bool keep_mpu_on __read_mostly;
+static bool keep_mpu_on;
 module_param(keep_mpu_on, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(keep_mpu_on,
 	"Prevent mpu powerdomain from entering any low power states (debugging)");
 
-static int max_state __read_mostly;
+static int max_state;
 module_param(max_state, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(max_state,
 	"Select deepest power state allowed (0=any, 1=WFI, 2=INA, 3=CSWR, 4=OSWR)");
 
-static int only_state __read_mostly;
+static int only_state;
 module_param(only_state, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(only_state,
 	"Select only power state allowed (0=any, 1=WFI, 2=INA, 3=CSWR, 4=OSWR)");
@@ -409,7 +409,7 @@ static void omap4_enter_idle_primary(struct omap4_processor_cx *cx)
 
 	cpu_pm_enter();
 
-	if (unlikely(skip_off))
+	if (skip_off)
 		goto out;
 
 	/* spin until cpu1 is really off */
@@ -423,19 +423,19 @@ static void omap4_enter_idle_primary(struct omap4_processor_cx *cx)
 	if (ret)
 		goto wake_cpu1;
 
-	if (likely(!keep_mpu_on)) {
+	if (!keep_mpu_on) {
 		pwrdm_set_logic_retst(mpu_pd, cx->mpu_logic_state);
 		omap_set_pwrdm_state(mpu_pd, cx->mpu_state);
 	}
 
-	if (likely(!keep_core_on)) {
+	if (!keep_core_on) {
 		pwrdm_set_logic_retst(core_pd, cx->core_logic_state);
 		omap_set_pwrdm_state(core_pd, cx->core_state);
 	}
 
 	pr_debug("%s: cpu0 down\n", __func__);
 
-	omap4_enter_sleep(0, PWRDM_POWER_OFF, false); 
+	omap4_enter_sleep(0, PWRDM_POWER_OFF, false);
 
 	pr_debug("%s: cpu0 up\n", __func__);
 
@@ -451,12 +451,12 @@ wake_cpu1:
 		 * the gic distributor before waking CPU1, and then waiting
 		 * for CPU1 to re-enable the gic distributor before continuing.
 		 */
-		if (likely(!cpu_is_omap443x()))
+		if (!cpu_is_omap443x())
 			gic_dist_disable();
 
 		clkdm_wakeup(cpu1_cd);
 
-		if (likely(!cpu_is_omap443x()))
+		if (!cpu_is_omap443x())
 			while (gic_dist_disabled())
 				cpu_relax();
 
@@ -494,7 +494,7 @@ static void omap4_enter_idle_secondary(int cpu)
 	omap_wakeupgen_irqmask_all(cpu, 1);
 	gic_cpu_disable();
 
-	if (likely(!skip_off))
+	if (!skip_off)
 		omap4_enter_lowpower(cpu, PWRDM_POWER_OFF);
 
 	omap_wakeupgen_irqmask_all(cpu, 0);
@@ -530,18 +530,18 @@ static int omap4_enter_idle(struct cpuidle_device *dev,
 	 * If disallow_smp_idle is set, revert to the old hotplug governor
 	 * behavior
 	 */
-	if (unlikely(dev->cpu != 0 && disallow_smp_idle))
+	if (dev->cpu != 0 && disallow_smp_idle)
 		return omap4_enter_idle_wfi(dev, state);
 
 	/* Clamp the power state at max_state */
-	if (unlikely(max_state > 0 && (cx->type > max_state - 1)))
+	if (max_state > 0 && (cx->type > max_state - 1))
 		cx = &omap4_power_states[max_state - 1];
 
 	/*
 	 * If only_state is set, use wfi if asking for a shallower idle state,
 	 * or the specified state if asking for a deeper idle state
 	 */
-	if (unlikely(only_state > 0)) {
+	if (only_state > 0) {
 		if (cx->type < only_state - 1)
 			cx = &omap4_power_states[OMAP4_STATE_C1];
 		else

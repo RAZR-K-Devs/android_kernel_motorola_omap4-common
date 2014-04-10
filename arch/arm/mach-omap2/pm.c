@@ -73,7 +73,6 @@ static struct omap2_pm_lp_description _pm_lp_desc = {
 static struct omap_device_pm_latency *pm_lats;
 
 static struct device *mpu_dev;
-static struct device *gpu_dev;
 static struct device *iva_dev;
 static struct device *l3_dev;
 static struct device *dsp_dev;
@@ -87,13 +86,6 @@ struct device *omap2_get_mpuss_device(void)
 	return mpu_dev;
 }
 EXPORT_SYMBOL(omap2_get_mpuss_device);
-
-struct device *omap2_get_gpu_device(void)
-{
-	WARN_ON_ONCE(!gpu_dev);
-	return gpu_dev;
-}
-EXPORT_SYMBOL(omap2_get_gpu_device);
 
 struct device *omap2_get_iva_device(void)
 {
@@ -368,7 +360,7 @@ static int __init omap2_set_init_voltage(char *vdd_name, char *clk_name,
 	}
 
 	voltdm = voltdm_lookup(vdd_name);
-	if (!voltdm) {
+	if (IS_ERR(voltdm)) {
 		printk(KERN_ERR "%s: Unable to get vdd pointer for vdd_%s\n",
 			__func__, vdd_name);
 		goto exit;
@@ -482,12 +474,12 @@ static void __init omap4_init_voltages(void)
 		omap2_set_init_voltage("mpu", "virt_dpll_mpu_ck", mpu_dev);
 	} else {
 		omap2_set_init_voltage("mpu", "dpll_mpu_ck", mpu_dev);
-	
+	}
 	omap2_set_init_voltage("core", "virt_l3_ck", l3_dev);
 //	omap2_set_init_voltage("iva", "virt_iva_ck", iva_dev);
 	omap2_set_init_voltage("iva", "dpll_iva_m5x2_ck", iva_dev);
-   }
 }
+
 static int __init omap2_common_pm_init(void)
 {
 	omap2_init_processor_devices();

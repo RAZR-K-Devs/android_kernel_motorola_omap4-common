@@ -85,7 +85,6 @@
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/pm_runtime.h>
-#include <linux/opp.h>
 
 #include <plat/omap_device.h>
 #include <plat/omap_hwmod.h>

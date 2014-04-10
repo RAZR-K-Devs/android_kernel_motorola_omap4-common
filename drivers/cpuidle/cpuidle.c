@@ -76,6 +76,16 @@ static void cpuidle_idle_call(void)
 	hrtimer_peek_ahead_timers();
 #endif
 
+	/*
+	 * Call the device's prepare function before calling the
+	 * governor's select function.  ->prepare gives the device's
+	 * cpuidle driver a chance to update any dynamic information
+	 * of its cpuidle states for the current idle period, e.g.
+	 * state availability, latencies, residencies, etc.
+	 */
+	if (dev->prepare)
+		dev->prepare(dev);
+
 	/* ask the governor for the next state */
 	next_state = cpuidle_curr_governor->select(dev);
 	if (need_resched()) {
@@ -256,7 +266,7 @@ EXPORT_SYMBOL_GPL(cpuidle_enable_device);
  */
 void cpuidle_disable_device(struct cpuidle_device *dev)
 {
-	if (!dev || !dev->enabled)
+	if (!dev->enabled)
 		return;
 	if (!cpuidle_get_driver() || !cpuidle_curr_governor)
 		return;

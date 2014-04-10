@@ -24,6 +24,7 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
+#include "voltage.h" 
 
 #include <plat/common.h>
 
@@ -35,7 +36,6 @@ extern bool dpll_active;
 #include "pm.h"
 #include "dvfs.h"
 #include "smartreflex.h"
-#include "voltage.h" 
 
 #define SMARTREFLEX_NAME_LEN	16
 #define NVALUE_NAME_LEN		40
@@ -87,7 +87,6 @@ static u32 coremax = OMAP4_VP_CORE_VLIMITTO_VDDMAX;
 
 #define HIGHFLOOR 1250000
 #define HIGHCEILING 1450000
-
 
 static inline void sr_write_reg(struct omap_sr *sr, unsigned offset, u32 value)
 {

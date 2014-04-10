@@ -17,7 +17,7 @@ endif
 
 OBJCOPYFLAGS	:=-O binary -R .comment -S
 GZFLAGS		:=-9
-# KBUILD_CFLAGS	+=-pipe
+#KBUILD_CFLAGS	+=-pipe
 # Explicitly specifiy 32-bit ARM ISA since toolchain default can be -mthumb:
 KBUILD_CFLAGS	+=$(call cc-option,-marm,)
 
@@ -70,25 +70,25 @@ arch-$(CONFIG_CPU_32v4)		:=-D__LINUX_ARM_ARCH__=4 -march=armv4
 arch-$(CONFIG_CPU_32v3)		:=-D__LINUX_ARM_ARCH__=3 -march=armv3
 
 # This selects how we optimise for the processor.
-tune-$(CONFIG_CPU_ARM610)  	:=-mtune=arm610
-tune-$(CONFIG_CPU_ARM710)  	:=-mtune=arm710
-tune-$(CONFIG_CPU_ARM7TDMI)  	:=-mtune=arm7tdmi
-tune-$(CONFIG_CPU_ARM720T)  	:=-mtune=arm7tdmi
-tune-$(CONFIG_CPU_ARM740T)  	:=-mtune=arm7tdmi
-tune-$(CONFIG_CPU_ARM9TDMI)  	:=-mtune=arm9tdmi
-tune-$(CONFIG_CPU_ARM940T)  	:=-mtune=arm9tdmi
-tune-$(CONFIG_CPU_ARM946E)  	:=$(call cc-option,-mtune=arm9e,-mtune=arm9tdmi)
-tune-$(CONFIG_CPU_ARM920T)  	:=-mtune=arm9tdmi
-tune-$(CONFIG_CPU_ARM922T)  	:=-mtune=arm9tdmi
-tune-$(CONFIG_CPU_ARM925T)  	:=-mtune=arm9tdmi
-tune-$(CONFIG_CPU_ARM926T)  	:=-mtune=arm9tdmi
-tune-$(CONFIG_CPU_FA526)  	:=-mtune=arm9tdmi
-tune-$(CONFIG_CPU_SA110)  	:=-mtune=strongarm110
-tune-$(CONFIG_CPU_SA1100)  	:=-mtune=strongarm1100
-tune-$(CONFIG_CPU_XSCALE)  	:=$(call cc-option,-mtune=xscale,-mtune=strongarm110) -Wa,-mcpu=xscale
-tune-$(CONFIG_CPU_XSC3)    	:=$(call cc-option,-mtune=xscale,-mtune=strongarm110) -Wa,-mcpu=xscale
-tune-$(CONFIG_CPU_FEROCEON)  	:=$(call cc-option,-mtune=marvell-f,-mtune=xscale)
-tune-$(CONFIG_CPU_V6)    	:=$(call cc-option,-mtune=arm1136j-s,-mtune=strongarm)
+tune-$(CONFIG_CPU_ARM610)	:=-mtune=arm610
+tune-$(CONFIG_CPU_ARM710)	:=-mtune=arm710
+tune-$(CONFIG_CPU_ARM7TDMI)	:=-mtune=arm7tdmi
+tune-$(CONFIG_CPU_ARM720T)	:=-mtune=arm7tdmi
+tune-$(CONFIG_CPU_ARM740T)	:=-mtune=arm7tdmi
+tune-$(CONFIG_CPU_ARM9TDMI)	:=-mtune=arm9tdmi
+tune-$(CONFIG_CPU_ARM940T)	:=-mtune=arm9tdmi
+tune-$(CONFIG_CPU_ARM946E)	:=$(call cc-option,-mtune=arm9e,-mtune=arm9tdmi)
+tune-$(CONFIG_CPU_ARM920T)	:=-mtune=arm9tdmi
+tune-$(CONFIG_CPU_ARM922T)	:=-mtune=arm9tdmi
+tune-$(CONFIG_CPU_ARM925T)	:=-mtune=arm9tdmi
+tune-$(CONFIG_CPU_ARM926T)	:=-mtune=arm9tdmi
+tune-$(CONFIG_CPU_FA526)	:=-mtune=arm9tdmi
+tune-$(CONFIG_CPU_SA110)	:=-mtune=strongarm110
+tune-$(CONFIG_CPU_SA1100)	:=-mtune=strongarm1100
+tune-$(CONFIG_CPU_XSCALE)	:=$(call cc-option,-mtune=xscale,-mtune=strongarm110) -Wa,-mcpu=xscale
+tune-$(CONFIG_CPU_XSC3)		:=$(call cc-option,-mtune=xscale,-mtune=strongarm110) -Wa,-mcpu=xscale
+tune-$(CONFIG_CPU_FEROCEON)	:=$(call cc-option,-mtune=marvell-f,-mtune=xscale)
+tune-$(CONFIG_CPU_V6)		:=$(call cc-option,-mtune=arm1136j-s,-mtune=strongarm)
 
 
 ifeq ($(CONFIG_AEABI),y)

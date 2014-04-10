@@ -142,7 +142,7 @@ static int sr_dev_init(struct omap_hwmod *oh, void *user)
 	sr_data->senp_mod = 0x1;
 
 	sr_data->voltdm = voltdm_lookup(sr_dev_attr->sensor_voltdm_name);
-	if (!sr_data->voltdm) {
+	if (IS_ERR(sr_data->voltdm)) {
 		pr_err("%s: Unable to get voltage domain pointer for VDD %s\n",
 			__func__, sr_dev_attr->sensor_voltdm_name);
 		goto exit;

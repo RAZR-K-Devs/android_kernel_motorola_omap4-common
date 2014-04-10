@@ -20,6 +20,7 @@
  */
 #include <linux/module.h>
 #include <linux/opp.h>
+#include <linux/clk.h>
 
 #include <plat/cpu.h>
 #include <plat/common.h>
@@ -45,8 +46,55 @@
  * 	   Because we have limited eFuses, we must define one eFuse per each OPP in header file 
  *   	   and adjust voltages for OPPs
  *
- * 		Define voltage for and fuses for new OPPs
+ * CONTROL_STD_FUSE_OPP_DPLL_1 bit fields:
+ * Bit #|       Name       |        Description     |        Comment          |  Device
+ * -----+------------------+------------------------+-------------------------|----------
+ * 18-19|MPU_DPLL_TRIM_FREQ| 0 - 2.0GHz             | If RBB is not trimmed,  | OMAP4460
+ *      |                  | 1 - 2.4GHz             | but MPU DPLL is trimmed |
+ *      |                  | 2 - Reserved           | to 2.4GHz of higher,    |
+ *      |                  | 3 - 3.0GHz             | it is recommended to    |
+ *      |                  |                        | enable FBB for MPU at   |
+ *      |                  |                        | OPPTB and OPPNT         |
+ * -----+------------------+------------------------+-------------------------|----------
+ *  20  |    MPU_RBB_TB    | 0 - RBB is trimmed     | If trimmed RBB can be   | OMAP4460/
+ *      |                  | 1 - RBB is not trimmed | enabled at OPPTB on MPU | OMAP4470
+ * -----+------------------+                        +-------------------------|----------
+ *  21  |    IVA_RBB_TB    |                        | If trimmed RBB can be   | OMAP4460/
+ *      |                  |                        | enabled at OPPTB on IVA | OMAP4470
+ * -----+------------------+                        +-------------------------|----------
+ *  22  |    MPU_RBB_NT    |                        | If trimmed RBB can be   | OMAP4470
+ *      |                  |                        | enabled at OPPNT on MPU |
+ * -----+------------------+                        +-------------------------|----------
+ *  23  |    MPU_RBB_SB    |                        | If trimmed RBB can be   | OMAP4470
+ *      |                  |                        | enabled at OPPSB on MPU |
+ * -----+------------------+                        +-------------------------|----------
+ *  24  |    IVA_RBB_NT    |                        | If trimmed RBB can be   | OMAP4470
+ *      |                  |                        | enabled at OPPNT on IVA |
+ * -----+------------------+                        +-------------------------|----------
+ *  25  |    IVA_RBB_SB    |                        | If trimmed RBB can be   | OMAP4470
+ *      |                  |                        | enabled at OPPSB on IVA |
  */
+
+/**
+ * struct omap4_ldo_abb_trim_data - describe ABB trim bits for specific voltage
+ * @volt_data:		voltage table
+ * @volt_nominal:      voltage for which ABB type should be modified according to trim bits.
+ * @rbb_trim_mask:     If this bit is set in trim register, ABB type should be modified to RBB.
+ * @fbb_trim_mask:     If this bit is set in trim register, ABB type should be modified to FBB.
+ */
+struct omap4_ldo_abb_trim_data {
+	struct omap_volt_data *volt_data;
+	u32 volt_nominal;
+	u32 rbb_trim_mask;
+	u32 fbb_trim_mask;
+};
+
+/*
+ * Structures containing OMAP4430 voltage supported and various
+ * voltage dependent data for each VDD.
+ */
+
+
 #ifdef CONFIG_OMAP_OCFREQ_12
 #define OMAP4430_VDD_MPU_OPP_UVA_UV		 950000			/* 100 */
 #define OMAP4430_VDD_MPU_OPP50_UV		 995000			/* 200 */
@@ -318,7 +366,7 @@ static struct omap_opp_def __initdata omap443x_opp_def_list[] = {
 	/* IVA OPP4 - OPP-Nitro */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 430000000, OMAP4430_VDD_IVA_OPPNITRO_UV),
 	/* IVA OPP4 - OPP-NitroSB */
-	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 500000000, OMAP4430_VDD_IVA_OPPNITROSB_UV),
+	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", false, 500000000, OMAP4430_VDD_IVA_OPPNITROSB_UV),
 	/* SGX OPP1 - OPP50 */
 	OPP_INITIALIZER("gpu", "dpll_per_m7x2_ck", "core", true, 100300000, OMAP4430_VDD_CORE_OPP25_UV),
 	/* SGX OPP1 - OPP50 */
@@ -535,23 +583,78 @@ static struct omap_opp_def __initdata omap446x_opp_def_list[] = {
 */
 static void __init omap4_opp_enable(const char *oh_name, unsigned long freq)
 {
-		struct device *dev;
-		int r;
+	struct device *dev;
+	int r;
 
-		dev = omap_hwmod_name_get_dev(oh_name);
-		if (IS_ERR(dev)) {
-			pr_err("%s: no %s device, did not enable f=%ld\n", __func__,
-				oh_name, freq);
+	dev = omap_hwmod_name_get_dev(oh_name);
+	if (IS_ERR(dev)) {
+		pr_err("%s: no %s device, did not enable f=%ld\n", __func__,
+			oh_name, freq);
 		return;
-		}
+	}
 
-		r = opp_enable(dev, freq);
-		if (r < 0)
-			dev_err(dev, "%s: opp_enable failed(%d) f=%ld\n", __func__,
-				r, freq);
+	r = opp_enable(dev, freq);
+	if (r < 0)
+		dev_err(dev, "%s: opp_enable failed(%d) f=%ld\n", __func__,
+			r, freq);
 }
 
+/**
+ * omap4_abb_update() - update the ABB map for a specific voltage in table
+ * @vtable:	voltage table to update
+ * @voltage:   voltage whose voltage data needs update
+ * @abb_type:  what ABB type should we update it to?
+ */
+static void __init omap4_abb_update(struct omap_volt_data *vtable,
+				    unsigned long voltage, int abb_type)
+{
+	/* scan through and update the voltage table */
+	while (vtable->volt_nominal) {
+		if (vtable->volt_nominal == voltage) {
+			vtable->abb_type = abb_type;
+			return;
+		}
+		vtable++;
+	}
+	/* WARN noticably to get the developer to fix */
+	WARN(1, "%s: voltage %ld could not be set to ABB %d\n",
+	     __func__, voltage, abb_type);
+}
 
+/**
+ * omap4_abb_trim_update() - update the ABB mapping quirks for OMAP4460/4470
+ */
+static void __init omap4_abb_trim_update(
+		struct omap4_ldo_abb_trim_data *trim_data)
+{
+	u32 reg;
+	int abb_type;
+
+	if (!trim_data) {
+		pr_err("%s: Trim data is not valid\n", __func__);
+		return;
+	}
+
+	reg = omap_ctrl_readl(OMAP4_CTRL_MODULE_CORE_STD_FUSE_OPP_DPLL_1);
+
+	/* Update ABB configuration if at least one of trim bits is set
+	 * Leave default configuration in opposite case. */
+	for (; trim_data->volt_data; trim_data++) {
+		if (reg & trim_data->rbb_trim_mask)
+			abb_type = OMAP_ABB_SLOW_OPP;
+		else if (reg & trim_data->fbb_trim_mask)
+			abb_type = OMAP_ABB_FAST_OPP;
+		else
+			continue;
+
+		omap4_abb_update(trim_data->volt_data, trim_data->volt_nominal,
+				abb_type);
+	}
+}
+
+/**
+ * omap4_opp_init() - initialize omap4 opp table
+ */
 int __init omap4_opp_init(void)
 {
 	int r = -ENODEV;
@@ -559,20 +662,12 @@ int __init omap4_opp_init(void)
 
 	if (!cpu_is_omap44xx())
 		return r;
-
 	if (cpu_is_omap443x())
 		r = omap_init_opp_table(omap443x_opp_def_list,
-				ARRAY_SIZE(omap443x_opp_def_list));
-	else if (cpu_is_omap446x()) {
-		r = omap_init_opp_table(omap446x_opp_def_list,
-				ARRAY_SIZE(omap446x_opp_def_list));
-		trimmed = omap_readl(0x4a002268) & ((1 << 18) | (1 << 19));
-		if (!trimmed) 
-			omap_writel(0x29, 0x4a002330);
-	}
+			ARRAY_SIZE(omap443x_opp_def_list));
 
 
-		if (r)
+	if (r)
 		goto out;
 
 		/* Enable Nitro and NitroSB IVA OPPs */

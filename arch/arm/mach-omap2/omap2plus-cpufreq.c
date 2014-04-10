@@ -55,9 +55,9 @@ extern bool dpll_active;
 
 // [antsvx] these shoudl match same in opp4xxx_data.c
 #define OMAP4430_VDD_CORE_OPP25_UV		 902000
-#define OMAP4430_VDD_CORE_OPP50_UV	         962000
-#define OMAP4430_VDD_CORE_OPP100_UV		1127000
-#define OMAP4430_VDD_CORE_OPP100_OV_UV		1250000
+#define OMAP4430_VDD_CORE_OPP50_UV	         952000
+#define OMAP4430_VDD_CORE_OPP100_UV		1117000
+#define OMAP4430_VDD_CORE_OPP100_OV_UV		1240000
 
 #ifdef CONFIG_CUSTOM_VOLTAGE
 #include <linux/custom_voltage.h>
@@ -211,7 +211,6 @@ int omap_cpufreq_scale(struct device *req_dev, unsigned int target_freq)
 
 	freqs.new = omap_getspeed(0);
 
-
 #ifdef CONFIG_SMP
 	/*
 	 * Note that loops_per_jiffy is not updated on SMP systems in
@@ -360,17 +359,13 @@ static int omap_target(struct cpufreq_policy *policy,
 
 	if (!omap_cpufreq_suspended) {
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
-if (cpu_is_omap44xx() && target_freq > policy->min)
-omap4_dpll_cascading_blocker_hold(mpu_dev);
-	}
+		if (cpu_is_omap44xx() && target_freq > policy->min)
+			omap4_dpll_cascading_blocker_hold(mpu_dev);
 #endif
 		ret = omap_cpufreq_scale(mpu_dev, current_target_freq);
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
-if (cpu_is_omap44xx() && target_freq == policy->min)
-omap4_dpll_cascading_blocker_release(mpu_dev);
-}
+		if (cpu_is_omap44xx() && target_freq == policy->min)
+			omap4_dpll_cascading_blocker_release(mpu_dev);
 #endif
 	}
 	mutex_unlock(&omap_cpufreq_lock);
@@ -1076,6 +1071,9 @@ static ssize_t store_uv_mv_table(struct cpufreq_policy *policy,	const char *buf,
 
 			/* limit mpu voltage to min core voltage to prevent DVFS stalls */
 			switch ( mpu_voltdm->vdd->dep_vdd_info->dep_table[i].dep_vdd_volt ) {
+				case OMAP4430_VDD_CORE_OPP25_UV:
+					if ( opp_cur->u_volt < OMAP4430_VDD_CORE_OPP25_UV ) opp_cur->u_volt = OMAP4430_VDD_CORE_OPP25_UV;
+					break;
 				case OMAP4430_VDD_CORE_OPP50_UV:
 					if ( opp_cur->u_volt < OMAP4430_VDD_CORE_OPP50_UV ) opp_cur->u_volt = OMAP4430_VDD_CORE_OPP50_UV;
 					break;
@@ -1223,12 +1221,9 @@ static struct cpufreq_driver omap_driver = {
 	.attr		= omap_cpufreq_attr,
 };
 
-
-
 static int omap_cpufreq_suspend_noirq(struct device *dev)
 {
 	mutex_lock(&omap_cpufreq_lock);
-
 	omap_cpufreq_suspended = true;
 	mutex_unlock(&omap_cpufreq_lock);
 	return 0;
@@ -1237,7 +1232,6 @@ static int omap_cpufreq_suspend_noirq(struct device *dev)
 static int omap_cpufreq_resume_noirq(struct device *dev)
 {
 	mutex_lock(&omap_cpufreq_lock);
-
 	if (omap_getspeed(0) != current_target_freq)
 		omap_cpufreq_scale(mpu_dev, current_target_freq);
 
@@ -1329,4 +1323,3 @@ MODULE_DESCRIPTION("cpufreq driver for OMAP2PLUS SOCs");
 MODULE_LICENSE("GPL");
 late_initcall(omap_cpufreq_init);
 module_exit(omap_cpufreq_exit);
-
