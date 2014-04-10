@@ -15,7 +15,6 @@
 #include <linux/ioprio.h>
 #include <linux/blktrace_api.h>
 #include "cfq.h"
-#include "kt_save_sched.h"
 
 /*
  * tunables
@@ -4069,52 +4068,17 @@ static void *cfq_init_queue(struct request_queue *q)
 
 	INIT_WORK(&cfqd->unplug_work, cfq_kick_queue);
 
-	load_prev_screen_on = isload_prev_screen_on();
-	if (load_prev_screen_on == 2)
-	{
-		cfqd->cfq_quantum = gsched_vars[0];
-		cfqd->cfq_fifo_expire[0] = gsched_vars[2];
-		cfqd->cfq_fifo_expire[1] = gsched_vars[1];
-		cfqd->cfq_back_max = gsched_vars[3];
-		cfqd->cfq_back_penalty = gsched_vars[4];
-		cfqd->cfq_slice[0] = gsched_vars[8];
-		cfqd->cfq_slice[1] = gsched_vars[7];
-//		cfqd->cfq_target_latency = gsched_vars[11];
-		cfqd->cfq_slice_async_rq = gsched_vars[9];
-		cfqd->cfq_slice_idle = gsched_vars[5];
-		cfqd->cfq_group_idle = gsched_vars[6];
-		cfqd->cfq_latency = gsched_vars[10];;
-	}
-	else
-	{
-		cfqd->cfq_quantum = cfq_quantum;
-		cfqd->cfq_fifo_expire[0] = cfq_fifo_expire[0];
-		cfqd->cfq_fifo_expire[1] = cfq_fifo_expire[1];
-		cfqd->cfq_back_max = cfq_back_max;
-		cfqd->cfq_back_penalty = cfq_back_penalty;
-		cfqd->cfq_slice[0] = cfq_slice_async;
-		cfqd->cfq_slice[1] = cfq_slice_sync;
-	//	cfqd->cfq_target_latency = cfq_target_latency;
-		cfqd->cfq_slice_async_rq = cfq_slice_async_rq;
-		cfqd->cfq_slice_idle = cfq_slice_idle;
-		cfqd->cfq_group_idle = cfq_group_idle;
-		cfqd->cfq_latency = 1;
-		if (load_prev_screen_on == 0)
-		{
-			gsched_vars[0] = cfqd->cfq_quantum;
-			gsched_vars[2] = cfqd->cfq_fifo_expire[0];
-			gsched_vars[1] = cfqd->cfq_fifo_expire[1];
-			gsched_vars[3] = cfqd->cfq_back_max;
-			gsched_vars[4] = cfqd->cfq_back_penalty;
-			gsched_vars[8] = cfqd->cfq_slice[0];
-			gsched_vars[7] = cfqd->cfq_slice[1];
-			gsched_vars[9] = cfqd->cfq_slice_async_rq;
-			gsched_vars[5] = cfqd->cfq_slice_idle;
-			gsched_vars[6] = cfqd->cfq_group_idle;
-			gsched_vars[10] = 1;
-//			gsched_vars[11] = cfqd->cfq_target_latency;
-		}
-	}
+	cfqd->cfq_quantum = cfq_quantum;
+	cfqd->cfq_fifo_expire[0] = cfq_fifo_expire[0];
+	cfqd->cfq_fifo_expire[1] = cfq_fifo_expire[1];
+	cfqd->cfq_back_max = cfq_back_max;
+	cfqd->cfq_back_penalty = cfq_back_penalty;
+	cfqd->cfq_slice[0] = cfq_slice_async;
+	cfqd->cfq_slice[1] = cfq_slice_sync;
+	cfqd->cfq_slice_async_rq = cfq_slice_async_rq;
+	cfqd->cfq_slice_idle = cfq_slice_idle;
+	cfqd->cfq_group_idle = cfq_group_idle;
+	cfqd->cfq_latency = 1;
 	cfqd->hw_tag = -1;
 	/*
 	 * we optimistically start assuming sync ops weren't delayed in last

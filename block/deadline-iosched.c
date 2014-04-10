@@ -13,7 +13,6 @@
 #include <linux/init.h>
 #include <linux/compiler.h>
 #include <linux/rbtree.h>
-#include "kt_save_sched.h"
 
 /*
  * See Documentation/block/deadline-iosched.txt
@@ -352,32 +351,11 @@ static void *deadline_init_queue(struct request_queue *q)
 	INIT_LIST_HEAD(&dd->fifo_list[WRITE]);
 	dd->sort_list[READ] = RB_ROOT;
 	dd->sort_list[WRITE] = RB_ROOT;
-
-	load_prev_screen_on = isload_prev_screen_on();
-	if (load_prev_screen_on == 2)
-	{
-		dd->fifo_expire[READ] = gsched_vars[0] / 5;
-		dd->fifo_expire[WRITE] = gsched_vars[1] / 5;
-		dd->writes_starved = gsched_vars[2];
-		dd->front_merges = gsched_vars[3];
-		dd->fifo_batch = gsched_vars[4];
-	}
-	else
-	{
-		dd->fifo_expire[READ] = read_expire;
-		dd->fifo_expire[WRITE] = write_expire;
-		dd->writes_starved = writes_starved;
-		dd->front_merges = 1;
-		dd->fifo_batch = fifo_batch;
-		if (load_prev_screen_on == 0)
-		{
-			gsched_vars[0] = dd->fifo_expire[READ] * 5;
-			gsched_vars[1] = dd->fifo_expire[WRITE] * 5;
-			gsched_vars[2] = dd->writes_starved;
-			gsched_vars[3] = dd->front_merges;
-			gsched_vars[4] = dd->fifo_batch;
-		}
-	}
+	dd->fifo_expire[READ] = read_expire;
+	dd->fifo_expire[WRITE] = write_expire;
+	dd->writes_starved = writes_starved;
+	dd->front_merges = 1;
+	dd->fifo_batch = fifo_batch;
 	return dd;
 }
 
@@ -416,7 +394,7 @@ SHOW_FUNCTION(deadline_front_merges_show, dd->front_merges, 0);
 SHOW_FUNCTION(deadline_fifo_batch_show, dd->fifo_batch, 0);
 #undef SHOW_FUNCTION
 
-#define STORE_FUNCTION(__FUNC, __PTR, MIN, MAX, __CONV, NDX)		\
+#define STORE_FUNCTION(__FUNC, __PTR, MIN, MAX, __CONV)			\
 static ssize_t __FUNC(struct elevator_queue *e, const char *page, size_t count)	\
 {									\
 	struct deadline_data *dd = e->elevator_data;			\
@@ -430,14 +408,13 @@ static ssize_t __FUNC(struct elevator_queue *e, const char *page, size_t count)	
 		*(__PTR) = msecs_to_jiffies(__data);			\
 	else								\
 		*(__PTR) = __data;					\
-	gsched_vars[NDX] = __data;					\
 	return ret;							\
 }
-STORE_FUNCTION(deadline_read_expire_store, &dd->fifo_expire[READ], 0, INT_MAX, 1, 0);
-STORE_FUNCTION(deadline_write_expire_store, &dd->fifo_expire[WRITE], 0, INT_MAX, 1, 1);
-STORE_FUNCTION(deadline_writes_starved_store, &dd->writes_starved, INT_MIN, INT_MAX, 0, 2);
-STORE_FUNCTION(deadline_front_merges_store, &dd->front_merges, 0, 1, 0, 3);
-STORE_FUNCTION(deadline_fifo_batch_store, &dd->fifo_batch, 0, INT_MAX, 0, 4);
+STORE_FUNCTION(deadline_read_expire_store, &dd->fifo_expire[READ], 0, INT_MAX, 1);
+STORE_FUNCTION(deadline_write_expire_store, &dd->fifo_expire[WRITE], 0, INT_MAX, 1);
+STORE_FUNCTION(deadline_writes_starved_store, &dd->writes_starved, INT_MIN, INT_MAX, 0);
+STORE_FUNCTION(deadline_front_merges_store, &dd->front_merges, 0, 1, 0);
+STORE_FUNCTION(deadline_fifo_batch_store, &dd->fifo_batch, 0, INT_MAX, 0);
 #undef STORE_FUNCTION
 
 #define DD_ATTR(name) \

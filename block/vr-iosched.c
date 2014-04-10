@@ -29,7 +29,6 @@
 #include <linux/version.h>
 
 #include <asm/div64.h>
-#include "kt_save_sched.h"
 
 enum vr_data_dir {
 ASYNC,
@@ -41,8 +40,8 @@ FORWARD,
 BACKWARD,
 };
 
-static const int sync_expire = HZ / 2; /* max time before a sync is submitted. */
-static const int async_expire = 5 * HZ; /* ditto for async, these limits are SOFT! */
+static const int sync_expire = 1000; /* max time before a sync is submitted. */
+static const int async_expire = 5000; /* ditto for async, these limits are SOFT! */
 static const int fifo_batch = 1;
 static const int rev_penalty = 1; /* penalty for reversing head direction */
 
@@ -329,40 +328,20 @@ kfree(vd);
 */
 static void *vr_init_queue(struct request_queue *q)
 {
-	struct vr_data *vd;
+struct vr_data *vd;
 
-	vd = kmalloc_node(sizeof(*vd), GFP_KERNEL | __GFP_ZERO, q->node);
-	if (!vd)
-	return NULL;
+vd = kmalloc_node(sizeof(*vd), GFP_KERNEL | __GFP_ZERO, q->node);
+if (!vd)
+return NULL;
 
-	INIT_LIST_HEAD(&vd->fifo_list[SYNC]);
-	INIT_LIST_HEAD(&vd->fifo_list[ASYNC]);
-	vd->sort_list = RB_ROOT;
-	
-	
-	load_prev_screen_on = isload_prev_screen_on();
-	if (load_prev_screen_on == 2)
-	{
-		vd->fifo_expire[SYNC] = gsched_vars[0] / 5;
-		vd->fifo_expire[ASYNC] = gsched_vars[1] / 5;
-		vd->fifo_batch = gsched_vars[2];
-		vd->rev_penalty = gsched_vars[3];
-	}
-	else
-	{
-		vd->fifo_expire[SYNC] = sync_expire;
-		vd->fifo_expire[ASYNC] = async_expire;
-		vd->fifo_batch = fifo_batch;
-		vd->rev_penalty = rev_penalty;
-		if (load_prev_screen_on == 0)
-		{
-			gsched_vars[0] = vd->fifo_expire[SYNC] * 5;
-			gsched_vars[1] = vd->fifo_expire[ASYNC] * 5;
-			gsched_vars[2] = vd->fifo_batch;
-			gsched_vars[3] = vd->rev_penalty;
-		}
-	}
-	return vd;
+INIT_LIST_HEAD(&vd->fifo_list[SYNC]);
+INIT_LIST_HEAD(&vd->fifo_list[ASYNC]);
+vd->sort_list = RB_ROOT;
+vd->fifo_expire[SYNC] = sync_expire;
+vd->fifo_expire[ASYNC] = async_expire;
+vd->fifo_batch = fifo_batch;
+vd->rev_penalty = rev_penalty;
+return vd;
 }
 
 /*
@@ -397,27 +376,26 @@ SHOW_FUNCTION(vr_fifo_batch_show, vd->fifo_batch, 0);
 SHOW_FUNCTION(vr_rev_penalty_show, vd->rev_penalty, 0);
 #undef SHOW_FUNCTION
 
-#define STORE_FUNCTION(__FUNC, __PTR, MIN, MAX, __CONV, NDX)			\
+#define STORE_FUNCTION(__FUNC, __PTR, MIN, MAX, __CONV) \
 static ssize_t __FUNC(struct elevator_queue *e, const char *page, size_t count) \
-{ 										\
-	struct vr_data *vd = e->elevator_data; 					\
-	int __data; 								\
-	int ret = vr_var_store(&__data, (page), count); 			\
-	if (__data < (MIN)) 							\
-		__data = (MIN); 						\
-	else if (__data > (MAX)) 						\
-		__data = (MAX); 						\
-	if (__CONV) 								\
-		*(__PTR) = msecs_to_jiffies(__data); 				\
-	else 									\
-		*(__PTR) = __data; 						\
-	gsched_vars[NDX] = __data;						\
-return ret; 									\
+{ \
+struct vr_data *vd = e->elevator_data; \
+int __data; \
+int ret = vr_var_store(&__data, (page), count); \
+if (__data < (MIN)) \
+__data = (MIN); \
+else if (__data > (MAX)) \
+__data = (MAX); \
+if (__CONV) \
+*(__PTR) = msecs_to_jiffies(__data); \
+else \
+*(__PTR) = __data; \
+return ret; \
 }
-STORE_FUNCTION(vr_sync_expire_store, &vd->fifo_expire[SYNC], 0, INT_MAX, 1, 0);
-STORE_FUNCTION(vr_async_expire_store, &vd->fifo_expire[ASYNC], 0, INT_MAX, 1, 1);
-STORE_FUNCTION(vr_fifo_batch_store, &vd->fifo_batch, 0, INT_MAX, 0, 2);
-STORE_FUNCTION(vr_rev_penalty_store, &vd->rev_penalty, 0, INT_MAX, 0, 3);
+STORE_FUNCTION(vr_sync_expire_store, &vd->fifo_expire[SYNC], 0, INT_MAX, 1);
+STORE_FUNCTION(vr_async_expire_store, &vd->fifo_expire[ASYNC], 0, INT_MAX, 1);
+STORE_FUNCTION(vr_fifo_batch_store, &vd->fifo_batch, 0, INT_MAX, 0);
+STORE_FUNCTION(vr_rev_penalty_store, &vd->rev_penalty, 0, INT_MAX, 0);
 #undef STORE_FUNCTION
 
 #define DD_ATTR(name) \
@@ -455,7 +433,7 @@ static struct elevator_type iosched_vr = {
 
 static int __init vr_init(void)
 {
-elv_register(&iosched_vr);
+elv_register(&iosched_vr); 
 
 return 0;
 }
@@ -471,3 +449,4 @@ module_exit(vr_exit);
 MODULE_AUTHOR("Aaron Carroll");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("V(R) IO scheduler");
+
