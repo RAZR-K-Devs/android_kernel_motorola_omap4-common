@@ -223,10 +223,7 @@ struct regulator *mapphone_hdmi_dac_reg;
 struct regulator *mapphone_hdmi_5v_reg;
 
 static int  mapphone_panel_hdmi_5v_enable(void);
-#ifndef CONFIG_HDMI_TOGGLE
-static
-#endif
-int  mapphone_panel_hdmi_5v_disable(void);
+static int  mapphone_panel_hdmi_5v_disable(void);
 static int  mapphone_panel_enable_hdtv(struct omap_dss_device *dssdev);
 static void mapphone_panel_disable_hdtv(struct omap_dss_device *dssdev);
 static int  mapphone_panel_enable_hpd_hdtv(struct omap_dss_device *dssdev);
@@ -337,10 +334,8 @@ static int  mapphone_panel_hdmi_5v_enable(void)
 
 	return rc;
 }
-#ifndef CONFIG_HDMI_TOGGLE
-static
-#endif
-int mapphone_panel_hdmi_5v_disable(void)
+
+static int mapphone_panel_hdmi_5v_disable(void)
 {
 	int rc = 0;
 
@@ -1479,6 +1474,7 @@ if (likely(hdmi_active))
 }
 else if (unlikely(hdmi_active))
 {
+	pr_info("HDMI_TOGGLE: HDTV device removed\n");
 	mapphone_dss_data.num_devices--;
 }
 #endif
