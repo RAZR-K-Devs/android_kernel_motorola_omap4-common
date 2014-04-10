@@ -39,9 +39,13 @@
 #include <trace/events/block.h>
 
 #include "blk.h"
+#include "kt_save_sched.h"
 
 static DEFINE_SPINLOCK(elv_list_lock);
 static LIST_HEAD(elv_list);
+
+static struct request_queue *globalq[20];
+static unsigned int queue_size = 0;
 
 /*
  * Merge hash stuff.
@@ -237,6 +241,7 @@ int elevator_init(struct request_queue *q, char *name)
 	q->last_merge = NULL;
 	q->end_sector = 0;
 	q->boundary_rq = NULL;
+//	q->index = queue_size;
 
 	if (name) {
 		e = elevator_get(name);
@@ -272,6 +277,11 @@ int elevator_init(struct request_queue *q, char *name)
 	}
 
 	elevator_attach(q, eq, data);
+//	q->index = queue_size;
+	globalq[queue_size] = q;
+	queue_size += 1;
+	if (queue_size >= 19)
+		queue_size = 10;
 	return 0;
 }
 EXPORT_SYMBOL(elevator_init);
@@ -1019,6 +1029,23 @@ fail_register:
 	return err;
 }
 
+int elevator_change_relay(const char *name, int screen_status)
+{
+	int i = 0;
+	load_prev_screen_on = screen_status;
+	//pr_alert("CHANGE_SCHEDULER0-%d\n", load_prev_screen_on);
+	//for (i = 0; i < queue_size; i++)
+		elevator_change(globalq[i], name);
+	load_prev_screen_on = 0;
+	return 0;
+}
+
+int isload_prev_screen_on(void)
+{
+	return load_prev_screen_on;
+}
+
+extern void set_cur_sched(const char *name);
 /*
  * Switch this queue to the given IO scheduler.
  */
@@ -1055,6 +1082,7 @@ ssize_t elv_iosched_store(struct request_queue *q, const char *name,
 		return count;
 
 	ret = elevator_change(q, name);
+//	globalq[q->index] = q;
 	if (!ret)
 		return count;
 
