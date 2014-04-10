@@ -84,12 +84,6 @@ config ANDROID_RAM_CONSOLE_EARLY_SIZE
 	default 0
 	depends on ANDROID_RAM_CONSOLE_EARLY_INIT
 
-config ANDROID_RAM_CONSOLE
-	bool "Android RAM buffer console"
-	depends on !S390 && !UML && HAVE_MEMBLOCK
-	select ANDROID_PERSISTENT_RAM
-	default n
-
 config PERSISTENT_TRACER
 	bool "Persistent function tracer"
 	depends on HAVE_FUNCTION_TRACER
