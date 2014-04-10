@@ -1,0 +1,57 @@
+7427cea omap: cpu: Improved  voltages, freq calculation, overall handling
+8f822b5 Revert "CPU hotplug, debug: detect imbalance between get_online_cpus() and put_online_cpus()"
+a3674ca Revert "[1/4] power: introduce android_battery"
+c12be19 Revert "[2/4] block: add related function 'load_prev_screen_on' to work with update governors"
+17834ad Revert "[3/4] drivers: cpufreq/input: add related functions to support governor based screen- and freq-stats"
+6f30549 Revert "omap: cpufreq: start to cleanup"
+eee6d16 Fix voltages and config
+d5a7e0e omap: voltage--amend : mpu: raise valus-25mV of stock
+969bd1d omap: voltage: mpu: raise values ~ -25mV of stock
+911ba47 [2/2] kernel: workqueue: Adapt related changes to headers and fix code syntax in main driver
+551707b [1/2] kernel: workqueue: backport from 3.9 and include patches from Neobuddy
+132a928 workqueue: ROGUE workers are UNBOUND workers
+d8a4eb9 workqueue: drop CPU_DYING notifier operation
+744e0cd Revert "linux: workqeue: include back missing option"
+f09c864 linux: workqeue: include back missing option
+d2c0869 moto: fix Edison power domains target state
+b616e94 staging: kconfig: remove double entry
+d41b50e Revert "linux: workqeue: include back missing option"
+6515505 Revert "Revert "Revert "workqueue: drop CPU_DYING notifier operation"""
+2b880e2 Revert "workqueue: ROGUE workers are UNBOUND workers"
+79dcbeb Revert "[1/2] kernel: workqueue: backport from 3.9 and include patches from Neobuddy89"
+af1fdda Revert "[2/2] kernel: workqueue: Adapt related changes to headers and fix code syntax in main driver"
+091f9c4 mutex: Queue mutex spinners with MCS lock to reduce cacheline contention
+8cf8c2d Revert "staging: logger: revert back to previous version"
+7124d24 omap: vo--amend ltage: remove voltage_scale
+b74e9d2 omap: voltage: remove voltage_scale
+ee0f3f6 omap: voltage: fix the overall voltage handling
+ee72f0d moto: hdmi: cleanup and add pr_info
+9b33704 omap: opp: fix OPP define NOMINAL to FAST
+6381802 omap: voltage: add missing '_info.volt_data' and '_vp->vlimits->vddmax' and adapt vddlimits to actual volt defines in opp44xx_data.c
+acd1dfb OMAP: Introduce device scale
+8f9c880 Revert "mutex: Queue mutex spinners with MCS lock to reduce cacheline contention"
+98ff677 staging: logger: revert back to previous version
+215ecae omap: cpufreq: start to cleanup
+51bad69 defconfig: add new stuff to config
+0a53473 [4/4] staging: updates and add new features
+1187952 [3/4] drivers: cpufreq/input: add related functions to support governor based screen- and freq-stats
+8ecb2a1 [2/4] block: add related function 'load_prev_screen_on' to work with update governors
+43942b2 [1/4] power: introduce android_battery
+d021b3f arm: kernel: process: fix wrong macro accidently taken from 3.4 in commit 3044ee2785fd8a27830e43311a77ddcf50e4ae43
+554d307 memcopy: use glibc version for accurate speed
+34e1d74 ARM: add cpufreq transiton notifier to adjust loops_per_jiffy for smp
+e497cbc mutex: Queue mutex spinners with MCS lock to reduce cacheline contention
+6104eeb cpufreq: stats: Don't stop notification call chain
+f3cc196 cpufreq / stats: fix race between stats allocation and first usage
+195a4a4 CPU hotplug, writeback: Don't call writeback_set_ratelimit() too often during hotplug
+3044ee2 ARM: Fix negative idle stats for offline cpu
+8797098 cpufreq: Resolve CPUFREQ_NOTIFY issue
+2a7d338 sched: Set MC (multi-core) sched domain's busy_factor attribute to 1
+10bd1ed cpufreq: Retain only online cpus in managed_policy->cpus
+3238e26 [2/2] kernel: workqueue: Adapt related changes to headers and fix code syntax in main driver
+08f50d3 [1/2] kernel: workqueue: backport from 3.9 and include patches from Neobuddy89
+cccf473 workqueue: ROGUE workers are UNBOUND workers
+ba34852 omap4-common: improve HDMI video-mode selection
+3cf1487 mfd: Move omap-usb-host usbhs init before allocing child dev
+008835c8 usb: ehci-omap: implement backported omap_ehci_ulpi_{read,write} and default PHY settings (on boot) from p-android-omap-3.4.
+6ac7adb hdmi_toggle: fix some stuff..
