@@ -39,6 +39,8 @@
 #define DEF_BOOST_GPU				(450)
 #define DEF_BOOST_HOLD_CYCLES			(9)
 #define DEF_DISABLE_HOTPLUGGING			(1)
+#define DEF_UP_FREQ_THRESHOLD_HOTPLUG (700)
+#define DEF_DOWN_FREQ_THRESHOLD_HOTPLUG (500)
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -53,23 +55,16 @@
 #define MIN_SAMPLING_RATE_RATIO			(2)
 
 static unsigned int min_sampling_rate;
-static unsigned int stored_sampling_rate = 40000;
+static unsigned int stored_sampling_rate;
 static unsigned int Lcpu_down_block_cycles = 0;
 static unsigned int Lcpu_up_block_cycles = 0;
 static bool boostpulse_relayf = false;
 static int boost_hold_cycles_cnt = 0;
+static unsigned int boostpulse_relay_sr = 0;
 static bool screen_is_on = true;
 
 extern void ktoonservative_is_active(bool val);
-extern void boost_the_gpu(int freq, int cycles);
-
-extern void apenable_auto_hotplug(bool state);
-extern bool apget_enable_auto_hotplug(void);
-static bool prev_apenable;
-
-extern void kt_is_active_benabled_gpio(bool val);
-extern void kt_is_active_benabled_touchkey(bool val);
-extern void kt_is_active_benabled_power(bool val);
+//extern void boost_the_gpu(int freq, int cycles);
 
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(100)
@@ -125,6 +120,8 @@ static struct dbs_tuners {
 	unsigned int no_2nd_cpu_screen_off;
 	unsigned int ignore_nice;
 	unsigned int freq_step;
+	unsigned int up_freq_threshold_hotplug;
+	unsigned int down_freq_threshold_hotplug;
 } dbs_tuners_ins = {
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
 	.up_threshold_hotplug = DEF_FREQUENCY_UP_THRESHOLD_HOTPLUG,
@@ -141,6 +138,8 @@ static struct dbs_tuners {
 	.sampling_rate_screen_off = 40000,
 	.ignore_nice = 0,
 	.freq_step = 5,
+	.up_freq_threshold_hotplug = DEF_UP_FREQ_THRESHOLD_HOTPLUG,
+    .down_freq_threshold_hotplug = DEF_DOWN_FREQ_THRESHOLD_HOTPLUG,
 };
 
 static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
@@ -222,6 +221,18 @@ static ssize_t show_boost_cpu(struct kobject *kobj,
 	return sprintf(buf, "%u\n", dbs_tuners_ins.boost_cpu / 1000);
 }
 
+static ssize_t show_up_freq_threshold_hotplug(struct kobject *kobj,
+				      struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", dbs_tuners_ins.up_freq_threshold_hotplug/ 1000);
+}
+
+static ssize_t show_down_freq_threshold_hotplug(struct kobject *kobj,
+				      struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", dbs_tuners_ins.down_freq_threshold_hotplug/ 1000);
+}
+
 /* cpufreq_ktoonservative Governor Tunables */
 #define show_one(file_name, object)					\
 static ssize_t show_##file_name						\
@@ -269,9 +280,9 @@ static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 
 	if (ret != 1)
 		return -EINVAL;
-
+	boostpulse_relayf = false;
+	boostpulse_relay_sr = 0;
 	dbs_tuners_ins.sampling_rate = max(input, min_sampling_rate);
-	stored_sampling_rate = max(input, min_sampling_rate);
 	return count;
 }
 
@@ -319,6 +330,22 @@ static ssize_t store_up_threshold_hotplug(struct kobject *a, struct attribute *b
 	return count;
 }
 
+static ssize_t store_up_freq_threshold_hotplug(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	/* cannot be lower than 100 otherwise freq will not fall */
+	if (ret != 1 || input < 100 ||
+			input >= 2100)
+		return -EINVAL;
+
+	dbs_tuners_ins.up_freq_threshold_hotplug = input * 1000;
+	return count;
+}
+
 static ssize_t store_down_threshold(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
@@ -351,6 +378,22 @@ static ssize_t store_down_threshold_hotplug(struct kobject *a, struct attribute 
 	return count;
 }
 
+static ssize_t store_down_freq_threshold_hotplug(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	/* cannot be lower than 100 otherwise freq will not fall */
+	if (ret != 1 || input < 100  ||
+			input >= 2100)
+		return -EINVAL;
+
+	dbs_tuners_ins.down_freq_threshold_hotplug = input * 1000;
+	return count;
+}
+
 static ssize_t store_cpu_down_block_cycles(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
@@ -376,8 +419,8 @@ static ssize_t store_boost_cpu(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	if (input * 1000 > 2106000)
-		input = 2106000;
+	if (input * 1000 > 2100000)
+		input = 2100000;
 	if (input * 1000 < 0)
 		input = 0;
 	dbs_tuners_ins.boost_cpu = input * 1000;
@@ -405,7 +448,7 @@ static ssize_t store_boost_gpu(struct kobject *a, struct attribute *b,
 	int ret;
 	ret = sscanf(buf, "%u", &input);
 
-	if (input != 100 && input != 160 && input != 266 && input != 350 && input != 400 && input != 450 && input != 533 && input != 612)
+	if (input != 100 && input != 160 && input != 266 && input != 350 && input != 400 && input != 450 && input != 533 && input != 612 && input != 667 && input != 720)
 		input = 0;
 
 	dbs_tuners_ins.boost_gpu = input;
@@ -519,6 +562,8 @@ define_one_global_rw(disable_hotplugging);
 define_one_global_rw(no_2nd_cpu_screen_off);
 define_one_global_rw(ignore_nice_load);
 define_one_global_rw(freq_step);
+define_one_global_rw(up_freq_threshold_hotplug);
+define_one_global_rw(down_freq_threshold_hotplug);
 
 static struct attribute *dbs_attributes[] = {
 	&sampling_rate_min.attr,
@@ -538,6 +583,8 @@ static struct attribute *dbs_attributes[] = {
 	&no_2nd_cpu_screen_off.attr,
 	&ignore_nice_load.attr,
 	&freq_step.attr,
+	&up_freq_threshold_hotplug.attr,
+	&down_freq_threshold_hotplug.attr,
 	NULL
 };
 
@@ -561,8 +608,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	if (boostpulse_relayf)
 	{
-		if (stored_sampling_rate != 0 && screen_is_on)
-			dbs_tuners_ins.sampling_rate = stored_sampling_rate;
+		if (boostpulse_relay_sr != 0)
+			dbs_tuners_ins.sampling_rate = boostpulse_relay_sr;
 		if (boost_hold_cycles_cnt >= dbs_tuners_ins.boost_hold_cycles)
 		{
 			boostpulse_relayf = false;
@@ -572,7 +619,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 		this_dbs_info->down_skip = 0;
 		/* if we are already at full speed then break out early */
-		if (this_dbs_info->requested_freq == policy->max || policy->cur > dbs_tuners_ins.boost_cpu || this_dbs_info->requested_freq > dbs_tuners_ins.boost_cpu)
+		if (this_dbs_info->requested_freq == policy->max || policy->cur >= dbs_tuners_ins.boost_cpu || this_dbs_info->requested_freq > dbs_tuners_ins.boost_cpu)
 			return;
 
 		this_dbs_info->requested_freq = dbs_tuners_ins.boost_cpu;
@@ -580,7 +627,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			CPUFREQ_RELATION_H);
 		return;
 	}
-
+	
 	/*
 	 * Every sampling_rate, we check, if current idle time is less
 	 * than 20% (default), then we try to increase frequency
@@ -644,7 +691,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		return;
 
 	/* Check for frequency increase is greater than hotplug value */
-	if (max_load > dbs_tuners_ins.up_threshold_hotplug) {
+	if (max_load > dbs_tuners_ins.up_threshold_hotplug && policy->cur > dbs_tuners_ins.up_freq_threshold_hotplug ) {
 		if (num_online_cpus() < 2 && policy->cur != policy->min)
 		{
 			if (Lcpu_up_block_cycles > dbs_tuners_ins.cpu_down_block_cycles && (dbs_tuners_ins.no_2nd_cpu_screen_off == 0 || (dbs_tuners_ins.no_2nd_cpu_screen_off == 1 && screen_is_on)))
@@ -679,7 +726,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		return;
 	}
 
-	if (max_load < dbs_tuners_ins.down_threshold_hotplug && !dbs_tuners_ins.disable_hotplugging) {
+	if (max_load < dbs_tuners_ins.down_threshold_hotplug && !dbs_tuners_ins.disable_hotplugging && policy->cur < dbs_tuners_ins.down_freq_threshold_hotplug) {
 		if (num_online_cpus() > 1)
 		{
 			if (Lcpu_down_block_cycles > dbs_tuners_ins.cpu_down_block_cycles)
@@ -721,48 +768,51 @@ void screen_is_on_relay_kt(bool state)
 	{
 		if (stored_sampling_rate > 0)
 			dbs_tuners_ins.sampling_rate = stored_sampling_rate; //max(input, min_sampling_rate);
-		//pr_alert("SCREEN_IS_ON1: %d-%d\n", dbs_tuners_ins.sampling_rate, stored_sampling_rate);
 	}
 	else
 	{
 		stored_sampling_rate = dbs_tuners_ins.sampling_rate;
 		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.sampling_rate_screen_off;
-		//pr_alert("SCREEN_IS_ON2: %d-%d\n", dbs_tuners_ins.sampling_rate, stored_sampling_rate);
 	}
 
 }
 
-void boostpulse_relay(void)
+void boostpulse_relay_kt(void)
 {
 	if (!boostpulse_relayf)
 	{
 		if (dbs_tuners_ins.boost_gpu > 0)
 		{
 			int bpc = (dbs_tuners_ins.boost_hold_cycles / 2);
+				// Comment out if necessary 
 			//if (dbs_tuners_ins.boost_hold_cycles > 0)
-				//boost_the_gpu(dbs_tuners_ins.boost_gpu, bpc);
+			//	boost_the_gpu(dbs_tuners_ins.boost_gpu, bpc);
 			//else
-				//boost_the_gpu(dbs_tuners_ins.boost_gpu, 0);
+			//	boost_the_gpu(dbs_tuners_ins.boost_gpu, 0);
+					// end
 		}
 		if (num_online_cpus() < 2 && dbs_tuners_ins.boost_turn_on_2nd_core)
 			schedule_work_on(0, &hotplug_online_work);
 		else if (dbs_tuners_ins.boost_turn_on_2nd_core == 0 && dbs_tuners_ins.boost_cpu == 0 && dbs_tuners_ins.boost_gpu == 0)
 			return;
 
+		if (dbs_tuners_ins.sampling_rate != min_sampling_rate)
+			boostpulse_relay_sr = dbs_tuners_ins.sampling_rate;
 		boostpulse_relayf = true;
 		boost_hold_cycles_cnt = 0;
 		dbs_tuners_ins.sampling_rate = min_sampling_rate;
-		//pr_info("BOOSTPULSE RELAY KT");
 	}
 	else
 	{
 		if (dbs_tuners_ins.boost_gpu > 0)
 		{
 			int bpc = (dbs_tuners_ins.boost_hold_cycles / 2);
+			// Comment out if necessary 
 			//if (dbs_tuners_ins.boost_hold_cycles > 0)
-				//boost_the_gpu(dbs_tuners_ins.boost_gpu, bpc);
+			//	boost_the_gpu(dbs_tuners_ins.boost_gpu, bpc);
 			//else
-				//boost_the_gpu(dbs_tuners_ins.boost_gpu, 0);
+			//	boost_the_gpu(dbs_tuners_ins.boost_gpu, 0);
+			// end
 		}
 		boost_hold_cycles_cnt = 0;
 	}
@@ -842,7 +892,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 	switch (event) {
 	case CPUFREQ_GOV_START:
-	//	ktoonservative_is_active(true);		
+	// Comment out if necessary 
+		ktoonservative_is_active(true);
+		// end
 		if ((!cpu_online(cpu)) || (!policy->cur))
 			return -EINVAL;
 
@@ -903,7 +955,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_STOP:
-	//	ktoonservative_is_active(false);		
+		// Comment out if necessary 
+		ktoonservative_is_active(false);
+		// end
 		dbs_timer_exit(this_dbs_info);
 
 		mutex_lock(&dbs_mutex);
@@ -958,7 +1012,7 @@ static int __init cpufreq_gov_dbs_init(void)
 {
 	INIT_WORK(&hotplug_offline_work, hotplug_offline_work_fn);
 	INIT_WORK(&hotplug_online_work, hotplug_online_work_fn);
-
+	
 	return cpufreq_register_governor(&cpufreq_gov_ktoonservative);
 }
 

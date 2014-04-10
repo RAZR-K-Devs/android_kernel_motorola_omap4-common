@@ -38,6 +38,11 @@ extern bool battery_friend_active;
 static unsigned int fr_min;
 #endif
 
+static char scaling_sched_screen_off_sel[16];
+static char scaling_sched_screen_off_sel_prev[16];
+static char scaling_governor_screen_off_sel[16];
+static char scaling_governor_screen_off_sel_prev[16];
+
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
@@ -79,6 +84,38 @@ static struct kset *cpudev_kset;
  */
 static DEFINE_PER_CPU(int, cpufreq_policy_cpu);
 static DEFINE_PER_CPU(struct rw_semaphore, cpu_policy_rwsem);
+
+static unsigned int Lscreen_off_scaling_mhz = 0;
+static unsigned int Lscreen_off_scaling_mhz_orig = 1700000;
+static struct timer_list screen_on_off_timer;
+static unsigned long Lonoff = 1;
+void screen_on_off(struct work_struct *screen_on_off_work);
+static DECLARE_WORK(screen_on_off_work, screen_on_off);
+
+static unsigned int Lbluetooth_scaling_mhz = 0;
+static unsigned int Lbluetooth_scaling_mhz_orig = 0;
+static bool bluetooth_scaling_mhz_active = false;
+static bool bluetooth_overwrote_screen_off = false;
+
+//static unsigned int gpu_min = 100;
+//static unsigned int gpu_max = 533;
+unsigned int batt_lvl_low = 0;
+unsigned int batt_lvl_high = 0;
+unsigned int cpu_mhz_lvl_low = 0;
+unsigned int cpu_mhz_lvl_high = 0;
+//unsigned int gpu_mhz_lvl_low = 0;
+//unsigned int gpu_mhz_lvl_high = 0;
+extern void set_batt_mhz_info(unsigned int batt_lvl_low, unsigned int batt_lvl_high, unsigned int cpu_mhz_lvl_low, unsigned int cpu_mhz_lvl_high);
+//extern void set_gpu_original(unsigned int gpu_original);
+extern void get_batt_level(unsigned int* cpu_mhz_lvl);
+//extern unsigned int get_cur_gpu_freq(void);
+
+/*
+extern ssize_t hlpr_get_gpu_gov_table(char *buf);
+extern void hlpr_set_gpu_gov_table(int gpu_table[]);
+extern ssize_t hlpr_get_gpu_gov_mif_table(char *buf);
+extern void hlpr_set_gpu_gov_mif_table(int gpu_table[]);
+*/
 
 #define lock_policy_rwsem(mode, cpu)					\
 int lock_policy_rwsem_##mode					\
@@ -442,8 +479,143 @@ static ssize_t store_##file_name					\
 	return ret ? ret : count;					\
 }
 
-store_one(scaling_min_freq, min);
-store_one(scaling_max_freq, max);
+//store_one(scaling_min_freq, min);
+//store_one(scaling_max_freq, max);
+static ssize_t store_scaling_min_freq(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	unsigned int value = 0;
+	struct cpufreq_policy new_policy;
+
+	ret = sscanf(buf, "%u", &value);
+	if (ret != 1)
+		return -EINVAL;
+
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);
+	new_policy.min = value;
+	ret = __cpufreq_set_policy(policy, &new_policy);	
+	policy->user_policy.min = policy->min;
+
+	Lbluetooth_scaling_mhz_orig = value;
+
+	return count;
+}
+
+static ssize_t store_scaling_max_freq(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	unsigned int value = 0;
+	struct cpufreq_policy new_policy;
+
+	ret = sscanf(buf, "%u", &value);
+	if (ret != 1)
+		return -EINVAL;
+
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);
+	new_policy.max = value;
+	ret = __cpufreq_set_policy(policy, &new_policy);	
+	policy->user_policy.max = policy->max;
+
+	if (value != 800000 && value != 1700000)
+		Lscreen_off_scaling_mhz_orig = value;
+	
+	return count;
+}
+
+static ssize_t show_battery_ctrl_batt_lvl_low(struct cpufreq_policy *policy,	char *buf)
+{
+	return sprintf(buf, "%u\n", batt_lvl_low);
+}
+
+static ssize_t store_battery_ctrl_batt_lvl_low(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1)
+		return -EINVAL;
+	
+	if (input < 0 || input > 100)
+		input = 0;
+	batt_lvl_low = input;
+	set_batt_mhz_info(batt_lvl_low, batt_lvl_high, cpu_mhz_lvl_low, cpu_mhz_lvl_high);
+	return count;
+}
+
+static ssize_t show_battery_ctrl_batt_lvl_high(struct cpufreq_policy *policy,	char *buf)
+{
+	return sprintf(buf, "%u\n", batt_lvl_high);
+}
+
+static ssize_t store_battery_ctrl_batt_lvl_high(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1)
+		return -EINVAL;
+	
+	if (input < 0 || input > 100)
+		input = 0;
+	batt_lvl_high = input;
+	set_batt_mhz_info(batt_lvl_low, batt_lvl_high, cpu_mhz_lvl_low, cpu_mhz_lvl_high);
+	return count;
+}
+
+static ssize_t show_battery_ctrl_cpu_mhz_lvl_low(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", cpu_mhz_lvl_low);
+}
+
+
+static ssize_t store_battery_ctrl_cpu_mhz_lvl_low(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1)
+		return -EINVAL;
+	
+	if (input < 100000 || input > 2100000)
+		input = 0;
+	cpu_mhz_lvl_low = input;
+	set_batt_mhz_info(batt_lvl_low, batt_lvl_high, cpu_mhz_lvl_low, cpu_mhz_lvl_high);
+	return count;
+}
+
+static ssize_t show_battery_ctrl_cpu_mhz_lvl_high(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", cpu_mhz_lvl_high);
+}
+
+
+static ssize_t store_battery_ctrl_cpu_mhz_lvl_high(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1)
+		return -EINVAL;
+	
+	if (input < 100000 || input > 2100000)
+		input = 0;
+	cpu_mhz_lvl_high = input;
+	set_batt_mhz_info(batt_lvl_low, batt_lvl_high, cpu_mhz_lvl_low, cpu_mhz_lvl_high);
+	return count;
+}
+
+/*
+static ssize_t show_battery_ctrl_gpu_mhz_lvl_low(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", gpu_mhz_lvl_low);
+}
+*/
 
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
@@ -457,6 +629,72 @@ static ssize_t show_cpuinfo_cur_freq(struct cpufreq_policy *policy,
 	return sprintf(buf, "%u\n", cur_freq);
 }
 
+static ssize_t show_scaling_governor_screen_off(struct cpufreq_policy *policy, char *buf)
+{
+	return scnprintf(buf, 16, "%s\n",
+				scaling_governor_screen_off_sel);
+}
+
+static ssize_t store_scaling_governor_screen_off(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	ret = sscanf(buf, "%15s", scaling_governor_screen_off_sel);
+	return count;
+}
+
+static ssize_t show_scaling_sched_screen_off(struct cpufreq_policy *policy, char *buf)
+{
+	return scnprintf(buf, 16, "%s\n",
+				scaling_sched_screen_off_sel);
+}
+
+static ssize_t store_scaling_sched_screen_off(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	ret = sscanf(buf, "%15s", scaling_sched_screen_off_sel);
+	return count;
+}
+
+unsigned int set_battery_max_level(unsigned int cpu_mhz_lvl)
+{
+	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
+	struct cpufreq_policy new_policy;
+	unsigned int ret = -EINVAL;
+	
+	if (policy->max != cpu_mhz_lvl && ((Lonoff == 1  && cpu_mhz_lvl < policy->max) || (Lonoff == 0 && cpu_mhz_lvl < Lscreen_off_scaling_mhz)))
+	{
+		ret = cpufreq_get_policy(&new_policy, policy->cpu);
+		new_policy.max = cpu_mhz_lvl;
+		ret = __cpufreq_set_policy(policy, &new_policy);	
+		policy->user_policy.max = policy->max;
+		pr_alert("SET_BATTERY_MAX_LEVEL_CPU: %u-%u\n", cpu_mhz_lvl);
+	}
+	
+	//GPU
+	/*	
+	if (gpu_mhz_lvl != gpu_max && gpu_mhz_lvl > 0 && gpu_mhz_lvl >= gpu_min)
+	{
+		gpu_max = gpu_mhz_lvl;
+		hlpr_set_min_max_G3D(gpu_min, gpu_max);
+		pr_alert("SET_BATTERY_MAX_LEVEL_GPU: %u-%u\n", cpu_mhz_lvl,  gpu_mhz_lvl);
+	}
+
+	if (Lscreen_off_scaling_mhz_orig != 0)
+		return Lscreen_off_scaling_mhz_orig;		
+	else
+		return 1700000;		
+	*/
+}
+
+extern int elevator_change_relay(const char *name, int screen_status);
+
+void set_cur_sched(const char *name)
+{
+	unsigned int ret = -EINVAL;
+	ret = sscanf(name, "%15s", scaling_sched_screen_off_sel_prev);
+}
 
 /**
  * show_scaling_governor - show the current policy for the specified CPU
@@ -511,6 +749,185 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 		return ret;
 	else
 		return count;
+}
+
+void screen_on_off(struct work_struct *notification_off_work)
+{
+	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
+	struct cpufreq_policy new_policy;
+	unsigned int ret = -EINVAL;
+	unsigned int cpu_mhz_lvl = 0;
+//	unsigned int gpu_mhz_lvl = 0;
+	
+	pr_alert("SET_SCREEN_ON_OFF_MHZ - %lx - so=%d - soo=%d\n", Lonoff, Lscreen_off_scaling_mhz, Lscreen_off_scaling_mhz_orig);
+
+	//CPU Stuff
+	if (Lonoff == 0 && Lscreen_off_scaling_mhz > 0)
+	{
+		if (!bluetooth_scaling_mhz_active)
+		{
+			ret = cpufreq_get_policy(&new_policy, policy->cpu);
+			new_policy.max = Lscreen_off_scaling_mhz;
+			ret = __cpufreq_set_policy(policy, &new_policy);	
+			policy->user_policy.max = policy->max;
+			del_timer(&screen_on_off_timer);
+		}
+		else
+			bluetooth_overwrote_screen_off = true;
+	}
+	else if (Lonoff == 1 && Lscreen_off_scaling_mhz > 0)
+	{
+		//CPU
+		ret = cpufreq_get_policy(&new_policy, policy->cpu);
+		if (Lscreen_off_scaling_mhz_orig != 0)
+			new_policy.max = Lscreen_off_scaling_mhz_orig;		
+		else
+			new_policy.max = 1700000;
+		get_batt_level(&cpu_mhz_lvl);
+		if (cpu_mhz_lvl > 0)
+			new_policy.max = cpu_mhz_lvl;
+					
+		ret = __cpufreq_set_policy(policy, &new_policy);	
+		policy->user_policy.max = policy->max;
+		
+		//GPU
+		/*
+		if (gpu_mhz_lvl > 0 && gpu_mhz_lvl >= gpu_min)
+		{
+			gpu_max = gpu_mhz_lvl;
+			hlpr_set_min_max_G3D(gpu_min, gpu_max);
+		} */
+	}
+	
+	//Scheduler stuff
+	if (Lonoff == 0)
+	{
+		if (!cpu_is_offline(0) && scaling_sched_screen_off_sel != NULL && scaling_sched_screen_off_sel[0] != '\0')
+		{
+			elevator_change_relay(scaling_sched_screen_off_sel, 1);
+			pr_alert("cpufreq_gov_suspend_gov_SCHED: %s\n", scaling_sched_screen_off_sel);
+		}
+		else
+			pr_alert("cpufreq_gov_suspend_gov_SCHED_DENIED2: %s\n", scaling_sched_screen_off_sel);
+	}
+	else if (Lonoff == 1)
+	{
+	
+		if (!cpu_is_offline(0) && scaling_sched_screen_off_sel_prev != NULL && scaling_sched_screen_off_sel_prev[0] != '\0' && scaling_sched_screen_off_sel != NULL && scaling_sched_screen_off_sel[0] != '\0')
+		{
+			elevator_change_relay(scaling_sched_screen_off_sel_prev, 2);
+			pr_alert("cpufreq_gov_resume_gov_SCHED: %s\n", scaling_sched_screen_off_sel_prev);
+		}
+		else
+		{
+			pr_alert("cpufreq_gov_resume_gov_SCHED_DENIED2: %s\n", scaling_sched_screen_off_sel_prev);
+		}
+	}
+
+	//Governor stuff
+	if (Lonoff == 0)
+	{
+		if (!cpu_is_offline(0) && scaling_governor_screen_off_sel != NULL && scaling_governor_screen_off_sel[0] != '\0')
+		{
+			policy = cpufreq_cpu_get(0);
+			ret = sscanf(policy->governor->name, "%15s", scaling_governor_screen_off_sel_prev);
+			if (ret == 1)
+			{
+				store_scaling_governor(policy, scaling_governor_screen_off_sel, sizeof(scaling_governor_screen_off_sel));
+				pr_alert("cpufreq_gov_suspend_gov: %s\n", scaling_governor_screen_off_sel);
+			}
+			else
+				pr_alert("cpufreq_gov_suspend_gov_DENIED1: %s\n", scaling_governor_screen_off_sel);
+		}
+	}
+	else if (Lonoff == 1)
+	{
+		if (!cpu_is_offline(0) && scaling_governor_screen_off_sel_prev != NULL && scaling_governor_screen_off_sel_prev[0] != '\0')
+		{
+			policy = cpufreq_cpu_get(0);
+			store_scaling_governor(policy, scaling_governor_screen_off_sel_prev, sizeof(scaling_governor_screen_off_sel_prev));
+			pr_alert("cpufreq_gov_resume_gov: %s\n", scaling_governor_screen_off_sel_prev);
+		}
+	}
+}
+
+static void handle_screen_on_off(unsigned long data)
+{
+	schedule_work(&screen_on_off_work);
+}
+
+void set_screen_on_off_mhz(unsigned long onoff)
+{
+	Lonoff = onoff;
+	if (onoff == 1)
+		mod_timer(&screen_on_off_timer, jiffies + msecs_to_jiffies(1000));
+	else
+		mod_timer(&screen_on_off_timer, jiffies + msecs_to_jiffies(5000));
+}
+
+static ssize_t show_screen_off_scaling_mhz(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", Lscreen_off_scaling_mhz);
+}
+static ssize_t store_screen_off_scaling_mhz(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int value = 0;
+	unsigned int ret;
+	ret = sscanf(buf, "%u", &value);
+	Lscreen_off_scaling_mhz = value;
+
+	return count;
+}
+
+static ssize_t show_bluetooth_scaling_mhz(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", Lbluetooth_scaling_mhz);
+}
+
+static ssize_t store_bluetooth_scaling_mhz(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	unsigned int value = 0;
+	unsigned int ret;
+	ret = sscanf(buf, "%u", &value);
+	Lbluetooth_scaling_mhz = value;
+	
+	return count;
+}
+
+void set_bluetooth_state(unsigned int val)
+{
+	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
+	struct cpufreq_policy new_policy;
+	unsigned int ret = -EINVAL;
+
+	pr_alert("SET_BLUETOOTH_STATE - %d\n", val);
+
+	if (val == 1)
+	{
+		bluetooth_scaling_mhz_active = true;
+		ret = cpufreq_get_policy(&new_policy, policy->cpu);
+		new_policy.min = Lbluetooth_scaling_mhz;
+		ret = __cpufreq_set_policy(policy, &new_policy);	
+		policy->user_policy.min = policy->min;
+	}
+	else
+	{
+		bluetooth_scaling_mhz_active = false;
+		ret = cpufreq_get_policy(&new_policy, policy->cpu);
+		if (Lbluetooth_scaling_mhz_orig > 0)
+			new_policy.min = Lbluetooth_scaling_mhz_orig;
+		
+		if (bluetooth_overwrote_screen_off && Lonoff == 0)
+			new_policy.max = Lscreen_off_scaling_mhz;
+			
+		ret = __cpufreq_set_policy(policy, &new_policy);	
+		policy->user_policy.min = policy->min;
+		
+		if (bluetooth_overwrote_screen_off && Lonoff == 0)
+			policy->user_policy.max = policy->max;
+		bluetooth_overwrote_screen_off = false;
+	}
 }
 
 /**
@@ -635,8 +1052,20 @@ cpufreq_freq_attr_ro(affected_cpus);
 cpufreq_freq_attr_ro(cpu_utilization);
 cpufreq_freq_attr_rw(scaling_min_freq);
 cpufreq_freq_attr_rw(scaling_max_freq);
+//cpufreq_freq_attr_rw(scaling_min_freq_gpu);
+//cpufreq_freq_attr_rw(scaling_max_freq_gpu);
+cpufreq_freq_attr_rw(battery_ctrl_batt_lvl_low);
+cpufreq_freq_attr_rw(battery_ctrl_batt_lvl_high);
+cpufreq_freq_attr_rw(battery_ctrl_cpu_mhz_lvl_low);
+cpufreq_freq_attr_rw(battery_ctrl_cpu_mhz_lvl_high);
+//cpufreq_freq_attr_rw(battery_ctrl_gpu_mhz_lvl_low);
+//cpufreq_freq_attr_rw(battery_ctrl_gpu_mhz_lvl_high);
 cpufreq_freq_attr_rw(scaling_governor);
+cpufreq_freq_attr_rw(scaling_governor_screen_off);
+cpufreq_freq_attr_rw(scaling_sched_screen_off);
 cpufreq_freq_attr_rw(scaling_setspeed);
+cpufreq_freq_attr_rw(screen_off_scaling_mhz);
+cpufreq_freq_attr_rw(bluetooth_scaling_mhz);
 
 static struct attribute *default_attrs[] = {
 	&cpuinfo_min_freq.attr,
@@ -644,13 +1073,23 @@ static struct attribute *default_attrs[] = {
 	&cpuinfo_transition_latency.attr,
 	&scaling_min_freq.attr,
 	&scaling_max_freq.attr,
+	&battery_ctrl_batt_lvl_low.attr,
+	&battery_ctrl_batt_lvl_high.attr,
+	&battery_ctrl_cpu_mhz_lvl_low.attr,
+	&battery_ctrl_cpu_mhz_lvl_high.attr,
+//	&battery_ctrl_gpu_mhz_lvl_low.attr,
+//	&battery_ctrl_gpu_mhz_lvl_high.attr,
 	&affected_cpus.attr,
 	&cpu_utilization.attr,
 	&related_cpus.attr,
 	&scaling_governor.attr,
+	&scaling_governor_screen_off.attr,
+	&scaling_sched_screen_off.attr,
 	&scaling_driver.attr,
 	&scaling_available_governors.attr,
 	&scaling_setspeed.attr,
+	&screen_off_scaling_mhz.attr,
+	&bluetooth_scaling_mhz.attr,
 	NULL
 };
 
@@ -1278,6 +1717,26 @@ unsigned int cpufreq_quick_get(unsigned int cpu)
 	return ret_freq;
 }
 EXPORT_SYMBOL(cpufreq_quick_get);
+
+/**
+ * cpufreq_quick_get_max - get the max reported CPU frequency for this CPU
+ * @cpu: CPU number
+ *
+ * Just return the max possible frequency for a given CPU.
+ */
+unsigned int cpufreq_quick_get_max(unsigned int cpu)
+{
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+	unsigned int ret_freq = 0;
+
+	if (policy) {
+		ret_freq = policy->max;
+		cpufreq_cpu_put(policy);
+	}
+
+	return ret_freq;
+}
+EXPORT_SYMBOL(cpufreq_quick_get_max);
 
 
 static unsigned int __cpufreq_get(unsigned int cpu)
@@ -2172,6 +2631,8 @@ static int __init cpufreq_core_init(void)
 	cpufreq_global_kobject->kset = cpufreq_kset;
 
 	register_syscore_ops(&cpufreq_syscore_ops);
+
+	setup_timer(&screen_on_off_timer, handle_screen_on_off, Lonoff);
 
 	return 0;
 }
