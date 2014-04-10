@@ -32,12 +32,12 @@
  */
 
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
-#define DEF_FREQUENCY_UP_THRESHOLD		(80)
-#define DEF_SAMPLING_DOWN_FACTOR		(1)
+#define DEF_FREQUENCY_UP_THRESHOLD		(65)
+#define DEF_SAMPLING_DOWN_FACTOR		(35)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
-#define MICRO_FREQUENCY_UP_THRESHOLD		(95)
-#define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
+#define MICRO_FREQUENCY_UP_THRESHOLD		(75)
+#define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(15000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 
@@ -68,11 +68,6 @@ static struct early_suspend cpufreq_gov_early_suspend;
 static unsigned int cpufreq_gov_lcd_status;
 static unsigned long stored_sampling_rate;
 #endif
-
-static bool boostpulse_relayf = false;
-static unsigned int boostpulse_relay_sr = 0;
-static unsigned int Lboostpulse_value = 1000000;
-
 
 #ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
 static
@@ -263,12 +258,6 @@ static ssize_t show_sampling_rate_min(struct kobject *kobj,
 }
 
 define_one_global_ro(sampling_rate_min);
-
-static ssize_t show_boostpulse_value(struct kobject *kobj,
-				      struct attribute *attr, char *buf)
-{
-	return sprintf(buf, "%u\n", Lboostpulse_value / 1000);
-}
 
 /* cpufreq_ondemand Governor Tunables */
 #define show_one(file_name, object)					\
@@ -472,30 +461,12 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-static ssize_t store_boostpulse_value(struct kobject *a, struct attribute *b,
-			       const char *buf, size_t count)
-{
-	unsigned int input;
-	int ret;
-	ret = sscanf(buf, "%u", &input);
-
-	if (ret != 1)
-		return -EINVAL;
-
-	if (input * 1000 > 2100000)
-		input = 2100000;
-
-	Lboostpulse_value = input * 1000;
-	return count;
-}
-
 define_one_global_rw(sampling_rate);
 define_one_global_rw(io_is_busy);
 define_one_global_rw(up_threshold);
 define_one_global_rw(sampling_down_factor);
 define_one_global_rw(ignore_nice_load);
 define_one_global_rw(powersave_bias);
-define_one_global_rw(boostpulse_value);
 #ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
 define_one_global_rw(two_phase_freq);
 #endif
@@ -508,7 +479,6 @@ static struct attribute *dbs_attributes[] = {
 	&ignore_nice_load.attr,
 	&powersave_bias.attr,
 	&io_is_busy.attr,
-	&boostpulse_value.attr,
 #ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
 	&two_phase_freq.attr,
 #endif
@@ -558,19 +528,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	this_dbs_info->freq_lo = 0;
 	policy = this_dbs_info->cur_policy;
-
-	if (boostpulse_relayf)
-	{
-		if (boostpulse_relay_sr != 0)
-			dbs_tuners_ins.sampling_rate = boostpulse_relay_sr;
-		boostpulse_relayf = false;
-		if (policy->cur > Lboostpulse_value)
-			return;
-
-		__cpufreq_driver_target(policy, Lboostpulse_value,
-			CPUFREQ_RELATION_H);
-		return;
-	}
 
 	/*
 	 * Every sampling_rate, we check, if current idle time is less
@@ -752,20 +709,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 }
 
-extern void ondemand_is_active(bool val);
-
-void boostpulse_relay_od()
-{
-	if (Lboostpulse_value > 0)
-	{
-		//pr_info("BOOST_PULSE_FROM_INTERACTIVE");
-		if (dbs_tuners_ins.sampling_rate != min_sampling_rate)
-			boostpulse_relay_sr = dbs_tuners_ins.sampling_rate;
-		boostpulse_relayf = true;
-		dbs_tuners_ins.sampling_rate = min_sampling_rate;
-	}
-}
-
 static void do_dbs_timer(struct work_struct *work)
 {
 	struct cpu_dbs_info_s *dbs_info =
@@ -858,7 +801,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 	switch (event) {
 	case CPUFREQ_GOV_START:
-		ondemand_is_active(true);
 		if ((!cpu_online(cpu)) || (!policy->cur))
 			return -EINVAL;
 
@@ -913,7 +855,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_STOP:
-		ondemand_is_active(false);
 		dbs_timer_exit(this_dbs_info);
 
 		mutex_lock(&dbs_mutex);
@@ -961,10 +902,11 @@ static void cpufreq_gov_resume(struct early_suspend *h)
 
 static int __init cpufreq_gov_dbs_init(void)
 {
+	cputime64_t wall;
 	u64 idle_time;
 	int cpu = get_cpu();
 
-	idle_time = get_cpu_idle_time_us(cpu, NULL);
+	idle_time = get_cpu_idle_time_us(cpu, &wall);
 	put_cpu();
 	if (idle_time != -1ULL) {
 		/* Idle micro accounting is supported. Use finer thresholds */
@@ -972,7 +914,7 @@ static int __init cpufreq_gov_dbs_init(void)
 		dbs_tuners_ins.down_differential =
 					MICRO_FREQUENCY_DOWN_DIFFERENTIAL;
 		/*
-		 * In nohz/micro accounting case we set the minimum frequency
+		 * In no_hz/micro accounting case we set the minimum frequency
 		 * not depending on HZ, but fixed (very low). The deferred
 		 * timer might skip some samples if idle/sleeping as needed.
 		*/
@@ -1001,7 +943,6 @@ static void __exit cpufreq_gov_dbs_exit(void)
 	cpufreq_unregister_governor(&cpufreq_gov_ondemand);
 }
 
-
 MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
 MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
 MODULE_DESCRIPTION("'cpufreq_ondemand' - A dynamic cpufreq governor for "
@@ -1014,3 +955,4 @@ fs_initcall(cpufreq_gov_dbs_init);
 module_init(cpufreq_gov_dbs_init);
 #endif
 module_exit(cpufreq_gov_dbs_exit);
+

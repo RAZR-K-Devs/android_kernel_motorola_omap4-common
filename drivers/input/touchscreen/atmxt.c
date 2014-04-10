@@ -40,28 +40,6 @@
 #include <linux/time.h>
 #endif
 
-extern void set_screen_on_off_mhz(unsigned long onoff);
-static bool ktoonservative_is_activef = false;
-static bool pegasusq_is_activef = false;
-static bool ondemand_is_activef = false;
-extern void boostpulse_relay_kt(void);
-extern void boostpulse_relay_pq(void);
-extern void boostpulse_relay_od(void);
-extern void screen_is_on_relay_kt(bool state);
-
-void ktoonservative_is_active(bool val)
-{
-	ktoonservative_is_activef = val;
-}
-void pegasusq_is_active(bool val)
-{
-	pegasusq_is_activef = val;
-}
-void ondemand_is_active(bool val)
-{
-	ondemand_is_activef = val;
-}
-
 static int atmxt_probe(struct i2c_client *client,
 		const struct i2c_device_id *id);
 static int atmxt_remove(struct i2c_client *client);
@@ -1116,12 +1094,6 @@ static irqreturn_t atmxt_isr(int irq, void *handle)
 				"%s: Servicing IRQ during sleep...\n",
 				__func__);
 		case ATMXT_IC_ACTIVE:
-					if (ktoonservative_is_activef)
-						boostpulse_relay_kt();
-					if (pegasusq_is_activef)
-						boostpulse_relay_pq();
-					if (ondemand_is_activef)
-						boostpulse_relay_od();
 			atmxt_active_handler(dd);
 			break;
 		default:
@@ -2302,18 +2274,6 @@ atmxt_active_handler_fail:
 		__func__, err);
 
 atmxt_active_handler_pass:
-	
-	if (ktoonservative_is_activef)
-	{
-		screen_is_on_relay_kt(true);
-		boostpulse_relay_kt();
-	}
-	if (pegasusq_is_activef)
-		boostpulse_relay_pq();
-	if (ondemand_is_activef)
-		boostpulse_relay_od();
-	set_screen_on_off_mhz(1);
-
 	kfree(msg_buf);
 	kfree(contents);
 	return;
