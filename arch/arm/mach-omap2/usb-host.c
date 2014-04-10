@@ -47,7 +47,7 @@
 static struct usbhs_omap_platform_data		usbhs_data;
 static struct ehci_hcd_omap_platform_data	ehci_data;
 static struct ohci_hcd_omap_platform_data	ohci_data;
-#ifndef CONFIG_MAPPHONE_MODEM_PORT
+#if !defined(CONFIG_MAPPHONE_MODEM_PORT) || !defined(CONFIG_MAPPHONE_EDISON)
 static int usbhs_update_sar;
 #endif
 static struct omap_device_pm_latency omap_uhhtll_latency[] = {
@@ -594,7 +594,7 @@ static void setup_ehci_io_mux(const enum usbhs_omap_port_mode *port_mode)
 static struct omap_hwmod_mux_info *
 setup_4430ehci_io_mux(const enum usbhs_omap_port_mode *port_mode)
 {
-#ifndef CONFIG_MAPPHONE_MODEM_PORT
+#if !defined(CONFIG_MAPPHONE_MODEM_PORT) || !defined(CONFIG_MAPPHONE_EDISON)
 //	struct omap_device_pad *pads;
 //	int pads_cnt;
 	struct omap_device_pad *pads = NULL;
@@ -848,7 +848,7 @@ static void setup_4430ehci_drvstrength(const enum usbhs_omap_port_mode
 		break;
 	}
 }
-#ifndef CONFIG_MAPPHONE_MODEM_PORT
+#if !defined(CONFIG_MAPPHONE_MODEM_PORT) || !defined(CONFIG_MAPPHONE_EDISON)
 int omap4430_usbhs_update_sar(void)
 {
 	if (usbhs_update_sar) {
@@ -912,7 +912,7 @@ void __init usbhs_init(const struct usbhs_omap_board_data *pdata)
 	ehci_data.ehci_phy_vbus_not_used = pdata->ehci_phy_vbus_not_used;
 	ohci_data.es2_compatibility = pdata->es2_compatibility;
 	ohci_data.ohci_phy_suspend = pdata->ohci_phy_suspend;
-#ifndef CONFIG_MAPPHONE_MODEM_PORT
+#if !defined(CONFIG_MAPPHONE_MODEM_PORT) || !defined(CONFIG_MAPPHONE_EDISON)
 	ehci_data.usbhs_update_sar = &usbhs_update_sar;
 	ohci_data.usbhs_update_sar = &usbhs_update_sar;
 #endif
