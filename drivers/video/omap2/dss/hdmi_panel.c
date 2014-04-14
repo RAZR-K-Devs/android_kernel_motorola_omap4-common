@@ -320,7 +320,7 @@ if (unlikely(hdmi_active))
 	mutex_lock(&hdmi.hdmi_lock);
 		goto done;
 	}
-else
+else if (likely(hdmi_active))
 #endif
 	if (state == HPD_STATE_OFF) {
 		switch_set_state(&hdmi.hpd_switch, 0);

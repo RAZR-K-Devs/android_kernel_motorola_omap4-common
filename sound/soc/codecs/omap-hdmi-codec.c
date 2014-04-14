@@ -268,7 +268,7 @@ if (unlikely(hdmi_active))
 	cancel_delayed_work(&hdmi_data.delayed_work);
 		return 0;
 	}
-else
+else if (likely(hdmi_active))
 #endif
 	if (state == OMAP_DSS_DISPLAY_ACTIVE) {
 		/* this happens just after hdmi_power_on */

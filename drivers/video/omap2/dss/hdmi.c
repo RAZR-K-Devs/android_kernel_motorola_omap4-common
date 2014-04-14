@@ -964,7 +964,7 @@ if (unlikely(hdmi_active))
 	pr_info("HDMI_TOGGLE: disabled by user\n");
 	omapdss_hdmi_display_disable(dssdev);
 	}
-else
+else if (likely(hdmi_active))
 	{
 	hdmi.enabled = true;
 	}
