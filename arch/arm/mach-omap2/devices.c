@@ -25,7 +25,6 @@
 #include <asm/pmu.h>
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-extern bool dpll_active;
 #include <mach/omap4-common.h>
 #endif
 
@@ -992,7 +991,6 @@ static struct omap_device_pm_latency omap_gpu_latency[] = {
 int omap_device_scale_gpu(struct device *req_dev, struct device *target_dev,
 			unsigned long rate)
 {
-if (likely(dpll_active)) {
 	unsigned long freq = 0;
 
 	/* find lowest frequency */
@@ -1004,7 +1002,6 @@ if (likely(dpll_active)) {
 		omap4_dpll_cascading_blocker_release(target_dev);
 
 	return omap_device_scale(req_dev, target_dev, rate);
-    }
 }
 #endif
 
@@ -1037,11 +1034,7 @@ static void omap_init_gpu(void)
 		return;
 	}
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	pdata->device_scale = omap_device_scale_gpu;
-} else {
-	pdata->device_scale = omap_device_scale;
-	}
 #else
 	pdata->device_scale = omap_device_scale;
 #endif

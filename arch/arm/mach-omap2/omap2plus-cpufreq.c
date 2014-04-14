@@ -49,7 +49,6 @@
 #include "smartreflex.h"
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-extern bool dpll_active;
 #include <mach/omap4-common.h>
 #endif
 
@@ -670,6 +669,8 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 
 	cpufreq_frequency_table_get_attr(freq_table, policy->cpu);
 
+#ifdef CONFIG_BATTERY_FRIEND
+
 	/* BATTERY FRIEND
 	 * ______________
 	 *
@@ -688,9 +689,9 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 	 * ONLY for suspend mode!!
 	 *
 	 */
-#ifdef CONFIG_BATTERY_FRIEND
-			policy->min = policy->cpuinfo.min_freq;
-			fr_min = policy->min;
+
+		fr_min = policy->min = policy->cpuinfo.min_freq;
+		fr_sc_max = screen_off_max_freq = freq_table[index].frequency;
 #endif
 
 if (omap_cpufreq_suspended) 

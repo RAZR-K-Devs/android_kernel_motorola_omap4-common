@@ -44,7 +44,6 @@
 #include <linux/pm_qos_params.h>
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-extern bool dpll_active;
 #include <linux/notifier.h>
 #include <plat/clock.h>
 
@@ -481,9 +480,7 @@ static int omap_i2c_init(struct omap_i2c_dev *dev)
 		fclk = clk_get(dev->dev, "fck");
 		fclk_rate = clk_get_rate(fclk) / 1000;
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 		dev->i2c_fclk_rate = fclk_rate;
-	}
 #endif
 		clk_put(fclk);
 
@@ -748,8 +745,6 @@ static void omap_i2c_dpll_configure(struct omap_i2c_dev *dev,
 				    struct omap_i2c_bus_platform_data *pdata,
 				    unsigned long fclk_rate)
 {
-if (likely(dpll_active)) 
-{
 	unsigned long internal_clk;
 
 	u16 psc = 0, scll = 0, sclh = 0;
@@ -802,13 +797,11 @@ if (likely(dpll_active))
 	/* SCL low and high time values */
 	omap_i2c_write_reg(dev, OMAP_I2C_SCLL_REG, scll);
 	omap_i2c_write_reg(dev, OMAP_I2C_SCLH_REG, sclh);
-	}
 }
 
 static int omap_i2c_dpll_notifier(struct notifier_block *nb,
 					unsigned long val, void *data)
 {
-if (likely(dpll_active)) {
 	struct omap_i2c_dev *dev = container_of(nb, struct omap_i2c_dev, nb);
 	struct clk_notifier_data *cnd = (struct clk_notifier_data *)data;
 	unsigned int count = 0;
@@ -840,7 +833,6 @@ if (likely(dpll_active)) {
 	spin_unlock(&dev->dpll_lock);
 
 	return 0;
-	}
 }
 #endif
 
@@ -863,10 +855,8 @@ omap_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 		return -EINVAL;
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	pdev = container_of(dev->dev, struct platform_device, dev);
 	pdata = pdev->dev.platform_data;
-} else
 #endif
 
 	r = omap_i2c_hwspinlock_lock(dev);
@@ -896,7 +886,6 @@ if (likely(dpll_active)) {
 		pm_qos_update_request(dev->pm_qos, dev->latency);
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	spin_lock(&dev->dpll_lock);
 	if (dev->dpll_entry == 1) {
 		dev->dpll_entry = 0;
@@ -915,7 +904,6 @@ if (likely(dpll_active)) {
 		omap_i2c_dpll_configure(dev, pdata, dev->i2c_fclk_rate);
 	}
 	spin_unlock(&dev->dpll_lock);
-}
 #endif
 	for (i = 0; i < num; i++) {
 		r = omap_i2c_xfer_msg(adap, &msgs[i], (i == (num - 1)));
@@ -1348,7 +1336,6 @@ omap_i2c_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	/* Register notifiers to support DPLL cascading */
 	spin_lock_init(&dev->dpll_lock);
 	fclks = clk_get(dev->dev, "fck");
@@ -1356,7 +1343,6 @@ if (likely(dpll_active)) {
 	dev->nb.next = NULL;
 	clk_notifier_register(fclks, &dev->nb);
 	clk_put(fclks);
-	}
 #endif
 
 	/* reset ASAP, clearing any IRQs */

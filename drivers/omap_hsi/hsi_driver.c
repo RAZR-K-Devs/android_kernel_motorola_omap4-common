@@ -31,10 +31,6 @@
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
 
-#ifdef CONFIG_OMAP4_DPLL_CASCADING
-extern bool dpll_active;
-#endif
-
 #include <mach/omap4-common.h>
 #include <plat/omap_device.h>
 
@@ -666,9 +662,6 @@ static int __init hsi_init_gdd_chan_count(struct hsi_dev *hsi_ctrl)
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
 static void hsi_dpll_cascading_blocker_work(struct work_struct *work)
 {
-if (likely(dpll_active)) 
-{
-
 	struct hsi_dpll_cascading_blocker *dpll_blocker;
 
 	dpll_blocker = container_of(work,
@@ -679,7 +672,6 @@ if (likely(dpll_active))
 		omap4_dpll_cascading_blocker_hold(dpll_blocker->dev);
 	else
 		omap4_dpll_cascading_blocker_release(dpll_blocker->dev);
-	}
 }
 #endif
 
@@ -721,11 +713,9 @@ void hsi_clocks_disable_channel(struct device *dev, u8 channel_number,
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
 	/* Allow Fclk to change */
-if (likely(dpll_active)) {
 	dpll_blocker.lock_dpll_cascading = false;
 	dpll_blocker.dev = dev;
 	schedule_work(&dpll_blocker.dpll_blocker_work);
-	}
 #endif
 
 	pm_runtime_put_sync_suspend(dev);
@@ -765,11 +755,9 @@ int hsi_clocks_enable_channel(struct device *dev, u8 channel_number,
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
 	/* Prevent Fclk to change */
-if (likely(dpll_active)) {
 	dpll_blocker.lock_dpll_cascading = true;
 	dpll_blocker.dev = dev;
 	schedule_work(&dpll_blocker.dpll_blocker_work);
-	}
 #endif
 
 	return pm_runtime_get_sync(dev);
@@ -1233,10 +1221,8 @@ static int __init hsi_driver_init(void)
 	}
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	INIT_WORK(&dpll_blocker.dpll_blocker_work,
-			hsi_dpll_cascading_blocker_work);
-	}
+	 		hsi_dpll_cascading_blocker_work);
 #endif
 
 	/* Register the HSI platform driver */
@@ -1257,9 +1243,7 @@ rback1:
 static void __exit hsi_driver_exit(void)
 {
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	flush_work_sync(&dpll_blocker.dpll_blocker_work);
-	}
 #endif
 	platform_driver_unregister(&hsi_pdriver);
 	hsi_debug_exit();

@@ -49,7 +49,6 @@
 #include <plat/common.h>
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-extern bool dpll_active;
 #include <mach/omap4-common.h>
 #include <plat/clock.h>
 #endif
@@ -830,9 +829,7 @@ static void serial_omap_shutdown(struct uart_port *port)
 	/* Set this to zero, would be initialsed
 	 * to the corrcet value at set_stermios.
 	 */
- if (likely(dpll_active)) {
 	up->baud_rate = 0;
-	}
 #endif
 }
 
@@ -938,9 +935,7 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	 * DLH values. If this function is not called for
 	 * particulate UART it would remain as 0.
 	 */
-if (likely(dpll_active)) {
 	up->baud_rate = baud;
-	}
 #endif
 	quot = serial_omap_get_divisor(port, baud);
 
@@ -1649,15 +1644,11 @@ static void uart_tx_dma_callback(int lch, u16 ch_status, void *data)
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
 static inline bool omap_is_console_port(struct uart_port *port)
 {
-if (likely(dpll_active)) {
-	return (port->cons && (port->cons->index == port->line));
-	}	
+	return (port->cons && (port->cons->index == port->line));	
 }
 
 int omap_uart_recalibrate_baud_cb(struct notifier_block *nb,
 				unsigned long status, void *data)
-{
-if (likely(dpll_active)) 
 {
 	struct uart_omap_port *up = NULL;
 	struct clk_notifier_data *cnd = (struct clk_notifier_data *)data;
@@ -1761,7 +1752,6 @@ if (likely(dpll_active))
 	}
 
 	return NOTIFY_DONE;
-	}
 }
 #endif
 
@@ -1890,8 +1880,6 @@ static int serial_omap_probe(struct platform_device *pdev)
 	/* Initialise this to zero, would be initialsed
 	 * to the corrcet value at set_stermios.
 	 */
-if (likely(dpll_active)) 
-{
 	up->baud_rate = 0;
 
 	if (!dpll_registration_done) {
@@ -1900,7 +1888,6 @@ if (likely(dpll_active))
 		func_48m_fclk = clk_get(NULL, "func_48m_fclk");
 		clk_notifier_register(func_48m_fclk, &up->nb);
 		dpll_registration_done = true;
-	}
 }
 #endif
 	pm_runtime_use_autosuspend(&pdev->dev);
@@ -2113,8 +2100,7 @@ static void serial_dpll_cascading_blocker_work(struct work_struct *work)
 {
 	struct serial_dpll_cascading_blocker *dpll_blocker;
 	struct device *dev;
-if (likely(dpll_active)) 
-{
+
 	dpll_blocker = container_of(work,
 			struct serial_dpll_cascading_blocker,
 			dpll_blocker_work);
@@ -2129,7 +2115,6 @@ if (likely(dpll_active))
 		omap4_dpll_cascading_blocker_hold(dev);
 	else
 		omap4_dpll_cascading_blocker_release(dev);
-			}
 }
 #endif
 
@@ -2144,10 +2129,8 @@ static int __init serial_omap_init(void)
 	if (ret != 0)
 		uart_unregister_driver(&serial_omap_reg);
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	INIT_WORK(&dpll_blocker.dpll_blocker_work,
 			serial_dpll_cascading_blocker_work);
-	}
 #endif
 	return ret;
 }
@@ -2157,7 +2140,6 @@ static void __exit serial_omap_exit(void)
 	platform_driver_unregister(&serial_omap_driver);
 	uart_unregister_driver(&serial_omap_reg);
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active))
 	flush_work_sync(&dpll_blocker.dpll_blocker_work);
 #endif
 
@@ -2176,11 +2158,9 @@ int omap_serial_ext_uart_enable(u8 port_id)
 		up = ui[port_id];
 		serial_omap_port_enable(up);
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 		dpll_blocker.lock_dpll_cascading = true;
 		dpll_blocker.up = up;
 		schedule_work(&dpll_blocker.dpll_blocker_work);
-	}
 #endif
 	}
 	return err;
@@ -2198,11 +2178,9 @@ int omap_serial_ext_uart_disable(u8 port_id)
 		up = ui[port_id];
 		serial_omap_port_disable(up);
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 		dpll_blocker.lock_dpll_cascading = false;
 		dpll_blocker.up = up;
 		schedule_work(&dpll_blocker.dpll_blocker_work);
-	}
 #endif
 	}
 	return err;

@@ -44,7 +44,6 @@
 #include <plat/omap-pm.h>
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-extern bool dpll_active;
 #include <linux/notifier.h>
 #include <plat/clock.h>
 #endif
@@ -2089,9 +2088,6 @@ static int omap_hsmmc_sleep_to_off(struct omap_hsmmc_host *host)
 static void
 omap_hsmmc_dpll_clocks_configure(struct omap_hsmmc_host *host, int clk)
 {
-if (likely(dpll_active)) 
-{
-
 	int regval = 0, dsor = 0;
 	unsigned long timeout = 0;
 	u32 count = 0;
@@ -2118,13 +2114,10 @@ if (likely(dpll_active))
 
 	OMAP_HSMMC_WRITE(host->base, SYSCTL,
 	OMAP_HSMMC_READ(host->base, SYSCTL) | CEN);
-		}
 }
 
 static void
 omap_hsmmc_dpll_clocks_reconfigure(struct omap_hsmmc_host *host)
-{
-if (likely(dpll_active)) 
 {
 	spin_lock(&host->dpll_lock);
 	if (host->dpll_entry == 1) {
@@ -2135,7 +2128,6 @@ if (likely(dpll_active))
 		host->dpll_exit = 0;
 	}
 	spin_unlock(&host->dpll_lock);
-	}
 }	
 #endif
 
@@ -2145,9 +2137,7 @@ static int omap_hsmmc_disabled_to_enabled(struct omap_hsmmc_host *host)
 	pm_runtime_get_sync(host->dev);
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	omap_hsmmc_dpll_clocks_reconfigure(host);
-	}
 #endif
 	host->dpm_state = ENABLED;
 
@@ -2165,9 +2155,7 @@ static int omap_hsmmc_sleep_to_enabled(struct omap_hsmmc_host *host)
 	pm_runtime_get_sync(host->dev);
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	omap_hsmmc_dpll_clocks_reconfigure(host);
-	}
 #endif
 	if (mmc_slot(host).set_sleep)
 		mmc_slot(host).set_sleep(host->dev, host->slot_id, 0,
@@ -2399,8 +2387,6 @@ static void omap_hsmmc_debugfs(struct mmc_host *mmc)
 static int omap_hsmmc_dpll_notifier(struct notifier_block *nb,
 					unsigned long val, void *data)
 {
-if (likely(dpll_active)) 
-{
 	struct omap_hsmmc_host *host =
 		container_of(nb, struct omap_hsmmc_host, nb);
 	struct clk_notifier_data *cnd = (struct clk_notifier_data *)data;
@@ -2419,7 +2405,6 @@ if (likely(dpll_active))
 
 	spin_unlock(&host->dpll_lock);
 	return 0;
-	}
 }
 #endif
 
@@ -2527,13 +2512,11 @@ static int __init omap_hsmmc_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-if (likely(dpll_active)) {
 	if (0 == host->id) {
 		spin_lock_init(&host->dpll_lock);
 		host->nb.notifier_call = omap_hsmmc_dpll_notifier;
 		host->nb.next = NULL;
 		clk_notifier_register(host->fclk, &host->nb);
-	}
 }
 #endif
 
