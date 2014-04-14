@@ -1574,6 +1574,8 @@ int omap4_dpll_cascading_blocker_release(struct device *dev)
 
 	list_del(&blocker->node);
 
+	kfree(blocker);
+
 	if (list_empty(&dpll_cascading_blocker_list)
 		&& !omap4_is_in_dpll_cascading()
 		&& omap4_abe_can_enter_dpll_cascading()) {
