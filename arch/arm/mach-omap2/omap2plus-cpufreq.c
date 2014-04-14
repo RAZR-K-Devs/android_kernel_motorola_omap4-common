@@ -691,7 +691,7 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 	 */
 
 		fr_min = policy->min = policy->cpuinfo.min_freq;
-		fr_sc_max = screen_off_max_freq = freq_table[index].frequency;
+		fr_sc_max = policy->cpuinfo.max_freq;
 #endif
 
 if (omap_cpufreq_suspended) 

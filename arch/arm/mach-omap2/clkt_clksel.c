@@ -190,7 +190,6 @@ static u32 _clksel_to_divisor(struct clk *clk, u32 field_val)
 
 	if (!clkr->div) {
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
-	if (likely(dpll_active))
 		pr_debug("clock: Could not find fieldval %d for clock %s parent "
 		     "%s\n", field_val, clk->name, clk->parent->name);
 #else
