@@ -66,6 +66,13 @@ static unsigned long lowmem_deathpending_timeout;
 			pr_info(x);			\
 	} while (0)
 
+
+static void task_free_fn(struct work_struct *work)
+{
+	task_free_unregister(&task_nb);
+}
+static DECLARE_WORK(task_free_work, task_free_fn);
+
 static int
 task_notify_func(struct notifier_block *self, unsigned long val, void *data)
 {
