@@ -2046,6 +2046,15 @@ static int omap_serial_runtime_suspend(struct device *dev)
 		/* wait a few bytes to allow current transmission to complete */
 		udelay(300);
 	}
+	if (up->use_dma) {
+		struct omap_device *od;
+
+		/* ENABLE IDLE MODE */
+		od = to_omap_device(up->pdev);
+		omap_hwmod_set_slave_idlemode(od->hwmods[0],
+					HWMOD_IDLEMODE_SMART);
+	}
+
 	if (device_may_wakeup(dev))
 		omap_uart_enable_wakeup(up);
 	else
