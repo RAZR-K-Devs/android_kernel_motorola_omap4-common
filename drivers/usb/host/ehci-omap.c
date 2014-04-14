@@ -1145,9 +1145,7 @@ static int ehci_omap_bus_suspend(struct usb_hcd *hcd)
 
 	if (hcd->self.connection_change) {
 		dev_err(dev, "Connection state changed\n");
-#if defined(CONFIG_MAPPHONE_MODEM_PORT) || defined(CONFIG_MAPPHONE_EDISON)
 		save_usb_sar_regs();
-#endif
 		hcd->self.connection_change = 0;
 	}
 

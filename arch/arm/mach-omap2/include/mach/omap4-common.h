@@ -182,20 +182,16 @@ extern int omap4_prcm_freq_update(void);
 
 #ifdef CONFIG_PM
 extern int omap4_sar_save(void);
-#if defined(CONFIG_MAPPHONE_MODEM_PORT) || defined(CONFIG_MAPPHONE_EDISON)
 extern void omap4_usb_sar_restore(void);
-#endif
 extern void omap4_sar_overwrite(void);
 extern void omap4_sar_usbhost_init(u32 fck_source);
 #else
 void omap4_sar_save(void)
 {
 }
-#if defined(CONFIG_MAPPHONE_MODEM_PORT) || defined(CONFIG_MAPPHONE_EDISON)
 void omap4_usb_sar_restore(void)
 {
 }
-#endif
 void omap4_sar_overwrite(void)
 {
 }

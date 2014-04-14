@@ -399,12 +399,6 @@ config MAPPHONE_EDISON
 	bool "Atrix 2 Support"
 	depends on MACH_MAPPHONE
 
-config MAPPHONE_MODEM_PORT
-	bool "Motorola 3.0.8 Modem driver"
-	depends on MACH_MAPPHONE
-	help
-	  This options will build the Motorola modem driver
-
 config EMU_UART_DEBUG
 	bool "Setting MiniUSB port as UART3 to debug kernel"
 	default n
