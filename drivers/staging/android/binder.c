@@ -104,7 +104,7 @@ static uint32_t binder_debug_mask = BINDER_DEBUG_USER_ERROR |
 	BINDER_DEBUG_FAILED_TRANSACTION | BINDER_DEBUG_DEAD_TRANSACTION;
 module_param_named(debug_mask, binder_debug_mask, uint, S_IWUSR | S_IRUGO);
 
-static int binder_debug_no_lock;
+static bool binder_debug_no_lock;
 module_param_named(proc_no_lock, binder_debug_no_lock, bool, S_IWUSR | S_IRUGO);
 
 static DECLARE_WAIT_QUEUE_HEAD(binder_user_error_wait);
@@ -653,6 +653,11 @@ static int binder_update_page_range(struct binder_proc *proc, int allocate,
 	if (mm) {
 		down_write(&mm->mmap_sem);
 		vma = proc->vma;
+		if (vma && mm != proc->vma_vm_mm) {
+			pr_err("binder: %d: vma mm and task mm mismatch\n",
+				proc->pid);
+			vma = NULL;
+		}
 	}
 
 	if (allocate == 0)
@@ -2962,7 +2967,7 @@ static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
 	binder_insert_free_buffer(proc, buffer);
 	proc->free_async_space = proc->buffer_size / 2;
 	barrier();
-	proc->files = get_files_struct(current);
+	proc->files = get_files_struct(proc->tsk);
 	proc->vma = vma;
 
 	/*printk(KERN_INFO "binder_mmap: %d %lx-%lx maps %p\n",
