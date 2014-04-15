@@ -46,11 +46,11 @@
 /* C1 - CPUx WFI + MPU ON + CORE ON */
 #define OMAP4_STATE_C1		0
 /* C2 through C4 are shared C-states, both CPUs must agree to enter */
-/* C2 - CPUx OFF + MPU INA + CORE INA */
+/* C2 - CPU0 INA + CPU1 INA + MPU INA + CORE INA */
 #define OMAP4_STATE_C2		1
-/* C3 - CPUx OFF + MPU CSWR + CORE OSWR */
+/* C3 - CPU0 OFF + CPU1 OFF + MPU CSWR + CORE CSWR */
 #define OMAP4_STATE_C3		2
-/* C4 - CPUx OFF + MPU OSWR + CORE OSWR */
+/* C4 - CPU0 OFF + CPU1 OFF + MPU OSWR + CORE OSWR */
 #define OMAP4_STATE_C4		3
 
 #define OMAP4_MAX_STATES	4
@@ -119,36 +119,16 @@ static struct clockdomain *cpu1_cd;
 
 static __initdata struct cpuidle_params omap443x_cpuidle_params_table[] = {
 	/* C1 - CPUx WFI + MPU ON  + CORE ON */
-  {
-    .exit_latency = 4,
-    .target_residency = 4,
-    .valid = 1,
-  },
-  /* C2 - CPUx OFF + MPU INA  + CORE INA */
-  {
-    .exit_latency = 300,
-    .target_residency = 300,
-    .valid = 1,
-  },
-  /* C3 - CPUx OFF + MPU CSWR + CORE OSWR */
-  {
-    .exit_latency = 4746,
-    .target_residency = 10000,
-    .valid = 1,
-  },
+	{.exit_latency = 2 + 2,	.target_residency = 5, .valid = 1},
+	/* C2 - CPU0 INA + CPU1 INA + MPU INA  + CORE INA */
+	{.exit_latency = 1100, .target_residency = 1100, .valid = 1},
+	/* C3 - CPU0 OFF + CPU1 OFF + MPU CSWR + CORE CSWR */
+	{.exit_latency = 1200, .target_residency = 1200, .valid = 1},
 #ifdef CONFIG_OMAP_ALLOW_OSWR
- 	/* C4 - CPU0 OFF + CPU1 OFF + MPU CSWR + CORE OSWR */
-  {
-    .exit_latency = 4942,
-    .target_residency = 34000,
-    .valid = 1
-  },
+	/* C4 - CPU0 OFF + CPU1 OFF + MPU CSWR + CORE OSWR */
+	{.exit_latency = 1500, .target_residency = 1500, .valid = 1},
 #else
-  { 
-    .exit_latency = 1500,
-    .target_residency = 1000,
-    .valid = 0
-  },
+	{.exit_latency = 1500, .target_residency = 1500, .valid = 0},
 #endif
 };
 
@@ -713,7 +693,7 @@ DEFINE_PER_CPU(struct cpuidle_device, omap4_idle_dev);
 static void omap4_init_power_states(const struct cpuidle_params *cpuidle_params_table)
 {
 	/*
-	 * C1 - CPUx WFI + MPU ON + CORE ON
+	 * C1 - CPU0 WFI + CPU1 OFF + MPU ON + CORE ON
 	 */
 	omap4_power_states[OMAP4_STATE_C1].valid =
 			cpuidle_params_table[OMAP4_STATE_C1].valid;
@@ -725,7 +705,7 @@ static void omap4_init_power_states(const struct cpuidle_params *cpuidle_params_
 	omap4_power_states[OMAP4_STATE_C1].desc = "CPU WFI";
 
 	/*
-	 * C2 - CPUx OFF + MPU INA + CORE INA
+	 * C2 - CPU0 INA + CPU1 OFF + MPU INA + CORE INA
 	 */
 	omap4_power_states[OMAP4_STATE_C2].valid =
 			cpuidle_params_table[OMAP4_STATE_C2].valid;
@@ -738,11 +718,10 @@ static void omap4_init_power_states(const struct cpuidle_params *cpuidle_params_
 	omap4_power_states[OMAP4_STATE_C2].mpu_logic_state = PWRDM_POWER_RET;
 	omap4_power_states[OMAP4_STATE_C2].core_state = PWRDM_POWER_INACTIVE;
 	omap4_power_states[OMAP4_STATE_C2].core_logic_state = PWRDM_POWER_RET;
-	omap4_power_states[OMAP4_STATE_C2].desc =
-          "CPUs OFF, MPU INA + CORE INA";
+	omap4_power_states[OMAP4_STATE_C2].desc = "CPUs OFF, MPU + CORE INA";
 
 	/*
-	 * C3 - CPUx OFF + MPU CSWR + CORE OSWR
+	 * C3 - CPU0 OFF + CPU1 OFF + MPU CSWR + CORE CSWR
 	 */
 	omap4_power_states[OMAP4_STATE_C3].valid =
 			cpuidle_params_table[OMAP4_STATE_C3].valid;
@@ -754,12 +733,11 @@ static void omap4_init_power_states(const struct cpuidle_params *cpuidle_params_
 	omap4_power_states[OMAP4_STATE_C3].mpu_state = PWRDM_POWER_RET;
 	omap4_power_states[OMAP4_STATE_C3].mpu_logic_state = PWRDM_POWER_RET;
 	omap4_power_states[OMAP4_STATE_C3].core_state = PWRDM_POWER_RET;
-	omap4_power_states[OMAP4_STATE_C3].core_logic_state = PWRDM_POWER_OFF;
-	omap4_power_states[OMAP4_STATE_C3].desc =
-          "CPUs OFF, MPU CSWR + CORE OSWR";
+	omap4_power_states[OMAP4_STATE_C3].core_logic_state = PWRDM_POWER_RET;
+	omap4_power_states[OMAP4_STATE_C3].desc = "CPUs OFF, MPU + CORE CSWR";
 
 	/*
-	 * C4 - CPUx OFF + MPU OSWR + CORE OSWR
+	 * C4 - CPU0 OFF + CPU1 OFF + MPU OSWR + CORE OSWR
 	 */
 	omap4_power_states[OMAP4_STATE_C4].valid =
 			cpuidle_params_table[OMAP4_STATE_C4].valid;
