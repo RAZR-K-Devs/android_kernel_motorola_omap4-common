@@ -309,23 +309,21 @@ void *dma_pool_alloc(struct dma_pool *pool, gfp_t mem_flags,
 	might_sleep_if(mem_flags & __GFP_WAIT);
 
 	spin_lock_irqsave(&pool->lock, flags);
-
 	list_for_each_entry(page, &pool->page_list, page_list) {
 		if (page->offset < pool->allocation)
 			goto ready;
 	}
+
 	/* pool_alloc_page() might sleep, so temporarily drop &pool->lock */
 	spin_unlock_irqrestore(&pool->lock, flags);
+
 	page = pool_alloc_page(pool, mem_flags);
-	
 	if (!page)
 		return NULL;
 
-		spin_lock_irqsave(&pool->lock, flags);
+	spin_lock_irqsave(&pool->lock, flags);
 
-		list_add(&page->page_list, &pool->page_list);
-	}
-
+	list_add(&page->page_list, &pool->page_list);
  ready:
 	page->in_use++;
 	offset = page->offset;
