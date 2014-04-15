@@ -61,8 +61,6 @@ int omap4_ldo_trim_configure(void)
 	}
 
 	/* OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_EFUSE_1 is reserved for 4470 */
-//	/* FIXME: original code is: if (!cpu_is_omap447x()) */
-//	if (cpu_is_omap443x() || cpu_is_omap446x()) {
 	if (!cpu_is_omap447x()) {
 		/* For all trimmed and untrimmed write recommended value */
 		val =  0x10 << OMAP4_AVDAC_TRIM_BYTE0_SHIFT;
@@ -146,7 +144,6 @@ static __init int omap4_ldo_trim_init(void)
 	 * high enough voltage on SLDO output.
 	 * 2. trim VDAC value for TV output as per recomendation
 	 */
-//	if (omap_rev() >= CHIP_IS_OMAP4430ES2_2)
 	if (omap_rev() >= OMAP4430_REV_ES2_2)
 		bgap_trimmed = omap_ctrl_readl(
 			OMAP4_CTRL_MODULE_CORE_STD_FUSE_OPP_BGAP);
@@ -173,7 +170,7 @@ static __init int omap4_ldo_trim_init(void)
 	 * 0  1  Fixed test program issue of overlapping of LPDDR & SmartIO
 	 *	 efuse fields, SW WA needed for LPDDR.
 	 * 1  1  New LPDDR trim formula to compensate for vertical vs horizontal
-	 *	 cell layout. No overwrite required.
+	 *	 cell layout.  No overwrite required.
 	 */
 	if (cpu_is_omap443x()) {
 		u32 prod_id;

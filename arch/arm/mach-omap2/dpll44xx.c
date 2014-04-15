@@ -469,8 +469,9 @@ static int __init omap4_dpll_low_power_cascade_init_clocks(void)
 		dpll_cascading_inited = true;
 
 	return 0;
-	}
+}
 late_initcall(omap4_dpll_low_power_cascade_init_clocks);
+
 /**
  * omap4_dpll_low_power_cascade - configure system for low power DPLL cascade
  *
@@ -867,6 +868,7 @@ out:
 	atomic_set(&in_dpll_cascading, false);
 	return ret;
 }
+
 #endif
 
 /**
@@ -1450,7 +1452,7 @@ int omap4_dpll_cascading_blocker_hold(struct device *dev)
 
 #ifdef CONFIG_OMAP4_ONLY_OMAP4430_DPLL_CASCADING
 	if (!cpu_is_omap443x())
-	return ret;
+		return ret;
 #endif
 	if (!dev)
 		return -EINVAL;
@@ -1527,7 +1529,6 @@ int omap4_dpll_cascading_blocker_release(struct device *dev)
 	list_del(&blocker->node);
 
 	kfree(blocker);
-
 	if (list_empty(&dpll_cascading_blocker_list)
 		&& !omap4_is_in_dpll_cascading()
 		&& omap4_abe_can_enter_dpll_cascading()) {
