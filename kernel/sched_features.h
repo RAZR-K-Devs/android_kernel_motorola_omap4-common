@@ -3,11 +3,9 @@
  * them to run sooner, but does not allow tons of sleepers to
  * rip the spread apart.
  */
-SCHED_FEAT(GENTLE_FAIR_SLEEPERS, 1)
+SCHED_FEAT(GENTLE_FAIR_SLEEPERS, 0)
 SCHED_FEAT(NEW_FAIR_SLEEPERS, 0)
 SCHED_FEAT(NORMALIZED_SLEEPER, 0)
-SCHED_FEAT(FAIR_SLEEPERS_INTERACTIVE, 0) /* Selects interactive wakeups */
-SCHED_FEAT(FAIR_SLEEPERS_TIMER, 0)	 /* Selects timer-driven wakeups */
 
 /*
  * Place new tasks ahead so that they do not starve already running
@@ -51,12 +49,11 @@ SCHED_FEAT(CACHE_HOT_BUDDY, 1)
 /*
  * Use arch dependent cpu power functions
  */
-SCHED_FEAT(ARCH_POWER, 0)
+SCHED_FEAT(ARCH_POWER, 1)
 SCHED_FEAT(HRTICK, 0)
 SCHED_FEAT(DOUBLE_TICK, 0)
-SCHED_FEAT(LB_SHARES_UPDATE, 1)
 SCHED_FEAT(LB_BIAS, 1)
-SCHED_FEAT(ASYM_EFF_LOAD, 1)
+
 /*
  * Spin-wait on mutex acquisition when the mutex owner is running on
  * another cpu -- assumes that when the owner is running, it will soon
