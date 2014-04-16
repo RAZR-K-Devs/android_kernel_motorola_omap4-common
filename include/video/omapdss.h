@@ -22,6 +22,7 @@
 #include <linux/kobject.h>
 #include <linux/device.h>
 #include <linux/fb.h>
+#include <sound/asound.h>
 
 #define DISPC_IRQ_FRAMEDONE		(1 << 0)
 #define DISPC_IRQ_VSYNC			(1 << 1)
@@ -216,6 +217,10 @@ enum omap_dss_rotation_angle {
 enum omap_overlay_caps {
 	OMAP_DSS_OVL_CAP_SCALE = 1 << 0,
 	OMAP_DSS_OVL_CAP_DISPC = 1 << 1,
+	OMAP_DSS_OVL_CAP_GLOBAL_ALPHA = 1 << 1,
+	OMAP_DSS_OVL_CAP_PRE_MULT_ALPHA = 1 << 2,
+	OMAP_DSS_OVL_CAP_ZORDER = 1 << 3,
+	OMAP_DSS_OVL_CAP_FORCE_1D = 1 << 4,
 };
 
 enum omap_overlay_manager_caps {
@@ -857,6 +862,16 @@ struct omap_dss_driver {
 #endif
 	void (*get_fb_resolution)(struct omap_dss_device *dssdev,
 			u16 *xres, u16 *yres);
+	/*
+	 * For display drivers that support audio. This encompasses
+	 * HDMI and DisplayPort at the moment.
+	 */
+	int (*audio_enable)(struct omap_dss_device *dssdev, bool enable);
+	int (*audio_start)(struct omap_dss_device *dssdev, bool start);
+	bool (*audio_detect)(struct omap_dss_device *dssdev);
+	int (*audio_config)(struct omap_dss_device *dssdev,
+		struct snd_aes_iec958 *iec, struct snd_cea_861_aud_if *aud_if);
+
 };
 
 int omap_dss_register_driver(struct omap_dss_driver *);
