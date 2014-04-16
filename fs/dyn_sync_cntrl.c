@@ -24,7 +24,7 @@
 #include <linux/writeback.h>
 
 #define DYN_FSYNC_VERSION 2
-
+extern bool dyn_async;
 /*
  * fsync_mutex protects dyn_fsync_active during early suspend / lat resume transitions
  */
@@ -44,12 +44,14 @@ static ssize_t dyn_fsync_active_store(struct kobject *kobj, struct kobj_attribut
 
 	if(sscanf(buf, "%u\n", &data) == 1) {
 		if (data == 1) {
-			pr_info("%s: dynamic fsync enabled\n", __FUNCTION__);
+			pr_info("%s: dynamic fsync enabled\n Asynchronous fsync DISABLED\n", __FUNCTION__);
 			dyn_fsync_active = true;
+			dyn_async = false;
 		}
 		else if (data == 0) {
-			pr_info("%s: dyanamic fsync disabled\n", __FUNCTION__);
+			pr_info("%s: dyanamic fsync disabled\n Asynchronous fsync ENABLED\n", __FUNCTION__);
 			dyn_fsync_active = false;
+			dyn_async = true;
 		}
 		else
 			pr_info("%s: bad value: %u\n", __FUNCTION__, data);
