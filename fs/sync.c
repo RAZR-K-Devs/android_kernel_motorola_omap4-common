@@ -21,8 +21,7 @@
 #include <linux/statfs.h>
 #endif
 
-bool dyn_asnyc = true;
-module_param(dyn_asnyc, bool, 0755);
+bool dyn_async = true;
 
 #ifdef CONFIG_DYNAMIC_FSYNC
 extern bool dyn_fsync_early_suspend;
@@ -190,7 +189,7 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 	int err, ret;
 
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (dyn_fsync_active && !dyn_fsync_early_suspend !dyn_async)
+	if (dyn_fsync_active && !dyn_fsync_early_suspend && !dyn_async)
 		return 0;
 #endif
 
@@ -303,7 +302,7 @@ static int do_fsync(unsigned int fd, int datasync)
 			path = "(unknown)";
 #ifdef CONFIG_ASYNC_FSYNC
 		else if (async_fsync(file, fd)) {
-		if (dyn_asnyc) {
+		if (dyn_async) {
 			pr_info("afsync in work\n");
 			if (!fsync_workqueue)
 				fsync_workqueue =
@@ -356,7 +355,7 @@ SYSCALL_DEFINE1(fsync, unsigned int, fd)
 SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (dyn_fsync_active && !dyn_fsync_early_suspend && !dyn_asnyc)
+	if (dyn_fsync_active && !dyn_fsync_early_suspend && !dyn_async)
 		return 0;
 #endif
 
@@ -374,7 +373,7 @@ SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
 int generic_write_sync(struct file *file, loff_t pos, loff_t count)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (dyn_fsync_active && !dyn_fsync_early_suspend && !dyn_asnyc)
+	if (dyn_fsync_active && !dyn_fsync_early_suspend && !dyn_async)
 		return 0;
 #endif
 
@@ -443,7 +442,7 @@ SYSCALL_DEFINE(sync_file_range)(int fd, loff_t offset, loff_t nbytes,
 	umode_t i_mode;
 
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (dyn_fsync_active && !dyn_fsync_early_suspend && !dyn_asnyc)
+	if (dyn_fsync_active && !dyn_fsync_early_suspend && !dyn_async)
 		return 0;
 #endif
 
@@ -536,7 +535,7 @@ SYSCALL_DEFINE(sync_file_range2)(int fd, unsigned int flags,
 				 loff_t offset, loff_t nbytes)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (dyn_fsync_active && !dyn_fsync_early_suspend && !dyn_asnyc)
+	if (dyn_fsync_active && !dyn_fsync_early_suspend && !dyn_async)
 		return 0;
 #endif
 	return sys_sync_file_range(fd, offset, nbytes, flags);
