@@ -1,0 +1,67 @@
+ff5085c staging: lmk: revert back to prior version
+63bcdd5 Revert "Revert "mm: bugfix: set current->reclaim_state to NULL while returning from kswapd()""
+feb8a5f Revert "mm: bugfix: set current->reclaim_state to NULL while returning from kswapd()"
+9f575d7 misc: merge issues and fixes
+ee7c010 fixup merged changes..
+fac4e37 --- BREAKING POINT ---
+4f3b781 block: row: fix sysfs functions - idle_time conversion
+3cb6d1b block: row: Insert dispatch_quantum into struct row_queue
+c5f34c0 block: row: Add some debug information on ROW queues
+af6cabb block: row: Aggregate row_queue parameters to one structure
+6a4ed40 fs: fsync: FOUND A BATTERY EATER
+d188900 block: fix backport of row patches
+34221ca block: add BFQv5
+446b2f1 block: remove buggy BFQ
+625c45d block: Add API for urgent request handling
+2e26443 row: Add support for urgent request handling
+0df8dfe block:row: fix idling mechanism in ROW
+c935368 row: Adding support for reinsert already dispatched req
+d61b986 block: ROW: Correct minimum values of ROW tunable parameters
+a2ea796 random: entropy tweaks are all the rage nowadays
+fdbb523 binfmt_elf.c: use get_random_int() to fix entropy depleting
+3e4b850 Input: Send events one packet at a time
+dc8c5c6 sched: Add missing call to calc_load_exit_idle()
+26bf46a sched/nohz: Rewrite, fix and add more accurate load-avg computation
+0605aa4 Staging: logger: backport 3.8 logger
+fcc3dcd ondemand: backport from kernel 3.2
+8a9c3d1 Revert "ARM: disable preemption in machine_shutdown"
+f4e9ed7 Staging: android: binder: Add some tracepoints
+813ee0b Staging: android: binder: Add some missing binder_stat_br calls
+05b2538 Staging: android: binder: Fix use-after-free bug
+54fbf03 Staging:android: Change type for binder_debug_no_lock switch to bool
+4cde51b Staging: android: binder: Don't call dump_stack in binder_vma_open
+45b41b9 regulator: Correct voltage value used in regulator_set_voltage_complete
+ebe546e ext4: do not try to write superblock on ro remount w/o journal
+669a4b0 mm: compaction: fix echo 1 > compact_memory return error issue
+8501b1f mm: bugfix: set current->reclaim_state to NULL while returning from kswapd()
+f04e600 mm: soft offline: split thp at the beginning of soft_offline_page()
+90001eb mm/vmemmap: fix wrong use of virt_to_page
+79a4b3a mm: dmapool: use provided gfp flags for all dma_alloc_coherent() calls
+a6bdebb mm: Fix PageHead when [NOT]CONFIG_PAGEFLAGS_EXTENDED #
+539a6e8 ARM: missing ->mmap_sem around find_vma() in swp_emulate.c
+22d075d ARM: mm: use pteval_t to represent page protection values
+5d0288d mm: use aligned zone start for pfn_to_bitidx calculation
+9a092d8 staging: lowmemorykiller: backport patches from Codeaurora 3.4
+e613af4 lmk: re-enable async memory compaction
+9427eae cpufreq: copy policy to sibling cpu on resume
+3fa5821 omap: some corrections, small fixes, etc..
+03c47b9 defconfig: enable SCHED_SMT again
+fc91000 omap: cpuidle: reconfigure idle params
+c835bc3 kernel: sched_features: use standard settings with ARCH power
+dc2c670 Revert "sched: better settings"
+15f99a4 Fix some mistakes
+ae7d150 Revert "staging: lowmemorykiller: improve handling"
+23dd281 Revert "staging: android: lowmemorykiller: fix scheduling while atomic"
+409d48c Revert " Print pending wakeup IRQ preventing suspend to dmesg"
+42b082d staging: android: lowmemorykiller: fix scheduling while atomic
+c2e5370 sched: better settings
+219e345 input: evdev: Add missing wake_lock_destroy
+d157c0e  Print pending wakeup IRQ preventing suspend to dmesg
+88b0fd8 staging: lowmemorykiller: improve handling
+e37144d tty: omap-serial: Enable IDLE MODE on runtime suspend This patch allow idle on runtime suspend path.
+2eec45f dpll_cascading: remove unused CM_SHADOW_FREQ_CONFIG2
+69f7557 dpll_cascading: fix memory leak in DPLL cascading blocker release.
+01389dd dpll_cascading: remove module control
+a0774c3 hdmi_toggle: add some extra lines for bette runderstanding
+842e08c Modem: Use 3.0.8 Motorola driver for all devices
+104c4bb omap: add config option MODEM_PORT
