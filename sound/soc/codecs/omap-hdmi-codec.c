@@ -262,13 +262,13 @@ int hdmi_audio_notifier_callback(struct notifier_block *nb,
 {
 	enum omap_dss_display_state state = arg;
 #ifdef CONFIG_HDMI_TOGGLE
-if (unlikely(hdmi_active))
+if (hdmi_active == false)
 	{
 	pr_info("HDMI_TOGGLE: SOUND_CODEC: OFF\n");
 	cancel_delayed_work(&hdmi_data.delayed_work);
 		return 0;
 	}
-else if (likely(hdmi_active))
+else if (hdmi_active == true)
 #endif
 	if (state == OMAP_DSS_DISPLAY_ACTIVE) {
 		/* this happens just after hdmi_power_on */

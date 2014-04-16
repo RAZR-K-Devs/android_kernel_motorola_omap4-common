@@ -311,7 +311,7 @@ static void hdmi_hotplug_detect_worker(struct work_struct *work)
 
 	mutex_lock(&hdmi.hdmi_lock);
 #ifdef CONFIG_HDMI_TOGGLE
-if (unlikely(hdmi_active))
+if (hdmi_active == false)
 	{	
 	pr_info("HDMI_TOGGLE: Panel disabled by user\n");
 	mutex_unlock(&hdmi.hdmi_lock);
@@ -320,7 +320,7 @@ if (unlikely(hdmi_active))
 	mutex_lock(&hdmi.hdmi_lock);
 		goto done;
 	}
-else if (likely(hdmi_active))
+else if (hdmi_active == true)
 #endif
 	if (state == HPD_STATE_OFF) {
 		switch_set_state(&hdmi.hpd_switch, 0);

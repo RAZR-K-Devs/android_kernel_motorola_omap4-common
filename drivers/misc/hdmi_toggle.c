@@ -24,7 +24,7 @@
 
 static DEFINE_MUTEX(hdmi_mutex);
 
-bool hdmi_active __read_mostly = true;
+bool hdmi_active = true;
 
 static ssize_t hdmi_active_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)

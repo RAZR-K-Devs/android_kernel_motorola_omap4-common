@@ -1454,7 +1454,7 @@ void __init mapphone_panel_init(void)
 
 	if (mapphone_feature_hdmi) {
 #ifdef CONFIG_HDMI_TOGGLE
-if (likely(hdmi_active))
+if (hdmi_active == true)
 {
 #endif
 		/* Set the bits to disable "internal pullups" for the DDC
@@ -1472,7 +1472,7 @@ if (likely(hdmi_active))
 	}
 #ifdef CONFIG_HDMI_TOGGLE
 }
-else if (unlikely(hdmi_active))
+else if (hdmi_active == false)
 {
 	pr_info("HDMI_TOGGLE: HDTV device removed\n");
 	mapphone_dss_data.num_devices--;
