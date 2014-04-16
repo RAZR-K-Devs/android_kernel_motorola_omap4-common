@@ -1,11 +1,13 @@
 /*
- * BFQ-v5 for 3.0: data structures and common functions prototypes.
+ * BFQ-v5r1 for 3.0: data structures and common functions prototypes.
  *
  * Based on ideas and code from CFQ:
  * Copyright (C) 2003 Jens Axboe <axboe@kernel.dk>
  *
  * Copyright (C) 2008 Fabio Checconi <fabio@gandalf.sssup.it>
  *		      Paolo Valente <paolo.valente@unimore.it>
+ *
+ * Copyright (C) 2010 Paolo Valente <paolo.valente@unimore.it>
  */
 
 #ifndef _BFQ_H
@@ -593,3 +595,4 @@ static struct bfq_queue *bfq_get_queue(struct bfq_data *bfqd,
 static void bfq_put_async_queues(struct bfq_data *bfqd, struct bfq_group *bfqg);
 static void bfq_exit_bfqq(struct bfq_data *bfqd, struct bfq_queue *bfqq);
 #endif
+

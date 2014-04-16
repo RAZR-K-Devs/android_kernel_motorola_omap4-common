@@ -6,6 +6,8 @@
  *
  * Copyright (C) 2008 Fabio Checconi <fabio@gandalf.sssup.it>
  *		      Paolo Valente <paolo.valente@unimore.it>
+ *
+ * Copyright (C) 2010 Paolo Valente <paolo.valente@unimore.it>
  */
 
 #ifdef CONFIG_CGROUP_BFQIO
@@ -1064,3 +1066,4 @@ static void bfq_add_bfqq_busy(struct bfq_data *bfqd, struct bfq_queue *bfqq)
 	bfq_mark_bfqq_busy(bfqq);
 	bfqd->busy_queues++;
 }
+

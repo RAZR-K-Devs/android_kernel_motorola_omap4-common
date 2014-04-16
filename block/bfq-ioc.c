@@ -6,6 +6,8 @@
  *
  * Copyright (C) 2008 Fabio Checconi <fabio@gandalf.sssup.it>
  *		      Paolo Valente <paolo.valente@unimore.it>
+ *
+ * Copyright (C) 2010 Paolo Valente <paolo.valente@unimore.it>
  */
 
 /**
@@ -378,3 +380,4 @@ err:
 	put_io_context(ioc);
 	return NULL;
 }
+
