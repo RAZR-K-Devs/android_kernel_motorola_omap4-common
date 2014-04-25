@@ -686,7 +686,7 @@ int __lock_page_or_retry(struct page *page, struct mm_struct *mm,
 		return 1;
 	}
 }
-
+/*
 int __lock_page_or_retry(struct page *page, struct mm_struct *mm,
 			 unsigned int flags)
 {
@@ -698,7 +698,7 @@ int __lock_page_or_retry(struct page *page, struct mm_struct *mm,
 		wait_on_page_locked(page);
 		return 0;
 	}
-}
+}*/
 
 /**
  * find_get_page - find and get a page reference

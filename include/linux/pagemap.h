@@ -359,17 +359,6 @@ static inline int lock_page_or_retry(struct page *page, struct mm_struct *mm,
 }
 
 /*
- * lock_page_or_retry - Lock the page, unless this would block and the
- * caller indicated that it can handle a retry.
- */
-static inline int lock_page_or_retry(struct page *page, struct mm_struct *mm,
-				     unsigned int flags)
-{
-	might_sleep();
-	return trylock_page(page) || __lock_page_or_retry(page, mm, flags);
-}
-
-/*
  * This is exported only for wait_on_page_locked/wait_on_page_writeback.
  * Never use this directly!
  */
