@@ -79,7 +79,7 @@
  */
 #define DEFAULT_VFS_CACHE_PRESSURE 65
 int sysctl_vfs_cache_pressure __read_mostly, resume_cache_pressure;
-int suspend_cache_pressure = 10;
+int suspend_cache_pressure = 45;
 
 EXPORT_SYMBOL_GPL(sysctl_vfs_cache_pressure);
 
