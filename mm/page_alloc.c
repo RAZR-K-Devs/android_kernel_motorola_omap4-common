@@ -861,6 +861,11 @@ static int fallbacks[MIGRATE_TYPES][MIGRATE_TYPES-1] = {
 	[MIGRATE_RESERVE]     = { MIGRATE_RESERVE,     MIGRATE_RESERVE,   MIGRATE_RESERVE }, /* Never used */
 };
 
+int *get_migratetype_fallbacks(int mtype)
+{
+	return fallbacks[mtype];
+}
+
 /*
  * Move the free pages in a range to the free lists of the requested type.
  * Note that start_page and end_pages are not aligned on a pageblock

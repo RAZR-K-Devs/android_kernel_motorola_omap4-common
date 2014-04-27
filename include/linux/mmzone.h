@@ -48,6 +48,14 @@
 	for (order = 0; order < MAX_ORDER; order++) \
 		for (type = 0; type < MIGRATE_TYPES; type++)
 
+/*
+ * Returns a list which contains the migrate types on to which
+ * an allocation falls back when the free list for the migrate
+ * type mtype is depleted.
+ * The end of the list is delimited by the type MIGRATE_RESERVE.
+ */
+extern int *get_migratetype_fallbacks(int mtype);
+
 extern int page_group_by_mobility_disabled;
 
 static inline int get_pageblock_migratetype(struct page *page)
