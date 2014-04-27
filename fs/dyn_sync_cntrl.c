@@ -81,6 +81,7 @@ static ssize_t dyn_fsync_active_store(struct kobject *kobj, struct kobj_attribut
 				pr_info("%s: dynamic fsync ENABLED - async fsync DISABLED\n", __FUNCTION__);
 				dyn_fsync_enabled(true);
 				dyn_async = false;
+			}
 		}
 		else if (data == 0) {
 			if (dyn_fsync_force_off) {
