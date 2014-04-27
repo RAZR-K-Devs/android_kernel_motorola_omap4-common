@@ -1,3 +1,4 @@
+10bc66e defconfig: disable auto detection of oom_adj_values for lmk
 6aad444 cpufreq_stats: re-add live_oc related function 'cpufreq_stats_reset' which has been removed by accident
 4821f04 staging: lowmemkiller: 3.4 backport
 1ed6a53 cpuidle, freq_stats: adapt changes from reverted commit
