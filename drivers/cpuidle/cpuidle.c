@@ -18,6 +18,7 @@
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
 #include <trace/events/power.h>
+#include <linux/module.h>
 
 #include "cpuidle.h"
 
@@ -25,19 +26,9 @@ DEFINE_PER_CPU(struct cpuidle_device *, cpuidle_devices);
 
 DEFINE_MUTEX(cpuidle_lock);
 LIST_HEAD(cpuidle_detected_devices);
+static void (*pm_idle_old)(void);
 
 static int enabled_devices;
-static int off __read_mostly;
-static int initialized __read_mostly;
-
-int cpuidle_disabled(void)
-{
-	return off;
-}
-void disable_cpuidle(void)
-{
-	off = 1;
-}
 
 #if defined(CONFIG_ARCH_HAS_CPU_IDLE_WAIT)
 static void cpuidle_kick_cpus(void)
@@ -56,23 +47,25 @@ static int __cpuidle_register_device(struct cpuidle_device *dev);
  * cpuidle_idle_call - the main idle loop
  *
  * NOTE: no locks or semaphores should be used here
- * return non-zero on failure
  */
-int cpuidle_idle_call(void)
+static void cpuidle_idle_call(void)
 {
 	struct cpuidle_device *dev = __this_cpu_read(cpuidle_devices);
 	struct cpuidle_state *target_state;
 	int next_state;
 
-	if (off)
-		return -ENODEV;
-
-	if (!initialized)
-		return -ENODEV;
-
 	/* check if the device is ready */
-	if (!dev || !dev->enabled)
-		return -EBUSY;
+	if (!dev || !dev->enabled) {
+		if (pm_idle_old)
+			pm_idle_old();
+		else
+#if defined(CONFIG_ARCH_HAS_DEFAULT_IDLE)
+			default_idle();
+#else
+			local_irq_enable();
+#endif
+		return;
+	}
 
 #if 0
 	/* shows regressions, re-enable for 2.6.29 */
@@ -97,7 +90,7 @@ int cpuidle_idle_call(void)
 	next_state = cpuidle_curr_governor->select(dev);
 	if (need_resched()) {
 		local_irq_enable();
-		return 0;
+		return;
 	}
 
 	target_state = &dev->states[next_state];
@@ -112,6 +105,7 @@ int cpuidle_idle_call(void)
 
 	trace_power_end(dev->cpu);
 	trace_cpu_idle(PWR_EVENT_EXIT, dev->cpu);
+	trace_cpu_residency(dev->last_residency);
 
 	if (dev->last_state)
 		target_state = dev->last_state;
@@ -122,8 +116,6 @@ int cpuidle_idle_call(void)
 	/* give the governor an opportunity to reflect on the outcome */
 	if (cpuidle_curr_governor->reflect)
 		cpuidle_curr_governor->reflect(dev);
-
-	return 0;
 }
 
 /**
@@ -131,10 +123,10 @@ int cpuidle_idle_call(void)
  */
 void cpuidle_install_idle_handler(void)
 {
-	if (enabled_devices) {
+	if (enabled_devices && (pm_idle != cpuidle_idle_call)) {
 		/* Make sure all changes finished before we switch to new idle */
 		smp_wmb();
-		initialized = 1;
+		pm_idle = cpuidle_idle_call;
 	}
 }
 
@@ -143,8 +135,8 @@ void cpuidle_install_idle_handler(void)
  */
 void cpuidle_uninstall_idle_handler(void)
 {
-	if (enabled_devices) {
-		initialized = 0;
+	if (enabled_devices && pm_idle_old && (pm_idle != pm_idle_old)) {
+		pm_idle = pm_idle_old;
 		cpuidle_kick_cpus();
 	}
 }
@@ -396,12 +388,12 @@ void cpuidle_unregister_device(struct cpuidle_device *dev)
 EXPORT_SYMBOL_GPL(cpuidle_unregister_device);
 
 #ifdef CONFIG_SMP
-
+#if 0
 static void smp_callback(void *v)
 {
 	/* we already woke the CPU up, nothing more to do */
 }
-
+#endif
 /*
  * This function gets called when a part of the kernel has a new latency
  * requirement.  This means we need to get all processors out of their C-state,
@@ -411,7 +403,16 @@ static void smp_callback(void *v)
 static int cpuidle_latency_notify(struct notifier_block *b,
 		unsigned long l, void *v)
 {
+#if 0
+
+	/* when drivers request new latency requirement, it does not necessary
+	 * to immediately wake up another cpu by sending cross-cpu IPI, we can
+	 * consider the new latency to be taken into effect after next wakeup
+	 * from idle, this can save the unnecessary wakeup cost, and reduce the
+	 * risk that drivers may request latency in irq disabled context.
+	 */
 	smp_call_function(smp_callback, NULL, 1);
+#endif
 	return NOTIFY_OK;
 }
 
@@ -437,8 +438,7 @@ static int __init cpuidle_init(void)
 {
 	int ret;
 
-	if (cpuidle_disabled())
-		return -ENODEV;
+	pm_idle_old = pm_idle;
 
 	ret = cpuidle_add_class_sysfs(&cpu_sysdev_class);
 	if (ret)
@@ -449,5 +449,4 @@ static int __init cpuidle_init(void)
 	return 0;
 }
 
-module_param(off, int, 0444);
 core_initcall(cpuidle_init);
