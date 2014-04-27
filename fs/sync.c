@@ -244,7 +244,6 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 
 #ifdef CONFIG_DYNAMIC_FSYNC
         if (dyn_fsync_active && !dyn_fsync_can_sync && !dyn_async)
-	if (dyn_fsync_active && !dyn_fsync_can_sync && !dyn_async)
 		return 0;
 #endif
 
