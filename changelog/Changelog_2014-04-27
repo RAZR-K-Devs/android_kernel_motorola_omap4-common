@@ -1,0 +1,122 @@
+6aad444 cpufreq_stats: re-add live_oc related function 'cpufreq_stats_reset' which has been removed by accident
+4821f04 staging: lowmemkiller: 3.4 backport
+1ed6a53 cpuidle, freq_stats: adapt changes from reverted commit
+0a245b3 oom, memctrl: 3.1
+2f4b07a Revert "cpu: new cpufreq, cpuidle setup"
+f6175c5 Revert "cpu: add changes to headers"
+fd519a0 cpu: add changes to headers
+9e020e1 HDMI: improve multichannel support
+6e32ee8 hdmi: clean up a little
+3379f59 fs: dyn fsync: add missing bracket
+6cbb47e cpu: new cpufreq, cpuidle setup
+f0e4211 fs: dyn_fsync / afsync: Update dyn fsync to latest upstream version - adapt to async switch
+d879c2d SELinux: include definition of new capabilities
+d0b1c42 intelli_plug: code review clean up
+95f7567 drivers/Makefile: add exFat support
+0a33f9e exfat: AIO Optimization compatibility fixup
+8534a3d drivers/exfat: add Samsung's open source exFat module version 1.2.4
+147fa5a introduce for_each_thread() to replace the buggy while_each_thread() (fix)
+43dd044 staging: lowmemkiller: 3.4 port use 'use for_each_thread' instead 'while_each_thread'
+a832a8a introduce for_each_thread() to replace the buggy while_each_thread()
+3e58946 mm, oom: base root bonus on current usage
+eed1dcb mm, oom: prefer thread group leaders for display purposes
+95e9905 oom_kill: add rcu_read_lock() into find_lock_task_mm()
+1b84def oom_kill: has_intersects_mems_allowed() needs rcu_read_lock()
+c85a77a oom_kill: change oom_kill.c to use for_each_thread()
+f7535b0 mm/oom_kill: remove weird use of ERR_PTR()/PTR_ERR().
+cdb149c mm, oom: cleanup pagefault oom handler
+1b2d01b oom: use N_MEMORY instead N_HIGH_MEMORY
+09aa51a mm, oom: allow exiting threads to have access to memory reserves
+8f3661a mm, memcg: move all oom handling to memcontrol.c
+2b43a99 mm, oom: reduce dependency on tasklist_lock
+88f914f mm, memcg: introduce own oom handler to iterate only over its own threads
+bee3460 mm, oom: introduce helper function to process threads during scan
+fd982e6 mm, oom: move declaration for mem_cgroup_out_of_memory to oom.h
+bf8481e mm, oom: fix and cleanup oom score calculations
+98dcc01 mm, oom: fix badness score underflow
+b3be505 mm, oom: normalize oom scores to oom_score_adj scale only for userspace
+5c9eb7d Revert "omap4-common: fix wake on unplug"
+b133290 defconfig: take over changes for all devices
+1468202 fix merge
+7e0315c Revert "word-at-a-time: make the interfaces truly generic"
+2c8703c readahead: fault retry breaks mmap file read random detection
+772276b ARM: 7178/1: fault.c: Port OOM changes into do_page_fault
+02df30c mm: retry page fault when blocking on disk transfer
+a3098ad x86,mm: make pagefault killable
+14ad357 Revert "ARM: 7178/1: fault.c: Port OOM changes into do_page_fault"
+ae60d16 Revert "readahead: fault retry breaks mmap file read random detection"
+f517829 nl80211/cfg80211: add match filtering for sched_scan
+bf99e72 wireless: regulatory: fix channel disabling race condition
+2fab05c merge: fix merging issues
+1a002ebff sched: reduce the overhead of obtain factor
+8ddf50f sched: smart wake-affine foundation
+c62e878 ARM: cache: detect PIPT I-cache using CTR
+28c7c26 ARM: cacheflush: add new iovec-based cache flushing system call
+9f1a4ae ARM: cacheflush: don't bother rounding to nearest vma
+800fb0a ARM: cacheflush: don't round address range up to nearest page
+fa4a723 readahead: fault retry breaks mmap file read random detection
+2bfc787 Revert "ARM: mutex: use generic atomic_dec-based implementation for ARMv6+"
+7595e04 ARM: 7178/1: fault.c: Port OOM changes into do_page_fault
+49a3a19 power: decrease the amount of time the device waits after entering lower power state - Thanks Franco
+0f3f847 sched: don't call task_group() many times in set_task_rq()
+c942377 i2c: use usleep_range instead of msleep
+0b1d644 ARM: rwlocks: remove unused branch labels from trylock routines
+063ae97 ARM: spinlock: use ticket algorithm for ARMv6+ locking implementation
+e857696 ARM: mutex: use generic atomic_dec-based implementation for ARMv6+
+58c34de mutex: place lock in contended state after fastpath_lock failure
+f76465e ARM: 7467/1: mutex: use generic xchg-based implementation for ARMv6+
+9f77bb3 timer: optimize apply_slack()
+eb9a279 ARM: SMP: use a timing out completion for cpu hotplug
+0b6680f sched: Cleanup cpu_active madness
+b3adf53 [PATCH 2/2] mm: forcely swapout when we are out of page cache
+2097fe6 [PATCH 1/2] mm: prevent to add a page to swap if may_writepage is unset
+6aac25e [PATCH 2/3] Optimize copy_page for modern ARM platforms
+dfdae449 fs/sync: Make sync() satisfy many requests with one invocation
+9d55df2 logger: reduce memory usage
+8b7c546 fs: dcache: cache_pressure to 45
+8d53f41 config: testing..
+99782da word-at-a-time: make the interfaces truly generic
+19a2ae1 kernel/timer: Optimise apply_slack() for size and speed.
+515efc7 irq: Set CPU affinity as soon as the irq thread is created
+cec1256 slub: zero page to fix boot crashes
+9df522c panic: fix incomplete panic log in panic()
+c522da8 panic: Fix a possible deadlock in panic()
+005a308 SCHEDULER: Autogroup patch group by current user android UID instead of task ID
+e682492 drivers: core: mmc: disable CRC
+cadb7d4 drivers: load power before usb
+366b57e ping: always initialize ->sin6_scope_id and ->sin6_flowinfo
+6e2f544 net: ipv6: Add IPv6 support to the ping socket.
+9c2ad7b ipv6: introdcue __ipv6_addr_needs_scope_id and ipv6_iface_scope_id helper functions
+621e67c Revert "netfilter: xt_IDLETIMER: Add new netlink msg type"
+e662052 netfilter: xt_IDLETIMER: Add new netlink msg type
+a5f219f net: ipv6: Don't purge default router if accept_ra=2
+62628cc defconfig: disabled more debug
+b3fd08e cpufreq: break earlier if the target_freq is equal to the current freq.
+b94a882 cpufreq: Manage only online cpus
+322c841 lib/int_sqrt.c: optimize square root algorithm
+d2aa7ef writeback: Fix occasional slow sync(1)
+d5427cc softirq: reduce latencies
+10f930a tcp: fix FIONREAD/SIOCINQ
+5e070fe signal: always clear sa_restorer on execve
+f0b858b use clamp_t in UNAME26 fix
+8824696 kernel/sys.c: fix stack memory content leak via UNAME26
+26b02fc Revert "staging: binder: backport from 3.1"
+0756863 topology: update to latest upstream version
+17dd222 Revert "Revert "sdhci: workaround from lkml""
+e320229 Revert "sdhci: workaround from lkml"
+99b0210 staging: binder: backport from 3.1
+33f3404 sdhci: workaround from lkml
+124511d cpufreq: make rw = 0664
+4df4df2 small bt changes
+2e60fee perf_event: just a little typo
+5a5a572 block: enable IO changes
+c0d0260  block: blk-merge: don't merge the pages with non-contiguous descriptors
+9f95486 mutex: Make more scalable by doing less atomic operations
+665a83f arm: mutex: merge Will Deacon's patch for including a different implementationfor mutexes for ARM6+ chips. Didn't cherry pick original patches because they conflicted for some reason and I felt too lazy to fix the conflict.
+6e6b3ce block: Add Zen I/O scheduler. Similar to SIO, primarily based on noop and deadline. Intended to be mostly FCFS. Simpler than SIO in many ways, one of them being write requests/read requests have mostly the same priority.
+7f017ac ARM: cpu topology: Add asym topology flag for using cpu0 1st
+6cf8562 ARM: topology: Add a topology update notification
+3859108 ARM: topology: save cpu id of each core
+126e7c9 Revert "ARM: cpu topology: Add asym topology flag for using cpu0 1st"
+4a7dde2 ARM: cpu topology: Add asym topology flag for using cpu0 1st
+02f0058c omap4-common: fix wake on unplug
