@@ -238,12 +238,6 @@ nl80211_rekey_policy[NUM_NL80211_REKEY_DATA] = {
 	[NL80211_REKEY_DATA_REPLAY_CTR] = { .len = NL80211_REPLAY_CTR_LEN },
 };
 
-static const struct nla_policy
-nl80211_match_policy[NL80211_SCHED_SCAN_MATCH_ATTR_MAX + 1] = {
-	[NL80211_ATTR_SCHED_SCAN_MATCH_SSID] = { .type = NLA_BINARY,
-						 .len = IEEE80211_MAX_SSID_LEN },
-};
-
 /* ifidx get helper */
 static int nl80211_get_ifidx(struct netlink_callback *cb)
 {
@@ -6881,7 +6875,7 @@ void nl80211_michael_mic_failure(struct cfg80211_registered_device *rdev,
 	if (addr)
 		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
 	NLA_PUT_U32(msg, NL80211_ATTR_KEY_TYPE, key_type);
-	if (key_id != -1)
+	if (knl80211_match_policyey_id != -1)
 		NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, key_id);
 	if (tsc)
 		NLA_PUT(msg, NL80211_ATTR_KEY_SEQ, 6, tsc);

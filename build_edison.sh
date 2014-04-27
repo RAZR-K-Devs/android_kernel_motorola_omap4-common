@@ -32,8 +32,8 @@ echo " "
 # First get tags in shell
 cd /data/4.4/
 export USE_CCACHE=1
-source build/envsetup.sh
 export PATH=${PATH/\/path\/to\/jdk\/dir:/}
+source build/envsetup.sh
 lunch cm_edison-userdebug
 
 # built kernel & modules
