@@ -458,7 +458,6 @@ static int hdmi_set_hpd(struct omap_dss_device *dssdev, bool enable)
 	mutex_lock(&hdmi.hdmi_lock);
 
 	sHpdEnabled = enable;
-
 	rc = omapdss_set_hdmi_hpd(dssdev, enable);
 
 	mutex_unlock(&hdmi.hdmi_lock);

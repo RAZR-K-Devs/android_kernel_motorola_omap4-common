@@ -43,10 +43,6 @@
 #include "../dss/dss.h"
 #include "../dss/dss_features.h"
 
-#ifdef CONFIG_HDMI_TOGGLE
-extern bool hdmi_active;
-#endif
-
 /*#define HDTV_DEBUG*/
 #ifdef HDTV_DEBUG
 #define HDTVDBG(format, ...) \
@@ -794,9 +790,6 @@ int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev, int edid_only)
 		hdmi.edid_only = false;
 	}
 
-	mutex_unlock(&hdmi.lock);
-	return 0;
-out:
 	mutex_unlock(&hdmi.lock);
 	return 0;
 
