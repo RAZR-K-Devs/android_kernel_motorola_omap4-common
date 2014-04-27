@@ -344,11 +344,20 @@ static struct task_struct *select_bad_process(unsigned int *ppoints,
 
 		points = oom_badness(p, NULL, nodemask, totalpages);
 
-		if (points > chosen_points) {
+			if (!points || points < chosen_points)
+				continue;
+			/* Prefer thread group leaders for display purposes */
+			if (points == chosen_points &&
+			    thread_group_leader(chosen))
+				continue;
+	
+			if (chosen)
+				put_task_struct(chosen);
 			chosen = p;
 			chosen_points = points;
-		}
+			get_task_struct(chosen);
 	}
+
 	if (chosen)
 		get_task_struct(chosen);
 	rcu_read_unlock();
