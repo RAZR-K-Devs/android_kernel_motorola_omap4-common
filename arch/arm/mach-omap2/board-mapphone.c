@@ -86,6 +86,8 @@
 #include <plat/omap_hsi.h>
 #include <linux/wl12xx.h>
 
+#include <linux/omap4_duty_cycle_governor.h>
+
 #ifdef CONFIG_SND_LM48901_AMP
 #include <linux/lm48901.h>
 #endif
@@ -454,6 +456,86 @@ static void __init omap_i2c_hwspinlock_init(int bus_id, int spinlock_id,
 								bus_id);
 	}
 }
+
+#ifdef CONFIG_OMAP4_DUTY_CYCLE
+
+static struct pcb_section omap4_duty_governor_pcb_sections[] = {
+{
+		.pcb_temp_level			= 65,
+		.max_opp			= 1300000,
+		.duty_cycle_enabled		= false,
+		.tduty_params = {
+			.nitro_rate		= 0,
+			.cooling_rate		= 0,
+			.nitro_interval		= 0,
+			.nitro_percentage	= 0,
+			},
+		},
+		{
+		.pcb_temp_level			= 70,
+		.max_opp			= 1300000,
+		.duty_cycle_enabled		= true,
+		.tduty_params = {
+			.nitro_rate		= 1200000,
+			.cooling_rate		= 1000000,
+			.nitro_interval		= 20000,
+			.nitro_percentage	= 37,
+			},
+		},
+		{
+		.pcb_temp_level			= 75,
+		.max_opp			= 1300000,
+		.duty_cycle_enabled		= true,
+		.tduty_params = {
+			.nitro_rate		= 1200000,
+			.cooling_rate		= 1000000,
+			.nitro_interval		= 20000,
+			.nitro_percentage	= 24,
+			},
+		},
+		{
+		.pcb_temp_level			= 80,
+		.max_opp			= 1200000,
+		.duty_cycle_enabled		= true,
+		.tduty_params = {
+			.nitro_rate		= 1200000,
+			.cooling_rate		= 1000000,
+			.nitro_interval		= 20000,
+			.nitro_percentage	= 19,
+			},
+		},
+		{
+		.pcb_temp_level			= 90,
+		.max_opp			= 1200000,
+		.duty_cycle_enabled		= true,
+		.tduty_params = {
+			.nitro_rate		= 1200000,
+			.cooling_rate		= 1000000,
+			.nitro_interval		= 20000,
+			.nitro_percentage	= 14,
+			},
+		},
+		{
+		.pcb_temp_level			= 110,
+		.max_opp			= 1000000,
+		.duty_cycle_enabled		= true,
+		.tduty_params = {
+			.nitro_rate		= 1000000,
+			.cooling_rate		= 800000,
+			.nitro_interval		= 20000,
+			.nitro_percentage	= 1,
+			},
+		},
+};
+
+static void init_duty_governor(void)
+{
+	omap4_duty_pcb_section_reg(omap4_duty_governor_pcb_sections,
+	ARRAY_SIZE(omap4_duty_governor_pcb_sections));
+}
+#else
+static void init_duty_governor(void){}
+#endif /*CONFIG_OMAP4_DUTY_CYCLE*/
 
 static struct omap_i2c_bus_board_data __initdata mapphone_i2c_1_bus_pdata;
 static struct omap_i2c_bus_board_data __initdata mapphone_i2c_2_bus_pdata;
