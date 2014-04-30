@@ -60,21 +60,6 @@ done
 
 echo " "
 
-# Ramdisk needs addition to fix 10% battery
-cd /data/4.4/out/target/product/targa
-# rm ramdisk.img
-cd ramdisk
-gzip -dc ../ramdisk.img | cpio -i
-
-echo " "
-echo "Edit files: add ':/system/framework/telephony-msim.jar' to BOOTCLASSPATH "
-echo " "
-
-sleep
-
-find . | cpio -o -H newc | gzip > ../ramdisk.img
-
-# end ramdisk
 
 # Build libhealthd.omap4
 while true; do
