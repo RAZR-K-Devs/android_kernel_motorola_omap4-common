@@ -24,6 +24,8 @@
 #include <linux/suspend.h>
 #include <linux/syscore_ops.h>
 #include <trace/events/power.h>
+#include <linux/quickwakeup.h>
+#include <linux/wakelock.h>
 
 #include "power.h"
 
@@ -128,6 +130,28 @@ void __attribute__ ((weak)) arch_suspend_enable_irqs(void)
 	local_irq_enable();
 }
 
+static int _suspend_enter(suspend_state_t state)
+{
+	int error;
+	arch_suspend_disable_irqs();
+	BUG_ON(!irqs_disabled());
+
+	error = syscore_suspend();
+	if (!error) {
+		if (!suspend_test(TEST_CORE))
+			error = suspend_ops->enter(state);
+		syscore_resume();
+	}
+	if (!error) {
+#ifdef CONFIG_QUICK_WAKEUP
+		quickwakeup_check();
+#endif
+	}
+	arch_suspend_enable_irqs();
+	BUG_ON(irqs_disabled());
+	return error;
+}
+
 /**
  *	suspend_enter - enter the desired system sleep state.
  *	@state:		state to enter
@@ -163,6 +187,14 @@ static int suspend_enter(suspend_state_t state)
 	if (error || suspend_test(TEST_CPUS))
 		goto Enable_cpus;
 
+	error = _suspend_enter(state);
+#ifdef CONFIG_QUICK_WAKEUP
+		while (!error && !quickwakeup_execute()) {
+			if (has_wake_lock(WAKE_LOCK_SUSPEND))
+				break;
+			error = _suspend_enter(state);
+		}
+#else
 	arch_suspend_disable_irqs();
 	BUG_ON(!irqs_disabled());
 
@@ -177,7 +209,7 @@ static int suspend_enter(suspend_state_t state)
 
 	arch_suspend_enable_irqs();
 	BUG_ON(irqs_disabled());
-
+#endif
  Enable_cpus:
 	enable_nonboot_cpus();
 
