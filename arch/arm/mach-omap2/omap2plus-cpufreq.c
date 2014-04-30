@@ -781,8 +781,6 @@ else if (!omap_cpufreq_suspended)
 		cpumask_setall(policy->cpus);
 	}
 
-	omap_cpufreq_cooling_init();
-	omap_duty_cooling_init();
 	/* Tranisition time for worst case */
 	policy->cpuinfo.transition_latency = 40 * 1000;
 
@@ -1311,6 +1309,16 @@ static int __init omap_cpufreq_init(void)
 		t = platform_driver_register(&omap_cpufreq_platform_driver);
 		if (t)
 			pr_warn("%s_init: platform_driver_register failed\n",
+				__func__);
+
+ 		ret = omap_cpufreq_cooling_init();
+
+		if (ret)
+			return ret;
+
+		ret = omap_duty_cooling_init();
+		if (ret)
+			pr_warn("%s: omap_duty_cooling_init failed\n",
 				__func__);
 	}
 
