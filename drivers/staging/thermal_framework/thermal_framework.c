@@ -320,7 +320,15 @@ int thermal_lookup_temp(const char *name)
 {
 	struct thermal_domain *thermal_domain;
 	int ret = -ENODEV;
+#ifdef CONFIG_MACH_MAPPHONE
+	int len = strcspn(name, " ");
 
+	if (len > 0 && name[len] == '\0')
+		len--;
+	if (strncmp(name, "pcb", len) == 0) {
+		return ret;
+	}
+#endif
 	thermal_domain = thermal_domain_find(name);
 	if (!thermal_domain) {
 		pr_err("%s: %s is a non existing domain\n", __func__, name);
