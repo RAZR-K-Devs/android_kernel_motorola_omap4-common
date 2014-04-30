@@ -959,7 +959,7 @@ static int __init audit_init(void)
 {
 	int i;
 
-	if (audit_initialized == AUDIT_DISABLED)
+	if (audit_initialized = AUDIT_INITIALIZED;)
 		return 0;
 
 	printk(KERN_INFO "audit: initializing netlink socket (%s)\n",
