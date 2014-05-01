@@ -1,3 +1,6 @@
+dce7919 hdmi: toggle: fix looping in HDP mode detection.
+01ffeb1 disable temperature seonsor support for now -
+5a88d29 Added todays changelog and updated full history
 a54af87 staging: lowmemorykiller: Fix error negative width in bit-field
 06cd8e8 temp sensor: enabled TMP102 temperature sensopr
 d5094ff staging: lowmemorykiller: backport from 3.4 kernel
@@ -24,11 +27,3 @@ f2420f8 net: wireless: nh80211: fix damn typo
 4821f04 staging: lowmemkiller: 3.4 backport
 1ed6a53 cpuidle, freq_stats: adapt changes from reverted commit
 0a245b3 oom, memctrl: 3.1
-2f4b07a Revert "cpu: new cpufreq, cpuidle setup"
-f6175c5 Revert "cpu: add changes to headers"
-fd519a0 cpu: add changes to headers
-9e020e1 HDMI: improve multichannel support
-6e32ee8 hdmi: clean up a little
-3379f59 fs: dyn fsync: add missing bracket
-6cbb47e cpu: new cpufreq, cpuidle setup
-f0e4211 fs: dyn_fsync / afsync: Update dyn fsync to latest upstream version - adapt to async switch
