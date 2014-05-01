@@ -1,0 +1,34 @@
+a54af87 staging: lowmemorykiller: Fix error negative width in bit-field
+06cd8e8 temp sensor: enabled TMP102 temperature sensopr
+d5094ff staging: lowmemorykiller: backport from 3.4 kernel
+1c94533a audit: disable log spam messages
+359664e kernel: introduce wakeup-timer
+3ffdf06 staging: binder: 3.1 kowalski kernel port
+7408547 omap4-common: fix the power-key
+c249749 audit: allowed but just be quiet
+74afc76 HWMOD: Using this patch to don't distrub the sleep when serial port is activated and connected.
+3a0d291 defconfig: EXPERIMENTAL: adjust features
+73186d6 [moto] Kernel: power: Introduce Quickwakeup feature
+005c798 staging: add sync and sw_sync
+1ee8c15 Add omap4_duty_governor_pcb_sections definition based of the SDP board.
+9642329 It seems that there is no external PCB temperature sensor is included
+d16b8b1 OMAP2PLUS: TF: rework initialization sequence
+07aed87 OMAP2PLUS:fix for TF doesn't work when CPU1 on/off
+5c9fbf7 targa: remove ramdisk mod from build script
+2fd3557 OMAP4: DPLL csacading: CPUfreq: manage DPLL cascading constraint
+f2420f8 net: wireless: nh80211: fix damn typo
+652f1ff net: wireless: nl80211: fix redefinition
+4d46e5d Added todays changelog and updated full history
+10bc66e defconfig: disable auto detection of oom_adj_values for lmk
+6aad444 cpufreq_stats: re-add live_oc related function 'cpufreq_stats_reset' which has been removed by accident
+4821f04 staging: lowmemkiller: 3.4 backport
+1ed6a53 cpuidle, freq_stats: adapt changes from reverted commit
+0a245b3 oom, memctrl: 3.1
+2f4b07a Revert "cpu: new cpufreq, cpuidle setup"
+f6175c5 Revert "cpu: add changes to headers"
+fd519a0 cpu: add changes to headers
+9e020e1 HDMI: improve multichannel support
+6e32ee8 hdmi: clean up a little
+3379f59 fs: dyn fsync: add missing bracket
+6cbb47e cpu: new cpufreq, cpuidle setup
+f0e4211 fs: dyn_fsync / afsync: Update dyn fsync to latest upstream version - adapt to async switch
