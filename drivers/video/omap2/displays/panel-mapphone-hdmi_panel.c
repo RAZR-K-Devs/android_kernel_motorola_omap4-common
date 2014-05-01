@@ -267,7 +267,7 @@ if (hdmi_active == false)
 	mutex_unlock(&hdmi.hdmi_lock);
 	dssdev->driver->disable(dssdev);
 	mutex_lock(&hdmi.hdmi_lock);
-		goto done;
+		return 0;
 	}
 else if (hdmi_active == true)
 #endif

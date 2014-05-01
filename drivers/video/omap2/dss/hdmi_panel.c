@@ -319,7 +319,7 @@ if (hdmi_active == false)
 	dssdev->driver->disable(dssdev);
 	omapdss_hdmi_enable_s3d(false);
 	mutex_lock(&hdmi.hdmi_lock);
-		goto done;
+		return 0;
 	}
 else if (hdmi_active == true)
 #endif
