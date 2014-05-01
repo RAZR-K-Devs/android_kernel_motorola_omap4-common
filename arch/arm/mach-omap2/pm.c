@@ -24,6 +24,8 @@
 #include "clockdomain.h"
 #include "pm.h"
 
+unsigned int wakeup_timer_nseconds;
+
 /**
  * struct omap2_pm_lp_description - Describe low power behavior of the system
  * @oscillator_startup_time:	Time rounded up to uSec for the oscillator to

@@ -81,6 +81,7 @@ obj-$(CONFIG_PM_DEBUG)			+= pm-debug.o
 ifeq ($(CONFIG_PM_DEBUG),y)
 obj-$(CONFIG_ARCH_OMAP4)		+= prcm-debug.o
 endif
+obj-y                    		+= wakeup-timer.o
 obj-$(CONFIG_OMAP_SMARTREFLEX)          += sr_device.o smartreflex.o
 obj-$(CONFIG_OMAP_SMARTREFLEX_CLASS3)	+= smartreflex-class3.o
 obj-$(CONFIG_OMAP_SMARTREFLEX_CLASS1P5)	+= smartreflex-class1p5.o

@@ -239,6 +239,7 @@ extern int omap_max8952_init(void);
 extern int omap_cpcap_init(void);
 extern u32 enable_off_mode;
 #endif
+extern unsigned int wakeup_timer_nseconds;
 
 #ifdef CONFIG_OMAP_TPS6236X
 extern int omap_tps6236x_board_setup(bool use_62361, int gpio_vsel0,
