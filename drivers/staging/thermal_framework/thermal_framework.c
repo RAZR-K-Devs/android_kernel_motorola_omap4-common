@@ -320,7 +320,7 @@ int thermal_lookup_temp(const char *name)
 {
 	struct thermal_domain *thermal_domain;
 	int ret = -ENODEV;
-#ifdef CONFIG_MACH_MAPPHONE
+#ifdef CONFIG_NO_PCB
 	int len = strcspn(name, " ");
 
 	if (len > 0 && name[len] == '\0')
