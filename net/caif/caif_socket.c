@@ -1067,7 +1067,8 @@ static int caif_create(struct net *net, struct socket *sock, int protocol,
 		.obj_size = sizeof(struct caifsock),
 	};
 
-	if (!capable(CAP_SYS_ADMIN) && !capable(CAP_NET_ADMIN))
+	/* mediaserver is in AID_NET_BT_ADMIN */
+      	if (!capable(CAP_SYS_ADMIN) && !capable(CAP_NET_ADMIN) && !in_egroup_p(AID_MOT_CAIF) && !in_egroup_p(AID_NET_BT_ADMIN))
 		return -EPERM;
 	/*
 	 * The sock->type specifies the socket type to use.
