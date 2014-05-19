@@ -25,6 +25,7 @@
 #include <net/caif/caif_layer.h>
 #include <net/caif/caif_dev.h>
 #include <net/caif/cfpkt.h>
+#include <linux/android_aid.h>
 
 MODULE_LICENSE("GPL");
 MODULE_ALIAS_NETPROTO(AF_CAIF);
