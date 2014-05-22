@@ -1,0 +1,7 @@
+31acab4 omap4-commo: caif; sync to latest changes from CM
+6aa3c0a Revert "cpuftrq: sync to latest google changes"
+555087c Revert "omap4-common: allow mediaserver to open a CAIF socket"
+54bea01 omap4-common: allow mediaserver to open a CAIF socket
+99721c4 n_tty: Fix n_tty_write crash when echoing in raw mode
+4671efc cpuftrq: sync to latest google changes
+c09f019 lmk: fix
