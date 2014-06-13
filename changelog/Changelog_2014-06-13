@@ -1,0 +1,15 @@
+922eb33 Update JBX 3.3.5
+a127e9d dyn_fsync / dyn_async: update suspend actions for dyn_fsync and make dyn_fsync the default method. HTC's Async Fsync is now disabled by default
+400214d futex: Make lookup_pi_state more robust
+d3b0310 futex: Always cleanup owner tid in unlock_pi
+3793798 futex: Validate atomic acquisition in futex_lock_pi_atomic()
+0a26e45 futex-prevent-requeue-pi-on-same-futex.patch futex: Forbid uaddr == uaddr2 in futex_requeue(..., requeue_pi=1)
+42e9ce2 futex: Add another early deadlock detection check
+0cabd40 futex: Prevent attaching to kernel threads
+ccfd693 ti-st: use msleep_interruptible instead of mdelay
+50b89ce ti-st: use cpu friendly wait_for_completions
+52c114b drivers:misc: ti-st: fix potential NULL pointer dereference in st_register()
+93a6aaf ti-st: tty_hci: Properly unregister protocols in open.
+fe39e0b ti-st: tty_hci: Fix race condition in hci_tty_open.
+c8c17e0 ti-st: tty_hci: Remove redundant assignment.
+10195745 ti-st: tty_hci: Check kzalloc return value.
