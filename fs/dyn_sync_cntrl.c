@@ -33,6 +33,9 @@ bool dyn_fsync_force_off = false;
 bool dyn_fsync_can_sync = false;
 bool dyn_fsync_active = false;
 bool dyn_fsync_was_active = false;
+bool suspended = false;
+
+static void fsync_suspend_work_fn(struct work_struct *work);
 
 static void dyn_fsync_flush(bool force)
 {
@@ -73,7 +76,7 @@ static ssize_t dyn_fsync_active_store(struct kobject *kobj, struct kobj_attribut
 		pr_info("%s: dynamic fsync locked - commands will be stored and replied ( when charge > 5%% )\n", __FUNCTION__);
 
 	if(sscanf(buf, "%u\n", &data) == 1) {
-		if (data == 1) {
+		if (data == 1 && !dyn_fsync_active) {
 			if (dyn_fsync_force_off) {
 				pr_info("%s: dynamic fsync will be enabled\n", __FUNCTION__);
 				dyn_fsync_was_active = true;
@@ -81,9 +84,11 @@ static ssize_t dyn_fsync_active_store(struct kobject *kobj, struct kobj_attribut
 				pr_info("%s: dynamic fsync ENABLED - async fsync DISABLED\n", __FUNCTION__);
 				dyn_fsync_enabled(true);
 				dyn_async = false;
+				if (suspended)
+					schedule_delayed_work_on(0, &fsync_suspend_work, 1*HZ);
 			}
 		}
-		else if (data == 0) {
+		else if (data == 0 && dyn_fsync_active) {
 			if (dyn_fsync_force_off) {
 				pr_info("%s: dynamic fsync will be disabled\n", __FUNCTION__);
 				dyn_fsync_was_active = false;
@@ -93,8 +98,6 @@ static ssize_t dyn_fsync_active_store(struct kobject *kobj, struct kobj_attribut
 				dyn_async = true;
 			}
 		}
-		else
-			pr_info("%s: bad value: %u\n", __FUNCTION__, data);
 	} else
 		pr_info("%s: unknown input!\n", __FUNCTION__);
 
@@ -144,6 +147,8 @@ static void dyn_fsync_suspend(struct early_suspend *h)
 {
 	if (dyn_fsync_active)
 		schedule_delayed_work_on(0, &fsync_suspend_work, 3*HZ);
+
+	suspended = true;
 }
 
 static void dyn_fsync_resume(struct early_suspend *h)
@@ -152,6 +157,8 @@ static void dyn_fsync_resume(struct early_suspend *h)
 		cancel_delayed_work(&fsync_suspend_work);
 		dyn_fsync_can_sync = false;
 	}
+
+	suspended = false;
 }
 
 static struct early_suspend dyn_fsync_can_sync_handler = {

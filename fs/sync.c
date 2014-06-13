@@ -21,7 +21,7 @@
 #include <linux/statfs.h>
 #endif
 
-bool dyn_async = true;
+bool dyn_async = false;
 
 #ifdef CONFIG_DYNAMIC_FSYNC
 extern bool dyn_fsync_can_sync;
