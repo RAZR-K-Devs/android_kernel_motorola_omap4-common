@@ -838,7 +838,7 @@ static int hw_breakpoint_pending(unsigned long addr, unsigned int fsr,
  */
 static void reset_ctrl_regs(void *info)
 {
-	int i, cpu = smp_processor_id();
+	int i, raw_num_brps, cpu = smp_processor_id();
 	u32 dbg_power;
 	cpumask_t *cpumask = info;
 
