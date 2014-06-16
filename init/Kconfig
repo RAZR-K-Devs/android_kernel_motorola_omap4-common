@@ -1299,7 +1299,6 @@ config PCI_QUIRKS
           unaffected by PCI quirks.
 
 config SLUB_DEBUG
-	default y
 	bool "Enable SLUB debugging support" if EXPERT
 	depends on SLUB && SYSFS
 	help
@@ -1327,6 +1326,7 @@ choice
 	   This option allows to select a slab allocator.
 
 config SLAB
+	default y
 	bool "SLAB"
 	help
 	  The regular slab allocator that is established and known to work
