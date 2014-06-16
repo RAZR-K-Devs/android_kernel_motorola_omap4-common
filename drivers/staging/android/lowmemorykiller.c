@@ -40,6 +40,7 @@
 #include <linux/swap.h>
 #include <linux/rcupdate.h>
 #include <linux/notifier.h>
+#include <linux/delay.h>
 
 static uint32_t lowmem_debug_level = 1;
 static int lowmem_adj[6] = {
@@ -64,6 +65,23 @@ static unsigned long lowmem_deathpending_timeout;
 		if (lowmem_debug_level >= (level))	\
 			pr_info(x);			\
 	} while (0)
+
+static int test_task_flag(struct task_struct *p, int flag)
+{
+	struct task_struct *t = p;
+	do {
+		task_lock(t);
+
+	if (test_tsk_thread_flag(t, flag)) {
+		task_unlock(t);
+
+			return 1;
+	}
+		task_unlock(t);
+		} while_each_thread(p, t);
+	
+			return 0;
+}
 
 static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 {
