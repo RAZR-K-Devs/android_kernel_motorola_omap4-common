@@ -219,6 +219,11 @@ static void isolate_freepages(struct zone *zone,
 	cc->nr_freepages = nr_freepages;
 }
 
+static inline bool migrate_async_suitable(int migratetype)
+{
+        return is_migrate_cma(migratetype) || migratetype == MIGRATE_MOVABLE;
+}
+
 /* Update the number of anon and file isolated pages in the zone */
 static void acct_isolated(struct zone *zone, struct compact_control *cc)
 {
