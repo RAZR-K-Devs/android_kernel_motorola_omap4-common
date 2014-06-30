@@ -185,26 +185,12 @@ struct omap_volt_data {
 #define OMAP3630_VP2_VLIMITTO_VDDMIN	900000
 #define OMAP3630_VP2_VLIMITTO_VDDMAX	1200000
 
-#define OMAP3_VP_CONFIG_ERROROFFSET	0x00
-#define OMAP3_VP_VSTEPMIN_VSTEPMIN	0x1
-#define OMAP3_VP_VSTEPMAX_VSTEPMAX	0x04
-#define OMAP3_VP_VLIMITTO_TIMEOUT_US	200
-
 #define OMAP4_VP_MPU_VLIMITTO_VDDMIN	830000
 #define OMAP4_VP_MPU_VLIMITTO_VDDMAX	1410000
 #define OMAP4_VP_IVA_VLIMITTO_VDDMIN	830000
 #define OMAP4_VP_IVA_VLIMITTO_VDDMAX	1260000
 #define OMAP4_VP_CORE_VLIMITTO_VDDMIN	830000
 #define OMAP4_VP_CORE_VLIMITTO_VDDMAX	1200000
-
-#define OMAP4430_VP_MPU_VLIMITTO_VDDMAX			1360000
-#define OMAP4430_VP_IVA_VLIMITTO_VDDMAX			1240000
-#define OMAP4430_VP_CORE_VLIMITTO_VDDMAX		1170000
-
-#define OMAP4460_VP_MPU_VLIMITTO_VDDMAX			1380000
-#define OMAP4460_VP_IVA_VLIMITTO_VDDMAX			1375000
-#define OMAP4460_VP_CORE_VLIMITTO_VDDMAX	1250000
-
 
 #define OMAP4_VP_CONFIG_ERROROFFSET	0x00
 #define OMAP4_VP_VSTEPMIN_VSTEPMIN	0x01
@@ -224,8 +210,6 @@ struct omap_volt_data {
  * @i2c_scll_low: PMIC interface speed config for fullspeed mode (T low)
  * @i2c_scll_high: PMIC interface speed config for fullspeed mode (T high)
  * @switch_on_time: time taken for switch on the DCDC in uSec
- * @max_volt: Maximum supported voltage in uV (should be contigous till min)
- * @min_volt: Minimum supported voltage in uV (should be contigous till max)
  */
 struct omap_voltdm_pmic {
 	int slew_rate;
@@ -239,11 +223,9 @@ struct omap_voltdm_pmic {
 	u8 vp_erroroffset;
 	u8 vp_vstepmin;
 	u8 vp_vstepmax;
-	u32 min_volt;
-	u32 max_volt;
 	u32 vp_vddmin;
 	u32 vp_vddmax;
-	u8 vp_timeout_us;
+	u16 vp_timeout_us;
 	u16 i2c_slave_addr;
 	u16 volt_reg_addr;
 	u16 cmd_reg_addr;
@@ -384,14 +366,6 @@ static inline unsigned long omap_get_dyn_nominal(struct omap_volt_data *vdata)
 }
 
 static inline unsigned long omap_get_nom_voltage(struct omap_volt_data *vdata)
-{
-	if (IS_ERR_OR_NULL(vdata))
-		return 0;
-	return vdata->volt_nominal;
-}
-
-static inline unsigned long omap_get_nominal_voltage(
-				struct omap_volt_data *vdata)
 {
 	if (IS_ERR_OR_NULL(vdata))
 		return 0;
