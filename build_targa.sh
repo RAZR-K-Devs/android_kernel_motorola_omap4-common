@@ -2,7 +2,7 @@
 set -m
 
 # Sync ?
-cd /data/4.4
+cd /media/dtrail/_home/4.4
 while true; do
     read -p "Do you wish to sync repo? " yn
     case $yn in
@@ -15,7 +15,7 @@ done
 echo " "
 
 # Exporting changelog to file
-cd /data/4.4
+cd /media/dtrail/_home/4.4
 while true; do
     read -p "Do you wto clean build dirs? " yn
     case $yn in
@@ -30,7 +30,7 @@ echo " "
 # We build the kernel and its modules first
 # Launch execute script in background
 # First get tags in shell
-cd /data/4.4
+cd /media/dtrail/_home/4.4
 export USE_CCACHE=1
 export PATH=${PATH/\/path\/to\/jdk\/dir:/}
 source build/envsetup.sh
@@ -40,7 +40,7 @@ lunch cm_targa-userdebug
 echo "Building kernel and modules..."
 echo " "
 
-# export PATH=/data/4.4/prebuilt/linux-x86/toolchain/arm-unknown-linux-gnueabi-standard_4.7.2/bin:$PATH
+# export PATH=/media/dtrail/_home/4.4/prebuilt/linux-x86/toolchain/arm-unknown-linux-gnueabi-standard_4.7.2/bin:$PATH
 export ARCH=arm
 export SUBARCH=arm
 export CROSS_COMPILE=arm-eabi-
@@ -48,7 +48,7 @@ export CROSS_COMPILE=arm-eabi-
 # export TARGET_KERNEL_CUSTOM_TOOLCHAIN=arm-unknown-linux-gnueabi-standard_4.7.2
 export LOCALVERSION="-JBX-3.4-Hybrid-Bionic-4.4"
 # Choose build option
-cd /data/4.4
+cd /media/dtrail/_home/4.4
 while true; do
     read -p "Do you want to build with HDMI support? " yn
     case $yn in
@@ -65,7 +65,7 @@ echo " "
 while true; do
     read -p "Do you wish to include 10% battery meter? " yn
     case $yn in
-        [Yy]* ) echo "Moving Ramdisk into built path..."; echo " "; cp /data/4.4/out/target/product/targa/ramdisk.img /home/dtrail/android/built/4.4/3.0/targa/rls/jbx/Applications/ramdisk/; break;;
+        [Yy]* ) echo "Moving Ramdisk into built path..."; echo " "; cp /media/dtrail/_home/4.4/out/target/product/targa/ramdisk.img /home/dtrail/android/built/4.4/3.0/targa/rls/jbx/Applications/ramdisk/; break;;
         [Nn]* ) break;;
         * ) echo "Please answer yes or no.";;
     esac
@@ -76,8 +76,8 @@ echo " "
 # We don't use the kernel but the modules
 echo "Copying modules to package folder"
 echo " "
-cp -r /data/4.4/out/target/product/targa/system/lib/modules/* /home/dtrail/android/built/4.4/3.0/targa/rls/system/lib/modules/
-cp /data/4.4/out/target/product/targa/kernel /home/dtrail/android/built/4.4/3.0/targa/rls/system/etc/kexec/
+cp -r /media/dtrail/_home/4.4/out/target/product/targa/system/lib/modules/* /home/dtrail/android/built/4.4/3.0/targa/rls/system/lib/modules/
+cp /media/dtrail/_home/4.4/out/target/product/targa/kernel /home/dtrail/android/built/4.4/3.0/targa/rls/system/etc/kexec/
 
 echo "------------- "
 echo "Done building"
