@@ -65,7 +65,6 @@ struct omap_vp_common {
 	u8 vpconfig_initvdd;
 	u8 vpconfig_forceupdate;
 	u8 vpconfig_vpenable;
-	u8 vstatus_vpidle;
 	u8 vstepmin_stepmin_shift;
 	u8 vstepmin_smpswaittimemin_shift;
 	u8 vstepmax_stepmax_shift;
@@ -79,16 +78,6 @@ struct omap_vp_common {
 };
 
 /**
- * struct omap_vp_volt_limits - Voltage limit Parameters for SoC
- * @vddmin:	Minimum voltage in uV
- * @vddmax:	Maximum voltage in uV
- */
-struct omap_vp_volt_limits {
-	u32 vddmin;
-	u32 vddmax;
-};
-
-/**
  * struct omap_vp_instance - VP register offsets (per-VDD)
  * @common: pointer to struct omap_vp_common * for this SoC
  * @vpconfig: PRM_VP*_CONFIG reg offset from PRM start
@@ -97,7 +86,6 @@ struct omap_vp_volt_limits {
  * @vstatus: PRM_VP*_VSTATUS reg offset from PRM start
  * @voltage: PRM_VP*_VOLTAGE reg offset from PRM start
  * @enabled: flag to keep track of whether vp is enabled or not
- * @limits: limits to set based off SoC VP capability.
  *
  * XXX vp_common is probably not needed since it is per-SoC
  */
@@ -111,7 +99,6 @@ struct omap_vp_instance {
 	u8 voltage;
 	u8 id;
 	bool enabled;
-	struct omap_vp_volt_limits *vlimits;
 };
 
 extern struct omap_vp_instance omap3_vp_mpu;
@@ -128,8 +115,6 @@ unsigned long omap_vp_get_curr_volt(struct voltagedomain *voltdm);
 int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 			      struct omap_volt_data *target_v);
 int omap_vp_update_errorgain(struct voltagedomain *voltdm,
-			     struct omap_volt_data *volt_data);
-bool omap_vp_is_transdone(struct voltagedomain *voltdm);
-void omap_vp_clear_transdone(struct voltagedomain *voltdm);
+			     unsigned long target_volt);
 
 #endif

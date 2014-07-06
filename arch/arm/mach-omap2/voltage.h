@@ -185,10 +185,10 @@ struct omap_volt_data {
 #define OMAP3630_VP2_VLIMITTO_VDDMIN	900000
 #define OMAP3630_VP2_VLIMITTO_VDDMAX	1200000
 
-#define OMAP3_VP_CONFIG_ERROROFFSET	0x00
-#define OMAP3_VP_VSTEPMIN_VSTEPMIN	0x1
-#define OMAP3_VP_VSTEPMAX_VSTEPMAX	0x04
-#define OMAP3_VP_VLIMITTO_TIMEOUT_US	200
+#define OMAP3_VP_CONFIG_ERROROFFSET    0x00
+#define OMAP3_VP_VSTEPMIN_VSTEPMIN     0x1
+#define OMAP3_VP_VSTEPMAX_VSTEPMAX     0x04
+#define OMAP3_VP_VLIMITTO_TIMEOUT_US   200
 
 #define OMAP4_VP_MPU_VLIMITTO_VDDMIN	830000
 #define OMAP4_VP_MPU_VLIMITTO_VDDMAX	1410000
@@ -197,13 +197,13 @@ struct omap_volt_data {
 #define OMAP4_VP_CORE_VLIMITTO_VDDMIN	830000
 #define OMAP4_VP_CORE_VLIMITTO_VDDMAX	1200000
 
-#define OMAP4430_VP_MPU_VLIMITTO_VDDMAX			1360000
+#define OMAP4430_VP_MPU_VLIMITTO_VDDMAX			1410000
 #define OMAP4430_VP_IVA_VLIMITTO_VDDMAX			1240000
 #define OMAP4430_VP_CORE_VLIMITTO_VDDMAX		1170000
 
-#define OMAP4460_VP_MPU_VLIMITTO_VDDMAX			1380000
-#define OMAP4460_VP_IVA_VLIMITTO_VDDMAX			1375000
-#define OMAP4460_VP_CORE_VLIMITTO_VDDMAX	1250000
+#define OMAP4460_VP_MPU_VLIMITTO_VDDMAX                1380000
+#define OMAP4460_VP_IVA_VLIMITTO_VDDMAX                1375000
+#define OMAP4460_VP_CORE_VLIMITTO_VDDMAX               1250000
 
 
 #define OMAP4_VP_CONFIG_ERROROFFSET	0x00
@@ -244,15 +244,16 @@ struct omap_voltdm_pmic {
 	u32 vp_vddmin;
 	u32 vp_vddmax;
 	u8 vp_timeout_us;
+
 	u16 i2c_slave_addr;
 	u16 volt_reg_addr;
 	u16 cmd_reg_addr;
 	bool i2c_high_speed;
-	u8 i2c_hscll_low;
-	u8 i2c_hscll_high;
-	u8 i2c_scll_low;
-	u8 i2c_scll_high;
-	u8 i2c_mcode;
+	u8  i2c_hscll_low;
+	u8  i2c_hscll_high;
+	u8  i2c_scll_low;
+	u8  i2c_scll_high;
+	u8  i2c_mcode;
 	u8  (*reconfigure_switcher)(struct voltagedomain *voltdm,
 					unsigned char i2c_addr);
 	unsigned long (*vsel_to_uv) (const u8 vsel);
