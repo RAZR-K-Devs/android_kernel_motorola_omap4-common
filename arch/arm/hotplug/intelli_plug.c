@@ -58,7 +58,7 @@ static struct workqueue_struct *intelliplug_boost_wq;
 static unsigned int intelli_plug_active = 0;
 module_param(intelli_plug_active, uint, 0644);
 
-static unsigned int touch_boost_active = 1;
+static unsigned int touch_boost_active = 0;
 module_param(touch_boost_active, uint, 0644);
 
 static unsigned int nr_run_profile_sel = 0;
@@ -276,11 +276,11 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 
 			switch (cpu_count) {
 			case 1:
-			 if (int_hotplug == 0) {			
+				if (persist_count == 0) {
+				  if (int_hotplug == 0) {			
 			  	//pr_info("case 1: Hotplug locked \n");
 				break;
 			  } else if (int_hotplug == 1) {
-				if (persist_count == 0) {
 					//take down everyone
 					unplug_cpu(0);
 				}
