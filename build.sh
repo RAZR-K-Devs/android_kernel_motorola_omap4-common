@@ -48,7 +48,7 @@ export CROSS_COMPILE=arm-eabi-
 # export TARGET_KERNEL_CUSTOM_TOOLCHAIN=arm-unknown-linux-gnueabi-standard_4.7.2
 export LOCALVERSION="-JBX-3.4-Hybrid-Razr-4.4"
 # Choose build option
-cd /home/4.4
+cd /media/dtrail/_home/4.4
 while true; do
     read -p "Do you want to build with HDMI support? " yn
     case $yn in

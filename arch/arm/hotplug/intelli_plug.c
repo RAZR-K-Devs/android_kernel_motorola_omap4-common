@@ -283,6 +283,7 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 					//take down everyone
 					unplug_cpu(0);
 				}
+				 	}		
 #ifdef DEBUG_INTELLI_PLUG
 				pr_info("case 1: %u\n", persist_count);
 #endif
