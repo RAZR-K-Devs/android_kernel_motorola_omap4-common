@@ -36,6 +36,7 @@ static void omap4_vp_recover(u8 vp_id)
 	 * it gets reported to the checkin server with proper stack trace.
 	 */
 	BUG();
+//	omap4_pm_cold_reset("Voltage Processor Recovery");
 }
 
 static const struct omap_vp_ops omap4_vp_ops = {
@@ -68,6 +69,10 @@ static const struct omap_vp_common omap4_vp_common = {
 	.ops = &omap4_vp_ops,
 };
 
+struct omap_vp_volt_limits omap4_vp_mpu_limit = {
+	.vddmin	= OMAP4_VP_MPU_VLIMITTO_VDDMIN,
+};
+
 struct omap_vp_instance omap4_vp_mpu = {
 	.id = OMAP4_PRM_IRQ_VDD_MPU_ID,
 	.common = &omap4_vp_common,
@@ -77,6 +82,11 @@ struct omap_vp_instance omap4_vp_mpu = {
 	.vlimitto = OMAP4_PRM_VP_MPU_VLIMITTO_OFFSET,
 	.vstatus = OMAP4_PRM_VP_MPU_STATUS_OFFSET,
 	.voltage = OMAP4_PRM_VP_MPU_VOLTAGE_OFFSET,
+	.vlimits = &omap4_vp_mpu_limit,
+};
+
+struct omap_vp_volt_limits omap4_vp_iva_limit = {
+	.vddmin	= OMAP4_VP_IVA_VLIMITTO_VDDMIN,
 };
 
 struct omap_vp_instance omap4_vp_iva = {
@@ -88,6 +98,11 @@ struct omap_vp_instance omap4_vp_iva = {
 	.vlimitto = OMAP4_PRM_VP_IVA_VLIMITTO_OFFSET,
 	.vstatus = OMAP4_PRM_VP_IVA_STATUS_OFFSET,
 	.voltage = OMAP4_PRM_VP_IVA_VOLTAGE_OFFSET,
+	.vlimits = &omap4_vp_iva_limit,
+};
+
+struct omap_vp_volt_limits omap4_vp_core_limit = {
+	.vddmin	= OMAP4_VP_CORE_VLIMITTO_VDDMIN,
 };
 
 struct omap_vp_instance omap4_vp_core = {
@@ -99,4 +114,5 @@ struct omap_vp_instance omap4_vp_core = {
 	.vlimitto = OMAP4_PRM_VP_CORE_VLIMITTO_OFFSET,
 	.vstatus = OMAP4_PRM_VP_CORE_STATUS_OFFSET,
 	.voltage = OMAP4_PRM_VP_CORE_VOLTAGE_OFFSET,
+	.vlimits = &omap4_vp_core_limit,
 };
