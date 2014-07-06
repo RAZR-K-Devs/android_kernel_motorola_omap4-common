@@ -159,6 +159,31 @@ enum {
 };
 #define THERMAL_GENL_CMD_MAX (__THERMAL_GENL_CMD_MAX - 1)
 
+/* Function declarations */
+#ifdef CONFIG_THERMAL_OF
+struct thermal_zone_device *
+thermal_zone_of_sensor_register(struct device *dev, int id,
+				void *data, int (*get_temp)(void *, long *),
+				int (*get_trend)(void *, long *));
+void thermal_zone_of_sensor_unregister(struct device *dev,
+					struct thermal_zone_device *tz);
+
+#else
+static inline struct thermal_zone_device *
+thermal_zone_of_sensor_register(struct device *dev, int id,
+			void *data, int (*get_temp)(void *, long *),
+			int (*get_trend)(void *, long *))
+{
+	return NULL;
+}
+
+static inline
+void thermal_zone_of_sensor_unregister(struct device *dev,
+					struct thermal_zone_device *tz)
+{
+}
+#endif
+
 struct thermal_zone_device *thermal_zone_device_register(char *, int, void *,
 		const struct thermal_zone_device_ops *, int tc1, int tc2,
 		int passive_freq, int polling_freq);
