@@ -468,12 +468,7 @@ struct rq {
 	unsigned char nohz_balance_kick;
 #endif
 	int skip_clock_update;
-
-  /* time-based average load */
-	u64 nr_last_stamp;
-	unsigned int ave_nr_running;
  
-
 	/* capture load from *all* tasks on this cpu: */
 	struct load_weight load;
 	unsigned long nr_load_updates;
@@ -610,29 +605,6 @@ static inline int cpu_of(struct rq *rq)
 #define cpu_curr(cpu)		(cpu_rq(cpu)->curr)
 #define raw_rq()		(&__raw_get_cpu_var(runqueues))
 
-/**
- * highest_flag_domain - Return highest sched_domain containing flag.
- * @cpu:	The cpu whose highest level of sched domain is to
- *		be returned.
- * @flag:	The flag to check for the highest sched_domain
- *		for the given cpu.
- *
- * Returns the highest sched_domain of a cpu which contains the given flag.
- */
-static inline struct sched_domain *highest_flag_domain(int cpu, int flag)
-{
-	struct sched_domain *sd, *hsd = NULL;
-
-	for_each_domain(cpu, sd) {
-		if (!(sd->flags & flag))
-			break;
-		hsd = sd;
-	}
-	return hsd;
-}
-DECLARE_PER_CPU(struct sched_domain *, sd_llc);
-DECLARE_PER_CPU(int, sd_llc_id);
-
 #ifdef CONFIG_INTELLI_PLUG
 struct nr_stats_s {
 	/* time-based average load */
@@ -648,6 +620,40 @@ struct nr_stats_s {
 
 DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
 #endif
+
+ /**
+
+  * highest_flag_domain - Return highest sched_domain containing flag.
+
+  * @cpu:	The cpu whose highest level of sched domain is to
+
+  *		be returned.
+
+  * @flag:	The flag to check for the highest sched_domain
+
+  *		for the given cpu.
+
+  *
+
+  * Returns the highest sched_domain of a cpu which contains the given flag.
+
+  */
+
+static inline struct sched_domain *highest_flag_domain(int cpu, int flag)
+{
+	struct sched_domain *sd, *hsd = NULL;
+
+	for_each_domain(cpu, sd) {
+		if (!(sd->flags & flag))
+			break;
+		hsd = sd;
+	}
+
+	return hsd;
+}
+
+DECLARE_PER_CPU(struct sched_domain *, sd_llc);
+DECLARE_PER_CPU(int, sd_llc_id);
 
 #ifdef CONFIG_CGROUP_SCHED
 
@@ -786,7 +792,6 @@ unsigned long avg_nr_running(void)
 }
 EXPORT_SYMBOL(avg_nr_running);
 #endif
-
 
 /*
  * Tunables that become constants when CONFIG_SCHED_DEBUG is off:
@@ -1919,31 +1924,6 @@ static const struct sched_class rt_sched_class;
 
 #include "sched_stats.h"
 
-/* 27 ~= 134217728ns = 134.2ms
-+ * 26 ~=  67108864ns =  67.1ms
-+ * 25 ~=  33554432ns =  33.5ms
-+ * 24 ~=  16777216ns =  16.8ms
-+ */
-#define NR_AVE_PERIOD_EXP  27
-#define NR_AVE_SCALE(x)    ((x) << FSHIFT)
-#define NR_AVE_PERIOD    (1 << NR_AVE_PERIOD_EXP)
-#define NR_AVE_DIV_PERIOD(x)  ((x) >> NR_AVE_PERIOD_EXP)
-
-static inline void do_avg_nr_running(struct rq *rq)
-{
-  s64 nr, deltax;
-
-  deltax = rq->clock_task - rq->nr_last_stamp;
-  rq->nr_last_stamp = rq->clock_task;
-  nr = NR_AVE_SCALE(rq->nr_running);
-
-  if (deltax > NR_AVE_PERIOD)
-    rq->ave_nr_running = nr;
-  else
-    rq->ave_nr_running +=
-      NR_AVE_DIV_PERIOD(deltax * (nr - rq->ave_nr_running));
-}
-
 static void inc_nr_running(struct rq *rq)
 {
 #ifdef CONFIG_INTELLI_PLUG
@@ -1954,6 +1934,8 @@ static void inc_nr_running(struct rq *rq)
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
+#else
+	do_avg_nr_running(rq); 
 #endif
 	rq->nr_running++;
 #ifdef CONFIG_INTELLI_PLUG
@@ -1971,6 +1953,8 @@ static void dec_nr_running(struct rq *rq)
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
+#else
+	do_avg_nr_running(rq); 
 #endif
 	rq->nr_running--;
 #ifdef CONFIG_INTELLI_PLUG
