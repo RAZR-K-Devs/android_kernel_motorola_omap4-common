@@ -69,8 +69,8 @@ static int motsnd_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int ret;
-//	unsigned long rate;
-//	struct clk *dpll_abe_ck;
+	unsigned long rate;
+	struct clk *dpll_abe_ck;
 
 	MOTSND_DEBUG_LOG("%s: entered\n", __func__);
 
@@ -486,12 +486,11 @@ static struct snd_soc_dai_driver dai[] = {
 };
 
 #ifdef MOTSND_CONFIG_ENABLE_ABE
-/*
 static const char *mm1_be[] = {
 		OMAP_ABE_BE_MM_EXT0,
 
 };
-*/
+
 struct snd_soc_dsp_link fe_lp_media = {
 	.playback	= true,
 	.trigger = {

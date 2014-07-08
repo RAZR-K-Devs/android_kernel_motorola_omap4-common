@@ -223,11 +223,11 @@ struct taal_data {
 	struct delayed_work te_timeout_work;
 
 	bool use_dsi_bl;
-	bool cabc_broken;
-	bool intro_printed;
-	bool framedone_timeout;
 
+	bool cabc_broken;
 	unsigned cabc_mode;
+
+	bool intro_printed;
 
 	struct workqueue_struct *workqueue;
 
@@ -1349,11 +1349,8 @@ static int taal_suspend(struct omap_dss_device *dssdev)
 
 	mutex_lock(&td->lock);
 
-	if (dssdev->state == OMAP_DSS_DISPLAY_DISABLED) {
+	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
 		r = -EINVAL;
-		goto err;
-	} else if (dssdev->state == OMAP_DSS_DISPLAY_SUSPENDED) {
-		r = 0;
 		goto err;
 	}
 
@@ -1416,27 +1413,8 @@ err:
 static void taal_framedone_cb(int err, void *data)
 {
 	struct omap_dss_device *dssdev = data;
-	struct taal_data *td = dev_get_drvdata(&dssdev->dev);
 	dev_dbg(&dssdev->dev, "framedone, err %d\n", err);
-	/*
-	 * assert framadone timeout flag before
-	 * unlocking the bus
-	 */
-	if (err && !dsi_bus_was_unlocked(dssdev))
-		td->framedone_timeout = true;
-
-	/*
-	 * reset framadone timeout flag upon next
-	 * framedone. Ensure no double un-lock from
-	 * the erroneous framedone callback.
-	 */
-	if (td->framedone_timeout && !err) {
-		td->framedone_timeout = false;
-		if (dsi_bus_was_unlocked(dssdev))
-			return;
-	}
 	dsi_bus_unlock(dssdev);
-	return;
 }
 
 static irqreturn_t taal_te_isr(int irq, void *data)

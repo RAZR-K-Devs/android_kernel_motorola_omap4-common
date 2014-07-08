@@ -101,12 +101,6 @@
 #define GPIOO			0x0520		/* GPIO Output */
 #define GPIOI			0x0520		/* GPIO Input */
 
-/* I2C Registers */
-#define I2CTIMCTRL		0x0540
-#define I2CMADDR		0x0544
-#define WDATAQ			0x0548
-#define RDATAQ			0x054C
-
 /* Chip Revision Registers */
 #define IDREG			0x0580		/* Chip and Revision ID */
 
@@ -138,5 +132,15 @@
 #define DCS_GET_ID1             0xda
 #define DCS_GET_ID2             0xdb
 #define DCS_GET_ID3             0xdc
+
+#define TC358765_WIDTH		1280
+#define TC358765_HEIGHT		800
+#define TC358765_PCLK		65183
+#define TC358765_HFP		10
+#define TC358765_HSW		20
+#define TC358765_HBP		10
+#define TC358765_VFP		4
+#define TC358765_VSW		4
+#define TC358765_VBP		4
 
 #endif

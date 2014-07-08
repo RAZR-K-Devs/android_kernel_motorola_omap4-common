@@ -69,6 +69,7 @@ static int deactivate_urbs(struct snd_usb_substream *subs, int force, int can_sl
 	for (i = 0; i < subs->nurbs; i++) {
 		if (test_bit(i, &subs->active_mask)) {
 			if (!test_and_set_bit(i, &subs->unlink_mask)) {
+				struct urb *u = subs->dataurb[i].urb;
 				/*
 				 * don't unlink submitted urbs, it is ok
 				 * to let them go through and play. Or it
@@ -77,7 +78,6 @@ static int deactivate_urbs(struct snd_usb_substream *subs, int force, int can_sl
 				 * usb_disconnect()
 				 */
 #ifndef CONFIG_USB_MUSB_HDRC
-				struct urb *u = subs->dataurb[i].urb;
 				if (async) {
 					usb_unlink_urb(u);
 				} else
@@ -90,6 +90,7 @@ static int deactivate_urbs(struct snd_usb_substream *subs, int force, int can_sl
 		for (i = 0; i < SYNC_URBS; i++) {
 			if (test_bit(i+16, &subs->active_mask)) {
 				if (!test_and_set_bit(i+16, &subs->unlink_mask)) {
+					struct urb *u = subs->syncurb[i].urb;
 					/*
 					 * don't unlink submitted urbs, it is ok
 					 * to let them go through and play.Or it
@@ -98,7 +99,6 @@ static int deactivate_urbs(struct snd_usb_substream *subs, int force, int can_sl
 					 * usb_disconnect()
 					 */
 #ifndef CONFIG_USB_MUSB_HDRC
-					struct urb *u = subs->syncurb[i].urb;
 					if (async) {
 						usb_unlink_urb(u);
 					} else

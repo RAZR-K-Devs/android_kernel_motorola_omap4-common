@@ -241,7 +241,7 @@ static ssize_t d2l_regs_show(struct device *dev, struct device_attribute *attr,
 
 static DEVICE_ATTR(d2l_regs, S_IRUGO, d2l_regs_show, NULL);
 
-/*static struct attribute *d2l_attrs[] = {
+static struct attribute *d2l_attrs[] = {
 	&dev_attr_d2l_regs.attr,
 	NULL,
 };
@@ -249,7 +249,7 @@ static DEVICE_ATTR(d2l_regs, S_IRUGO, d2l_regs_show, NULL);
 static struct attribute_group d2l_attr_group = {
 	.attrs = d2l_attrs,
 };
-*/
+
 static int d2l_set_hs_mode_timing(struct omap_dss_device *dssdev)
 {
 	u32 tlpx, ths_prepare, ths_zero;
