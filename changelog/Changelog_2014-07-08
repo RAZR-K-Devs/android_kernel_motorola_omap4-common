@@ -1,0 +1,55 @@
+0ace886 defconfig: make best config universal
+186904e UHID support, for Bluetooth keyboards, mouses, Heartrate monitors, ...
+1570e1e HID: uhid: Fix sending events with invalid data
+6171f55 HID: uhid: silence gcc warning
+8db7b36 HID: uhid: implement feature requests
+6060811 HID: uhid: forward raw output reports to user-space
+ae910d7 HID: uhid: forward output request to user-space
+52154fd HID: uhid: forward open/close events to user-space
+14a0aef HID: uhid: add UHID_START and UHID_STOP events
+ee70347 HID: uhid: forward hid report-descriptor to hid core
+64d122e HID: uhid: allow feeding input data into uhid devices
+7a72134 HID: uhid: add UHID_CREATE and UHID_DESTROY events
+890e2be HID: uhid: implement write() on uhid devices
+ae8bac5 HID: uhid: implement read() on uhid devices
+e911f82 HID: uhid: allow poll()'ing on uhid devices
+0254133 HID: uhid: add internal message buffer
+4d0ad2f HID: uhid: introduce user-space I/O driver support for HID
+2ba34bd Intelli-plug: fix
+4b7d161 Disable drivers (not fixed) for now
+28fec72 Revert "Revert "Merge omapzoom-changes into drivers/video/omap2/dss/dispc.c""
+9d835ef defconfig Targa/Edison: enable tmp and thermal drivers
+ee64569 thermal: adapt needed functions and fix
+41d46b4 defconfig: enable tmp and thermal drivers
+65173e9 omap: voltage: remove useless stuff
+20a850c intelli-plug: disble touch boost due to conflict with touch driver
+1d736db revert overall voltage handling patch
+6b32199 Revert "omap: fix voltage haandling - specially for OC'ers."
+ad4ad5f omap: fix voltage haandling - specially for OC'ers.
+dd75c9a defconfig: refactor config to CM-like and test tmp sensor
+e568963 thermal: tmp102: add thermal drivers, governos and prepare for use of tmp102 sensor
+d0ea002 Added cdrom option to luns
+73acbb2 2048 block size for cdrom-f_mass_storage devices
+18e6659 mm/ksm: engage deferred timer by default
+337077f ksm: Provide support to use deferred timers for scanner thread
+5d1468c Intelli-Plug: Update to version 3.7
+53ecb4b Revert "Revert "intelli_plug: move to its own directory. It's been cross platform for…""
+eae3c48 Revert "intelli_plug: move to its own directory. It's been cross platform for…"
+3e07acc Revert "intelli-plug: update to major version 3 (inlcuding my hotplug patches)"
+5935567 Revert "intelli_plug: unify powersuspend and earlysuspend drivers"
+f1c7c5c Revert "intelli_plug: adjust thread capacity for Cortex A7 SOCs"
+c6ac540 Revert "intelli_plug: fix thread capacity threshold calculation"
+886cd8b Revert "intelli_plug: fix logic error for eco mode profiles"
+1f7cb80 fixes...
+09f16c1 lzo: properly check for overruns
+85ca8c6 build script: update build paths (after Linux update my partition names changed)
+e54c2c1 intelli_plug: fix logic error for eco mode profiles
+b211e66 intelli_plug: fix thread capacity threshold calculation
+948c301 intelli_plug: adjust thread capacity for Cortex A7 SOCs
+eff5487 intelli_plug: unify powersuspend and earlysuspend drivers
+ca7def5 intelli-plug: update to major version 3 (inlcuding my hotplug patches)
+4621a8d intelli_plug: move to its own directory. It's been cross platform for…
+1d4b80f mm: vmscan: If kswapd has been running too long, allow it to sleep
+26124e9 Revert "Backport ipv6 addrconf.c and dependencies from 3.0.101"
+82014b9 Revert "Revert "omap4-common: fix wake on unplug""
+608766c Revert "Merge omapzoom-changes into drivers/video/omap2/dss/dispc.c"
