@@ -55,10 +55,10 @@ static struct delayed_work intelli_plug_boost;
 static struct workqueue_struct *intelliplug_wq;
 static struct workqueue_struct *intelliplug_boost_wq;
 
-static unsigned int intelli_plug_active = 0;
+static unsigned int intelli_plug_active = 1;
 module_param(intelli_plug_active, uint, 0644);
 
-static unsigned int touch_boost_active = 0;
+static unsigned int touch_boost_active = 1;
 module_param(touch_boost_active, uint, 0644);
 
 static unsigned int nr_run_profile_sel = 0;
@@ -551,7 +551,7 @@ int __init intelli_plug_init(void)
 		nr_run_profile_sel = NR_RUN_ECO_MODE_PROFILE;
 	}
 
-	//rc = input_register_handler(&intelli_plug_input_handler);
+	rc = input_register_handler(&intelli_plug_input_handler);
 #ifdef CONFIG_POWERSUSPEND
 	register_power_suspend(&intelli_plug_power_suspend_driver);
 #endif
