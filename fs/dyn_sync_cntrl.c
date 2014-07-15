@@ -31,7 +31,7 @@ struct delayed_work fsync_suspend_work;
 
 bool dyn_fsync_force_off = false;
 bool dyn_fsync_can_sync = false;
-bool dyn_fsync_active = true;
+bool dyn_fsync_active = false; // Enabling this will disable Async Fsync (HTC) and vice versa
 bool dyn_fsync_was_active = false;
 bool suspended = false;
 
