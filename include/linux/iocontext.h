@@ -5,6 +5,13 @@
 #include <linux/radix-tree.h>
 #include <linux/rcupdate.h>
 
+struct cfq_ttime {
+	unsigned long last_end_request;
+	unsigned long ttime_total;
+	unsigned long ttime_samples;
+	unsigned long ttime_mean;
+};
+
 struct cfq_io_context {
 	void *key;
 
@@ -12,12 +19,21 @@ struct cfq_io_context {
 
 	struct io_context *ioc;
 
+	struct cfq_ttime ttime;
+
 	unsigned long last_end_request;
 
 	unsigned long ttime_total;
 	unsigned long ttime_samples;
 	unsigned long ttime_mean;
 
+	unsigned int saved_IO_bound;
+
+	unsigned int cooperations;
+	unsigned int failed_cooperations;
+
+	unsigned int wr_time_left;
+	unsigned int saved_idle_window;
 	struct list_head queue_list;
 	struct hlist_node cic_list;
 
@@ -101,3 +117,4 @@ static inline int put_io_context(struct io_context *ioc)
 #endif
 
 #endif
+
