@@ -59,7 +59,7 @@ static void hlist_sched_exit(struct io_context *ioc, struct hlist_head *list)
 	if (!hlist_empty(list)) {
 		struct cfq_io_context *cic;
 
-	cic = hlist_entry(list->first, struct cfq_io_context, cic_list);
+		cic = hlist_entry(list->first, struct cfq_io_context, cic_list);
 		cic->exit(ioc);
 	}
 	rcu_read_unlock();
@@ -79,6 +79,7 @@ void exit_io_context(struct task_struct *task)
 		hlist_sched_exit(ioc, &ioc->cic_list);
 		hlist_sched_exit(ioc, &ioc->bfq_cic_list);
 	}
+
 	put_io_context(ioc);
 }
 
@@ -166,3 +167,4 @@ static int __init blk_ioc_init(void)
 	return 0;
 }
 subsys_initcall(blk_ioc_init);
+

@@ -1,5 +1,5 @@
 /*
- * BFQ, or Budget Fair Queueing, disk scheduler.
+ * Budget Fair Queueing (BFQ) disk scheduler.
  *
  * Based on ideas and code from CFQ:
  * Copyright (C) 2003 Jens Axboe <axboe@kernel.dk>
@@ -9,50 +9,55 @@
  *
  * Copyright (C) 2010 Paolo Valente <paolo.valente@unimore.it>
  *
- * Licensed under the GPL-2 as detailed in the accompanying COPYING.BFQ file.
+ * Licensed under the GPL-2 as detailed in the accompanying COPYING.BFQ
+ * file.
  *
- * BFQ is a proportional share disk scheduling algorithm based on the
- * slice-by-slice service scheme of CFQ. But BFQ assigns budgets,
- * measured in number of sectors, to tasks instead of time slices.
- * The disk is not granted to the active task for a given time slice,
- * but until it has exahusted its assigned budget.  This change from
- * the time to the service domain allows BFQ to distribute the disk
- * bandwidth among tasks as desired, without any distortion due to
- * ZBR, workload fluctuations or other factors. BFQ uses an ad hoc
- * internal scheduler, called B-WF2Q+, to schedule tasks according to
- * their budgets.  Thanks to this accurate scheduler, BFQ can afford
- * to assign high budgets to disk-bound non-seeky tasks (to boost the
- * throughput), and yet guarantee low latencies to interactive and
- * soft real-time applications.
+ * BFQ is a proportional-share storage-I/O scheduling algorithm based on
+ * the slice-by-slice service scheme of CFQ. But BFQ assigns budgets,
+ * measured in number of sectors, to processes instead of time slices. The
+ * device is not granted to the in-service process for a given time slice,
+ * but until it has exhausted its assigned budget. This change from the time
+ * to the service domain allows BFQ to distribute the device throughput
+ * among processes as desired, without any distortion due to ZBR, workload
+ * fluctuations or other factors. BFQ uses an ad hoc internal scheduler,
+ * called B-WF2Q+, to schedule processes according to their budgets. More
+ * precisely, BFQ schedules queues associated to processes. Thanks to the
+ * accurate policy of B-WF2Q+, BFQ can afford to assign high budgets to
+ * I/O-bound processes issuing sequential requests (to boost the
+ * throughput), and yet guarantee a low latency to interactive and soft
+ * real-time applications.
  *
- * BFQ has been introduced in [1], where the interested reader can
- * find an accurate description of the algorithm, the bandwidth
- * distribution and latency guarantees it provides, plus formal proofs
- * of all the properties.  With respect to the algorithm presented in
- * the paper, this implementation adds several little heuristics, and
- * a hierarchical extension, based on H-WF2Q+.
+ * BFQ is described in [1], where also a reference to the initial, more
+ * theoretical paper on BFQ can be found. The interested reader can find
+ * in the latter paper full details on the main algorithm, as well as
+ * formulas of the guarantees and formal proofs of all the properties.
+ * With respect to the version of BFQ presented in these papers, this
+ * implementation adds a few more heuristics, such as the one that
+ * guarantees a low latency to soft real-time applications, and a
+ * hierarchical extension based on H-WF2Q+.
  *
  * B-WF2Q+ is based on WF2Q+, that is described in [2], together with
  * H-WF2Q+, while the augmented tree used to implement B-WF2Q+ with O(log N)
  * complexity derives from the one introduced with EEVDF in [3].
  *
- * [1] P. Valente and F. Checconi, ``High Throughput Disk Scheduling
- *     with Deterministic Guarantees on Bandwidth Distribution,'',
- *     IEEE Transactions on Computer, May 2010.
+ * [1] P. Valente and M. Andreolini, ``Improving Application Responsiveness
+ *     with the BFQ Disk I/O Scheduler'',
+ *     Proceedings of the 5th Annual International Systems and Storage
+ *     Conference (SYSTOR '12), June 2012.
  *
- *     http://algo.ing.unimo.it/people/paolo/disk_sched/bfq-techreport.pdf
+ * http://algogroup.unimo.it/people/paolo/disk_sched/bf1-v1-suite-results.pdf
  *
  * [2] Jon C.R. Bennett and H. Zhang, ``Hierarchical Packet Fair Queueing
  *     Algorithms,'' IEEE/ACM Transactions on Networking, 5(5):675-689,
  *     Oct 1997.
  *
- *     http://www.cs.cmu.edu/~hzhang/papers/TON-97-Oct.ps.gz
+ * http://www.cs.cmu.edu/~hzhang/papers/TON-97-Oct.ps.gz
  *
  * [3] I. Stoica and H. Abdel-Wahab, ``Earliest Eligible Virtual Deadline
  *     First: A Flexible and Accurate Mechanism for Proportional Share
  *     Resource Allocation,'' technical report.
  *
- *     http://www.cs.berkeley.edu/~istoica/papers/eevdf-tr-95.pdf
+ * http://www.cs.berkeley.edu/~istoica/papers/eevdf-tr-95.pdf
  */
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -86,7 +91,7 @@ static const int bfq_max_budget_async_rq = 4;
 /*
  * Async to sync throughput distribution is controlled as follows:
  * when an async request is served, the entity is charged the number
- * of sectors of the request, multipled by the factor below
+ * of sectors of the request, multiplied by the factor below
  */
 static const int bfq_async_charge_factor = 10;
 
@@ -121,21 +126,46 @@ static DEFINE_IDA(cic_index_ida);
 #define BFQ_RATE_SHIFT		16
 
 /*
- * The duration of the weight raising for interactive applications is
- * computed automatically (as default behaviour), using the following
- * formula: duration = (R / r) * T, where r is the peak rate of the
- * disk, and R and T are two reference parameters. In particular, R is
- * the peak rate of a reference disk, and T is about the maximum time
- * for starting popular large applications on that disk, under BFQ and
- * while reading two files in parallel. Finally, BFQ uses two
- * different pairs (R, T) depending on whether the disk is rotational
- * or non-rotational.
+ * By default, BFQ computes the duration of the weight raising for
+ * interactive applications automatically, using the following formula:
+ * duration = (R / r) * T, where r is the peak rate of the device, and
+ * R and T are two reference parameters.
+ * In particular, R is the peak rate of the reference device (see below),
+ * and T is a reference time: given the systems that are likely to be
+ * installed on the reference device according to its speed class, T is
+ * about the maximum time needed, under BFQ and while reading two files in
+ * parallel, to load typical large applications on these systems.
+ * In practice, the slower/faster the device at hand is, the more/less it
+ * takes to load applications with respect to the reference device.
+ * Accordingly, the longer/shorter BFQ grants weight raising to interactive
+ * applications.
+ *
+ * BFQ uses four different reference pairs (R, T), depending on:
+ * . whether the device is rotational or non-rotational;
+ * . whether the device is slow, such as old or portable HDDs, as well as
+ *   SD cards, or fast, such as newer HDDs and SSDs.
+ *
+ * The device's speed class is dynamically (re)detected in
+ * bfq_update_peak_rate() every time the estimated peak rate is updated.
+ *
+ * In the following definitions, R_slow[0]/R_fast[0] and T_slow[0]/T_fast[0]
+ * are the reference values for a slow/fast rotational device, whereas
+ * R_slow[1]/R_fast[1] and T_slow[1]/T_fast[1] are the reference values for
+ * a slow/fast non-rotational device. Finally, device_speed_thresh are the
+ * thresholds used to switch between speed classes.
+ * Both the reference peak rates and the thresholds are measured in
+ * sectors/usec, left-shifted by BFQ_RATE_SHIFT.
  */
-#define T_rot			(msecs_to_jiffies(5500))
-#define T_nonrot		(msecs_to_jiffies(2000))
-/* Next two quantities are in sectors/usec, left-shifted by BFQ_RATE_SHIFT */
-#define R_rot			17415
-#define R_nonrot		34791
+static int R_slow[2] = {1536, 10752};
+static int R_fast[2] = {17415, 34791};
+/*
+ * To improve readability, a conversion function is used to initialize the
+ * following arrays, which entails that they can be initialized only in a
+ * function.
+ */
+static int T_slow[2];
+static int T_fast[2];
+static int device_speed_thresh[2];
 
 #define BFQ_SERVICE_TREE_INIT	((struct bfq_service_tree)		\
 				{ RB_ROOT, RB_ROOT, NULL, NULL, 0, 0 })
@@ -342,6 +372,125 @@ static void bfq_rq_pos_tree_add(struct bfq_data *bfqd, struct bfq_queue *bfqq)
 		bfqq->pos_root = NULL;
 }
 
+/*
+ * Tell whether there are active queues or groups with differentiated weights.
+ */
+static inline bool bfq_differentiated_weights(struct bfq_data *bfqd)
+{
+	BUG_ON(!bfqd->hw_tag);
+	/*
+	 * For weights to differ, at least one of the trees must contain
+	 * at least two nodes.
+	 */
+	return (!RB_EMPTY_ROOT(&bfqd->queue_weights_tree) &&
+		(bfqd->queue_weights_tree.rb_node->rb_left ||
+		 bfqd->queue_weights_tree.rb_node->rb_right)
+#ifdef CONFIG_CGROUP_BFQIO
+	       ) ||
+	       (!RB_EMPTY_ROOT(&bfqd->group_weights_tree) &&
+		(bfqd->group_weights_tree.rb_node->rb_left ||
+		 bfqd->group_weights_tree.rb_node->rb_right)
+#endif
+	       );
+}
+
+/*
+ * If the weight-counter tree passed as input contains no counter for
+ * the weight of the input entity, then add that counter; otherwise just
+ * increment the existing counter.
+ *
+ * Note that weight-counter trees contain few nodes in mostly symmetric
+ * scenarios. For example, if all queues have the same weight, then the
+ * weight-counter tree for the queues may contain at most one node.
+ * This holds even if low_latency is on, because weight-raised queues
+ * are not inserted in the tree.
+ * In most scenarios, the rate at which nodes are created/destroyed
+ * should be low too.
+ */
+static void bfq_weights_tree_add(struct bfq_data *bfqd,
+				 struct bfq_entity *entity,
+				 struct rb_root *root)
+{
+	struct rb_node **new = &(root->rb_node), *parent = NULL;
+
+	/*
+	 * Do not insert if:
+	 * - the device does not support queueing;
+	 * - the entity is already associated with a counter, which happens if:
+	 *   1) the entity is associated with a queue, 2) a request arrival
+	 *   has caused the queue to become both non-weight-raised, and hence
+	 *   change its weight, and backlogged; in this respect, each
+	 *   of the two events causes an invocation of this function,
+	 *   3) this is the invocation of this function caused by the second
+	 *   event. This second invocation is actually useless, and we handle
+	 *   this fact by exiting immediately. More efficient or clearer
+	 *   solutions might possibly be adopted.
+	 */
+	if (!bfqd->hw_tag || entity->weight_counter)
+		return;
+
+	while (*new) {
+		struct bfq_weight_counter *__counter = container_of(*new,
+						struct bfq_weight_counter,
+						weights_node);
+		parent = *new;
+
+		if (entity->weight == __counter->weight) {
+			entity->weight_counter = __counter;
+			goto inc_counter;
+		}
+		if (entity->weight < __counter->weight)
+			new = &((*new)->rb_left);
+		else
+			new = &((*new)->rb_right);
+	}
+
+	entity->weight_counter = kzalloc(sizeof(struct bfq_weight_counter),
+					 GFP_ATOMIC);
+	entity->weight_counter->weight = entity->weight;
+	rb_link_node(&entity->weight_counter->weights_node, parent, new);
+	rb_insert_color(&entity->weight_counter->weights_node, root);
+
+inc_counter:
+	entity->weight_counter->num_active++;
+}
+
+/*
+ * Decrement the weight counter associated with the entity, and, if the
+ * counter reaches 0, remove the counter from the tree.
+ * See the comments to the function bfq_weights_tree_add() for considerations
+ * about overhead.
+ */
+static void bfq_weights_tree_remove(struct bfq_data *bfqd,
+				    struct bfq_entity *entity,
+				    struct rb_root *root)
+{
+	/*
+	 * Check whether the entity is actually associated with a counter.
+	 * In fact, the device may not be considered NCQ-capable for a while,
+	 * which implies that no insertion in the weight trees is performed,
+	 * after which the device may start to be deemed NCQ-capable, and hence
+	 * this function may start to be invoked. This may cause the function
+	 * to be invoked for entities that are not associated with any counter.
+	 */
+	if (!entity->weight_counter)
+		return;
+
+	BUG_ON(RB_EMPTY_ROOT(root));
+	BUG_ON(entity->weight_counter->weight != entity->weight);
+
+	BUG_ON(!entity->weight_counter->num_active);
+	entity->weight_counter->num_active--;
+	if (entity->weight_counter->num_active > 0)
+		goto reset_entity_pointer;
+
+	rb_erase(&entity->weight_counter->weights_node, root);
+	kfree(entity->weight_counter);
+
+reset_entity_pointer:
+	entity->weight_counter = NULL;
+}
+
 static struct request *bfq_find_next_rq(struct bfq_data *bfqd,
 					struct bfq_queue *bfqq,
 					struct request *last)
@@ -366,37 +515,12 @@ static struct request *bfq_find_next_rq(struct bfq_data *bfqd,
 	return bfq_choose_req(bfqd, next, prev, blk_rq_pos(last));
 }
 
-static void bfq_del_rq_rb(struct request *rq)
-{
-	struct bfq_queue *bfqq = RQ_BFQQ(rq);
-	struct bfq_data *bfqd = bfqq->bfqd;
-	const int sync = rq_is_sync(rq);
-
-	BUG_ON(bfqq->queued[sync] == 0);
-	bfqq->queued[sync]--;
-	bfqd->queued--;
-
-	elv_rb_del(&bfqq->sort_list, rq);
-
-	if (RB_EMPTY_ROOT(&bfqq->sort_list)) {
-		if (bfq_bfqq_busy(bfqq) && bfqq != bfqd->active_queue)
-			bfq_del_bfqq_busy(bfqd, bfqq, 1);
-		/*
-		 * Remove queue from request-position tree as it is empty.
-		 */
-		if (bfqq->pos_root != NULL) {
-			rb_erase(&bfqq->pos_node, bfqq->pos_root);
-			bfqq->pos_root = NULL;
-		}
-	}
-}
-
 /* see the definition of bfq_async_charge_factor for details */
 static inline unsigned long bfq_serv_to_charge(struct request *rq,
 					       struct bfq_queue *bfqq)
 {
 	return blk_rq_sectors(rq) *
-		(1 + ((!bfq_bfqq_sync(bfqq)) * (bfqq->raising_coeff == 1) *
+		(1 + ((!bfq_bfqq_sync(bfqq)) * (bfqq->wr_coeff == 1) *
 		bfq_async_charge_factor));
 }
 
@@ -422,7 +546,7 @@ static void bfq_updated_next_req(struct bfq_data *bfqd,
 	if (next_rq == NULL)
 		return;
 
-	if (bfqq == bfqd->active_queue)
+	if (bfqq == bfqd->in_service_queue)
 		/*
 		 * In order not to break guarantees, budgets cannot be
 		 * changed after an entity has been selected.
@@ -430,21 +554,24 @@ static void bfq_updated_next_req(struct bfq_data *bfqd,
 		return;
 
 	BUG_ON(entity->tree != &st->active);
-	BUG_ON(entity == entity->sched_data->active_entity);
+	BUG_ON(entity == entity->sched_data->in_service_entity);
 
 	new_budget = max_t(unsigned long, bfqq->max_budget,
 			   bfq_serv_to_charge(next_rq, bfqq));
-	entity->budget = new_budget;
-	bfq_log_bfqq(bfqd, bfqq, "updated next rq: new budget %lu", new_budget);
-	bfq_activate_bfqq(bfqd, bfqq);
+	if (entity->budget != new_budget) {
+		entity->budget = new_budget;
+		bfq_log_bfqq(bfqd, bfqq, "updated next rq: new budget %lu",
+					 new_budget);
+		bfq_activate_bfqq(bfqd, bfqq);
+	}
 }
 
-static inline unsigned int bfq_wrais_duration(struct bfq_data *bfqd)
+static inline unsigned int bfq_wr_duration(struct bfq_data *bfqd)
 {
 	u64 dur;
 
-	if (bfqd->bfq_raising_max_time > 0)
-		return bfqd->bfq_raising_max_time;
+	if (bfqd->bfq_wr_max_time > 0)
+		return bfqd->bfq_wr_max_time;
 
 	dur = bfqd->RT_prod;
 	do_div(dur, bfqd->peak_rate);
@@ -452,26 +579,73 @@ static inline unsigned int bfq_wrais_duration(struct bfq_data *bfqd)
 	return dur;
 }
 
-static void bfq_add_rq_rb(struct request *rq)
+static inline unsigned
+bfq_bfqq_cooperations(struct bfq_queue *bfqq)
+{
+	return bfqq->cic ? bfqq->cic->cooperations : 0;
+}
+
+static inline void
+bfq_bfqq_resume_state(struct bfq_queue *bfqq, struct cfq_io_context *cic)
+{
+	if (cic->saved_idle_window)
+		bfq_mark_bfqq_idle_window(bfqq);
+	else
+		bfq_clear_bfqq_idle_window(bfqq);
+	if (cic->saved_IO_bound)
+		bfq_mark_bfqq_IO_bound(bfqq);
+	else
+		bfq_clear_bfqq_IO_bound(bfqq);
+	if (cic->wr_time_left && bfqq->bfqd->low_latency &&
+	    cic->cooperations < bfqq->bfqd->bfq_coop_thresh) {
+		/*
+		 * Start a weight raising period with the duration given by
+		 * the raising_time_left snapshot.
+		 */
+		if (bfq_bfqq_busy(bfqq))
+			bfqq->bfqd->wr_busy_queues++;
+		bfqq->wr_coeff = bfqq->bfqd->bfq_wr_coeff;
+		bfqq->wr_cur_max_time = cic->wr_time_left;
+		bfqq->last_wr_start_finish = jiffies;
+		bfqq->entity.ioprio_changed = 1;
+	}
+	/*
+	 * Clear raising_time_left to prevent bfq_bfqq_save_state() from
+	 * getting confused about the queue's need of a weight-raising
+	 * period.
+	 */
+	cic->wr_time_left = 0;
+}
+
+/*
+ * Must be called with the queue_lock held.
+ */
+static int bfqq_process_refs(struct bfq_queue *bfqq)
+{
+	int process_refs, io_refs;
+
+	io_refs = bfqq->allocated[READ] + bfqq->allocated[WRITE];
+	process_refs = atomic_read(&bfqq->ref) - io_refs - bfqq->entity.on_st;
+	BUG_ON(process_refs < 0);
+	return process_refs;
+}
+
+static void bfq_add_request(struct request *rq)
 {
 	struct bfq_queue *bfqq = RQ_BFQQ(rq);
 	struct bfq_entity *entity = &bfqq->entity;
 	struct bfq_data *bfqd = bfqq->bfqd;
-	struct request *__alias, *next_rq, *prev;
-	unsigned long old_raising_coeff = bfqq->raising_coeff;
-	int idle_for_long_time = bfqq->budget_timeout +
-		bfqd->bfq_raising_min_idle_time < jiffies;
+	struct request *next_rq, *prev;
+	unsigned long old_wr_coeff = bfqq->wr_coeff;
+	int idle_for_long_time = 0;
 
-	bfq_log_bfqq(bfqd, bfqq, "add_rq_rb %d", rq_is_sync(rq));
+	bfq_log_bfqq(bfqd, bfqq, "add_request %d", rq_is_sync(rq));
 	bfqq->queued[rq_is_sync(rq)]++;
 	bfqd->queued++;
 
-	/*
-	 * Looks a little odd, but the first insert might return an alias,
-	 * if that happens, put the alias on the dispatch list.
-	 */
-	while ((__alias = elv_rb_add(&bfqq->sort_list, rq)) != NULL)
-		bfq_dispatch_insert(bfqd->queue, __alias);
+	elv_rb_add(&bfqq->sort_list, rq);
+
+	spin_lock(&bfqd->eqm_lock);
 
 	/*
 	 * Check if this request is a better next-serve candidate.
@@ -487,84 +661,162 @@ static void bfq_add_rq_rb(struct request *rq)
 	if (prev != bfqq->next_rq)
 		bfq_rq_pos_tree_add(bfqd, bfqq);
 
+	spin_unlock(&bfqd->eqm_lock);
+
 	if (!bfq_bfqq_busy(bfqq)) {
-		int soft_rt = bfqd->bfq_raising_max_softrt_rate > 0 &&
-			bfqq->soft_rt_next_start < jiffies;
+		int soft_rt = bfqd->bfq_wr_max_softrt_rate > 0 &&
+			bfq_bfqq_cooperations(bfqq) < bfqd->bfq_coop_thresh &&
+			time_is_before_jiffies(bfqq->soft_rt_next_start);
+		idle_for_long_time = bfq_bfqq_cooperations(bfqq) <
+				     bfqd->bfq_coop_thresh &&
+			time_is_before_jiffies(
+			bfqq->budget_timeout +
+			bfqd->bfq_wr_min_idle_time);
 		entity->budget = max_t(unsigned long, bfqq->max_budget,
 				       bfq_serv_to_charge(next_rq, bfqq));
 
-		if (! bfqd->low_latency)
+		if (!bfq_bfqq_IO_bound(bfqq)) {
+			if (time_before(jiffies,
+					RQ_CIC(rq)->ttime.last_end_request +
+					bfqd->bfq_slice_idle)) {
+				bfqq->requests_within_timer++;
+				if (bfqq->requests_within_timer >=
+				    bfqd->bfq_requests_within_timer)
+					bfq_mark_bfqq_IO_bound(bfqq);
+			} else
+				bfqq->requests_within_timer = 0;
+		}
+
+		if (!bfqd->low_latency)
 			goto add_bfqq_busy;
 
+		if (bfq_bfqq_just_split(bfqq))
+			goto set_ioprio_changed;
+
 		/*
-		 * If the queue is not being boosted and has been idle
-		 * for enough time, start a weight-raising period
+		 * If the queue:
+		 * - is not being boosted,
+		 * - has been idle for enough time,
+		 * - is not a sync queue or is linked to a cfq_io_context (it is
+		 *   shared "for its nature" or it is not shared and its
+		 *   requests have not been redirected to a shared queue)
+		 * start a weight-raising period.
 		 */
-		if(old_raising_coeff == 1 && (idle_for_long_time || soft_rt)) {
-			bfqq->raising_coeff = bfqd->bfq_raising_coeff;
+		if (old_wr_coeff == 1 && (idle_for_long_time || soft_rt) &&
+		    (!bfq_bfqq_sync(bfqq) || bfqq->cic != NULL)) {
+			bfqq->wr_coeff = bfqd->bfq_wr_coeff;
 			if (idle_for_long_time)
-				bfqq->raising_cur_max_time =
-					bfq_wrais_duration(bfqd);
+				bfqq->wr_cur_max_time =
+					bfq_wr_duration(bfqd);
 			else
-				bfqq->raising_cur_max_time =
-					bfqd->bfq_raising_rt_max_time;
+				bfqq->wr_cur_max_time =
+					bfqd->bfq_wr_rt_max_time;
 			bfq_log_bfqq(bfqd, bfqq,
-				     "wrais starting at %llu msec,"
-				     "rais_max_time %u",
-				     bfqq->last_rais_start_finish,
+				     "wrais starting at %lu, rais_max_time %u",
+				     jiffies,
 				     jiffies_to_msecs(bfqq->
-					raising_cur_max_time));
-		} else if (old_raising_coeff > 1) {
+					wr_cur_max_time));
+		} else if (old_wr_coeff > 1) {
 			if (idle_for_long_time)
-				bfqq->raising_cur_max_time =
-					bfq_wrais_duration(bfqd);
-			else if (bfqq->raising_cur_max_time ==
-				 bfqd->bfq_raising_rt_max_time &&
-				 !soft_rt) {
-				bfqq->raising_coeff = 1;
+				bfqq->wr_cur_max_time =
+					bfq_wr_duration(bfqd);
+			else if (bfq_bfqq_cooperations(bfqq) >=
+					bfqd->bfq_coop_thresh ||
+				 (bfqq->wr_cur_max_time ==
+				  bfqd->bfq_wr_rt_max_time &&
+				  !soft_rt)) {
+				bfqq->wr_coeff = 1;
 				bfq_log_bfqq(bfqd, bfqq,
-					     "wrais ending at %llu msec,"
-					     "rais_max_time %u",
-					     bfqq->last_rais_start_finish,
-					     jiffies_to_msecs(bfqq->
-						raising_cur_max_time));
-				}
+					"wrais ending at %lu, rais_max_time %u",
+					jiffies,
+					jiffies_to_msecs(bfqq->
+						wr_cur_max_time));
+			} else if (time_before(
+					bfqq->last_wr_start_finish +
+					bfqq->wr_cur_max_time,
+					jiffies +
+					bfqd->bfq_wr_rt_max_time) &&
+				   soft_rt) {
+				/*
+				 *
+				 * The remaining weight-raising time is lower
+				 * than bfqd->bfq_raising_rt_max_time, which
+				 * means that the application is enjoying
+				 * weight raising either because deemed soft-
+				 * rt in the near past, or because deemed
+				 * interactive a long ago. In both cases,
+				 * resetting now the current remaining weight-
+				 * raising time for the application to the
+				 * weight-raising duration for soft rt
+				 * applications would not cause any latency
+				 * increase for the application (as the new
+				 * duration would be higher than the remaining
+				 * time).
+				 *
+				 * In addition, the application is now meeting
+				 * the requirements for being deemed soft rt.
+				 * In the end we can correctly and safely
+				 * (re)charge the weight-raising duration for
+				 * the application with the weight-raising
+				 * duration for soft rt applications.
+				 *
+				 * In particular, doing this recharge now, i.e.,
+				 * before the weight-raising period for the
+				 * application finishes, reduces the probability
+				 * of the following negative scenario:
+				 * 1) the weight of a soft rt application is
+				 *    raised at startup (as for any newly
+				 *    created application),
+				 * 2) since the application is not interactive,
+				 *    at a certain time weight-raising is
+				 *    stopped for the application,
+				 * 3) at that time the application happens to
+				 *    still have pending requests, and hence
+				 *    is destined to not have a chance to be
+				 *    deemed soft rt before these requests are
+				 *    completed (see the comments to the
+				 *    function bfq_bfqq_softrt_next_start()
+				 *    for details on soft rt detection),
+				 * 4) these pending requests experience a high
+				 *    latency because the application is not
+				 *    weight-raised while they are pending.
+				 */
+				bfqq->last_wr_start_finish = jiffies;
+				bfqq->wr_cur_max_time =
+					bfqd->bfq_wr_rt_max_time;
+			}
 		}
-		if (old_raising_coeff != bfqq->raising_coeff)
+set_ioprio_changed:
+		if (old_wr_coeff != bfqq->wr_coeff)
 			entity->ioprio_changed = 1;
 add_bfqq_busy:
+		bfqq->last_idle_bklogged = jiffies;
+		bfqq->service_from_backlogged = 0;
+		bfq_clear_bfqq_softrt_update(bfqq);
 		bfq_add_bfqq_busy(bfqd, bfqq);
-        } else {
-                if(bfqd->low_latency && old_raising_coeff == 1 &&
-			!rq_is_sync(rq) &&
-			bfqq->last_rais_start_finish +
-                        bfqd->bfq_raising_min_inter_arr_async < jiffies) {
-                        bfqq->raising_coeff = bfqd->bfq_raising_coeff;
-			bfqq->raising_cur_max_time = bfq_wrais_duration(bfqd);
+	} else {
+		if (bfqd->low_latency && old_wr_coeff == 1 && !rq_is_sync(rq) &&
+		    time_is_before_jiffies(
+				bfqq->last_wr_start_finish +
+				bfqd->bfq_wr_min_inter_arr_async)) {
+			bfqq->wr_coeff = bfqd->bfq_wr_coeff;
+			bfqq->wr_cur_max_time = bfq_wr_duration(bfqd);
 
+			bfqd->wr_busy_queues++;
 			entity->ioprio_changed = 1;
 			bfq_log_bfqq(bfqd, bfqq,
-				     "non-idle wrais starting at %llu msec,"
-				     "rais_max_time %u",
-				     bfqq->last_rais_start_finish,
-				     jiffies_to_msecs(bfqq->
-					raising_cur_max_time));
-                }
-                bfq_updated_next_req(bfqd, bfqq);
+			    "non-idle wrais starting at %lu, rais_max_time %u",
+			    jiffies,
+			    jiffies_to_msecs(bfqq->wr_cur_max_time));
+		}
+		if (prev != bfqq->next_rq)
+			bfq_updated_next_req(bfqd, bfqq);
 	}
 
-	if(bfqd->low_latency &&
-		(old_raising_coeff == 1 || bfqq->raising_coeff == 1 ||
+	if (bfqd->low_latency &&
+		(old_wr_coeff == 1 || bfqq->wr_coeff == 1 ||
 		 idle_for_long_time))
-		bfqq->last_rais_start_finish = jiffies;
-}
-
-static void bfq_reposition_rq_rb(struct bfq_queue *bfqq, struct request *rq)
-{
-	elv_rb_del(&bfqq->sort_list, rq);
-	bfqq->queued[rq_is_sync(rq)]--;
-	bfqq->bfqd->queued--;
-	bfq_add_rq_rb(rq);
+		bfqq->last_wr_start_finish = jiffies;
 }
 
 static struct request *bfq_find_rq_fmerge(struct bfq_data *bfqd,
@@ -578,7 +830,9 @@ static struct request *bfq_find_rq_fmerge(struct bfq_data *bfqd,
 	if (cic == NULL)
 		return NULL;
 
+	spin_lock(&bfqd->eqm_lock);
 	bfqq = cic_to_bfqq(cic, bfq_bio_sync(bio));
+	spin_unlock(&bfqd->eqm_lock);
 	if (bfqq != NULL) {
 		sector_t sector = bio->bi_sector + bio_sectors(bio);
 
@@ -598,11 +852,12 @@ static void bfq_activate_request(struct request_queue *q, struct request *rq)
 		(long long unsigned)bfqd->last_position);
 }
 
-static void bfq_deactivate_request(struct request_queue *q, struct request *rq)
+static inline void bfq_deactivate_request(struct request_queue *q,
+					  struct request *rq)
 {
 	struct bfq_data *bfqd = q->elevator->elevator_data;
 
-	WARN_ON(bfqd->rq_in_driver == 0);
+	BUG_ON(bfqd->rq_in_driver == 0);
 	bfqd->rq_in_driver--;
 }
 
@@ -610,17 +865,35 @@ static void bfq_remove_request(struct request *rq)
 {
 	struct bfq_queue *bfqq = RQ_BFQQ(rq);
 	struct bfq_data *bfqd = bfqq->bfqd;
+	const int sync = rq_is_sync(rq);
 
+	spin_lock(&bfqq->bfqd->eqm_lock);
 	if (bfqq->next_rq == rq) {
 		bfqq->next_rq = bfq_find_next_rq(bfqd, bfqq, rq);
 		bfq_updated_next_req(bfqd, bfqq);
 	}
 
 	list_del_init(&rq->queuelist);
-	bfq_del_rq_rb(rq);
+	BUG_ON(bfqq->queued[sync] == 0);
+	bfqq->queued[sync]--;
+	bfqd->queued--;
+	elv_rb_del(&bfqq->sort_list, rq);
+
+	if (RB_EMPTY_ROOT(&bfqq->sort_list)) {
+		if (bfq_bfqq_busy(bfqq) && bfqq != bfqd->in_service_queue)
+			bfq_del_bfqq_busy(bfqd, bfqq, 1);
+		/*
+		 * Remove queue from request-position tree as it is empty.
+		 */
+		if (bfqq->pos_root != NULL) {
+			rb_erase(&bfqq->pos_node, bfqq->pos_root);
+			bfqq->pos_root = NULL;
+		}
+	}
+	spin_unlock(&bfqq->bfqd->eqm_lock);
 
 	if (rq->cmd_flags & REQ_META) {
-		WARN_ON(bfqq->meta_pending == 0);
+		BUG_ON(bfqq->meta_pending == 0);
 		bfqq->meta_pending--;
 	}
 }
@@ -643,10 +916,33 @@ static int bfq_merge(struct request_queue *q, struct request **req,
 static void bfq_merged_request(struct request_queue *q, struct request *req,
 			       int type)
 {
-	if (type == ELEVATOR_FRONT_MERGE) {
+	if (type == ELEVATOR_FRONT_MERGE &&
+	    rb_prev(&req->rb_node) &&
+	    blk_rq_pos(req) <
+	    blk_rq_pos(container_of(rb_prev(&req->rb_node),
+				    struct request, rb_node))) {
 		struct bfq_queue *bfqq = RQ_BFQQ(req);
+		struct bfq_data *bfqd = bfqq->bfqd;
+		struct request *prev, *next_rq;
 
-		bfq_reposition_rq_rb(bfqq, req);
+		/* Reposition request in its sort_list */
+		elv_rb_del(&bfqq->sort_list, req);
+		elv_rb_add(&bfqq->sort_list, req);
+		/* Choose next request to be served for bfqq */
+		prev = bfqq->next_rq;
+		next_rq = bfq_choose_req(bfqd, bfqq->next_rq, req,
+					 bfqd->last_position);
+		BUG_ON(next_rq == NULL);
+		bfqq->next_rq = next_rq;
+		/*
+		 * If next_rq changes, update both the queue's budget to
+		 * fit the new request and the queue's position in its
+		 * rq_pos_tree.
+		 */
+		if (prev != bfqq->next_rq) {
+			bfq_updated_next_req(bfqd, bfqq);
+			bfq_rq_pos_tree_add(bfqd, bfqq);
+		}
 	}
 }
 
@@ -664,92 +960,89 @@ static void bfq_merged_requests(struct request_queue *q, struct request *rq,
 		rq_set_fifo_time(rq, rq_fifo_time(next));
 	}
 
-	if (bfqq->next_rq == next)
+	/*
+	 * eqm_lock needed to avoid that other critical sections not holding
+	 * the queue_lock read an inconsistent value from bfqq->next_rq while
+	 * traversing the rq_pos_trees
+	 */
+	if (bfqq->next_rq == next) {
+		spin_lock(&bfqq->bfqd->eqm_lock);
 		bfqq->next_rq = rq;
+		spin_unlock(&bfqq->bfqd->eqm_lock);
+	}
 
 	bfq_remove_request(next);
 }
 
-static int bfq_allow_merge(struct request_queue *q, struct request *rq,
-			   struct bio *bio)
+/* Must be called with bfqq != NULL */
+static inline void bfq_bfqq_end_wr(struct bfq_queue *bfqq)
 {
-	struct bfq_data *bfqd = q->elevator->elevator_data;
-	struct cfq_io_context *cic;
+	BUG_ON(bfqq == NULL);
+	if (bfq_bfqq_busy(bfqq))
+		bfqq->bfqd->wr_busy_queues--;
+	bfqq->wr_coeff = 1;
+	bfqq->wr_cur_max_time = 0;
+	/* Trigger a weight change on the next activation of the queue */
+	bfqq->entity.ioprio_changed = 1;
+}
+
+static void bfq_end_wr_async_queues(struct bfq_data *bfqd,
+				    struct bfq_group *bfqg)
+{
+	int i, j;
+
+	for (i = 0; i < 2; i++)
+		for (j = 0; j < IOPRIO_BE_NR; j++)
+			if (bfqg->async_bfqq[i][j] != NULL)
+				bfq_bfqq_end_wr(bfqg->async_bfqq[i][j]);
+	if (bfqg->async_idle_bfqq != NULL)
+		bfq_bfqq_end_wr(bfqg->async_idle_bfqq);
+}
+
+static void bfq_end_wr(struct bfq_data *bfqd)
+{
 	struct bfq_queue *bfqq;
 
-	/* Disallow merge of a sync bio into an async request. */
-	if (bfq_bio_sync(bio) && !rq_is_sync(rq))
-		return 0;
+	spin_lock_irq(bfqd->queue->queue_lock);
 
-	/*
-	 * Lookup the bfqq that this bio will be queued with. Allow
-	 * merge only if rq is queued there.
-	 */
-	cic = bfq_cic_lookup(bfqd, current->io_context);
-	if (cic == NULL)
-		return 0;
+	list_for_each_entry(bfqq, &bfqd->active_list, bfqq_list)
+		bfq_bfqq_end_wr(bfqq);
+	list_for_each_entry(bfqq, &bfqd->idle_list, bfqq_list)
+		bfq_bfqq_end_wr(bfqq);
+	bfq_end_wr_async(bfqd);
 
-	bfqq = cic_to_bfqq(cic, bfq_bio_sync(bio));
-	return bfqq == RQ_BFQQ(rq);
+	spin_unlock_irq(bfqd->queue->queue_lock);
 }
 
-static void __bfq_set_active_queue(struct bfq_data *bfqd,
-				   struct bfq_queue *bfqq)
+static inline sector_t bfq_io_struct_pos(void *io_struct, bool request)
 {
-	if (bfqq != NULL) {
-		bfq_mark_bfqq_must_alloc(bfqq);
-		bfq_mark_bfqq_budget_new(bfqq);
-		bfq_clear_bfqq_fifo_expire(bfqq);
-
-		bfqd->budgets_assigned = (bfqd->budgets_assigned*7 + 256) / 8;
-
-		bfq_log_bfqq(bfqd, bfqq, "set_active_queue, cur-budget = %lu",
-			     bfqq->entity.budget);
-	}
-
-	bfqd->active_queue = bfqq;
-}
-
-/*
- * Get and set a new active queue for service.
- */
-static struct bfq_queue *bfq_set_active_queue(struct bfq_data *bfqd,
-					      struct bfq_queue *bfqq)
-{
-	if (!bfqq)
-		bfqq = bfq_get_next_queue(bfqd);
+	if (request)
+		return blk_rq_pos(io_struct);
 	else
-		bfq_get_next_queue_forced(bfqd, bfqq);
-
-	__bfq_set_active_queue(bfqd, bfqq);
-	return bfqq;
+		return ((struct bio *)io_struct)->bi_sector;
 }
 
-static inline sector_t bfq_dist_from_last(struct bfq_data *bfqd,
-					  struct request *rq)
+static inline sector_t bfq_dist_from(sector_t pos1,
+				     sector_t pos2)
 {
-	if (blk_rq_pos(rq) >= bfqd->last_position)
-		return blk_rq_pos(rq) - bfqd->last_position;
+	if (pos1 >= pos2)
+		return pos1 - pos2;
 	else
-		return bfqd->last_position - blk_rq_pos(rq);
+		return pos2 - pos1;
 }
 
-/*
- * Return true if bfqq has no request pending and rq is close enough to
- * bfqd->last_position, or if rq is closer to bfqd->last_position than
- * bfqq->next_rq
- */
-static inline int bfq_rq_close(struct bfq_data *bfqd, struct request *rq)
+static inline int bfq_rq_close_to_sector(void *io_struct, bool request,
+					 sector_t sector)
 {
-	return bfq_dist_from_last(bfqd, rq) <= BFQQ_SEEK_THR;
+	return bfq_dist_from(bfq_io_struct_pos(io_struct, request), sector) <=
+	       BFQQ_SEEK_THR;
 }
 
-static struct bfq_queue *bfqq_close(struct bfq_data *bfqd)
+static struct bfq_queue *bfqq_close(struct bfq_data *bfqd, sector_t sector)
 {
 	struct rb_root *root = &bfqd->rq_pos_tree;
 	struct rb_node *parent, *node;
 	struct bfq_queue *__bfqq;
-	sector_t sector = bfqd->last_position;
 
 	if (RB_EMPTY_ROOT(root))
 		return NULL;
@@ -764,11 +1057,11 @@ static struct bfq_queue *bfqq_close(struct bfq_data *bfqd)
 
 	/*
 	 * If the exact sector wasn't found, the parent of the NULL leaf
-	 * will contain the closest sector (rq_pos_tree sorted by next_request
-	 * position).
+	 * will contain the closest sector (rq_pos_tree sorted by
+	 * next_request position).
 	 */
 	__bfqq = rb_entry(parent, struct bfq_queue, pos_node);
-	if (bfq_rq_close(bfqd, __bfqq->next_rq))
+	if (bfq_rq_close_to_sector(__bfqq->next_rq, true, sector))
 		return __bfqq;
 
 	if (blk_rq_pos(__bfqq->next_rq) < sector)
@@ -779,7 +1072,7 @@ static struct bfq_queue *bfqq_close(struct bfq_data *bfqd)
 		return NULL;
 
 	__bfqq = rb_entry(node, struct bfq_queue, pos_node);
-	if (bfq_rq_close(bfqd, __bfqq->next_rq))
+	if (bfq_rq_close_to_sector(__bfqq->next_rq, true, sector))
 		return __bfqq;
 
 	return NULL;
@@ -788,14 +1081,12 @@ static struct bfq_queue *bfqq_close(struct bfq_data *bfqd)
 /*
  * bfqd - obvious
  * cur_bfqq - passed in so that we don't decide that the current queue
- *            is closely cooperating with itself.
- *
- * We are assuming that cur_bfqq has dispatched at least one request,
- * and that bfqd->last_position reflects a position on the disk associated
- * with the I/O issued by cur_bfqq.
+ *            is closely cooperating with itself
+ * sector - used as a reference point to search for a close queue
  */
 static struct bfq_queue *bfq_close_cooperator(struct bfq_data *bfqd,
-					      struct bfq_queue *cur_bfqq)
+					      struct bfq_queue *cur_bfqq,
+					      sector_t sector)
 {
 	struct bfq_queue *bfqq;
 
@@ -815,7 +1106,7 @@ static struct bfq_queue *bfq_close_cooperator(struct bfq_data *bfqd,
 	 * working closely on the same area of the disk. In that case,
 	 * we can group them together and don't waste time idling.
 	 */
-	bfqq = bfqq_close(bfqd);
+	bfqq = bfqq_close(bfqd, sector);
 	if (bfqq == NULL || bfqq == cur_bfqq)
 		return NULL;
 
@@ -839,6 +1130,306 @@ static struct bfq_queue *bfq_close_cooperator(struct bfq_data *bfqd,
 	if (bfq_class_rt(bfqq) != bfq_class_rt(cur_bfqq))
 		return NULL;
 
+	return bfqq;
+}
+
+static struct bfq_queue *
+bfq_setup_merge(struct bfq_queue *bfqq, struct bfq_queue *new_bfqq)
+{
+	int process_refs, new_process_refs;
+	struct bfq_queue *__bfqq;
+
+	/*
+	 * If there are no process references on the new_bfqq, then it is
+	 * unsafe to follow the ->new_bfqq chain as other bfqq's in the chain
+	 * may have dropped their last reference (not just their last process
+	 * reference).
+	 */
+	if (!bfqq_process_refs(new_bfqq))
+		return NULL;
+
+	/* Avoid a circular list and skip interim queue merges. */
+	while ((__bfqq = new_bfqq->new_bfqq)) {
+		if (__bfqq == bfqq)
+			return NULL;
+		new_bfqq = __bfqq;
+	}
+
+	process_refs = bfqq_process_refs(bfqq);
+	new_process_refs = bfqq_process_refs(new_bfqq);
+	/*
+	 * If the process for the bfqq has gone away, there is no
+	 * sense in merging the queues.
+	 */
+	if (process_refs == 0 || new_process_refs == 0)
+		return NULL;
+
+	bfq_log_bfqq(bfqq->bfqd, bfqq, "scheduling merge with queue %d",
+		new_bfqq->pid);
+
+	/*
+	 * Merging is just a redirection: the requests of the process owning
+	 * one of the two queues are redirected to the other queue. The latter
+	 * queue, in its turn, is set as shared if this is the first time that
+	 * the requests of some process are redirected to it.
+	 *
+	 * We redirect bfqq to new_bfqq and not the opposite, because we
+	 * are in the context of the process owning bfqq, hence we have the
+	 * io_cq of this process. So we can immediately configure this io_cq
+	 * to redirect the requests of the process to new_bfqq.
+	 *
+	 * NOTE, even if new_bfqq coincides with the in-service queue, the
+	 * io_cq of new_bfqq is not available, because, if the in-service queue
+	 * is shared, bfqd->in_service_cic may not point to the io_cq of the
+	 * in-service queue.
+	 * Redirecting the requests of the process owning bfqq to the currently
+	 * in-service queue is in any case the best option, as we feed the
+	 * in-service queue with new requests close to the last request served
+	 * and, by doing so, hopefully increase the throughput.
+	 */
+	bfqq->new_bfqq = new_bfqq;
+	atomic_add(process_refs, &new_bfqq->ref);
+	return new_bfqq;
+}
+
+/*
+ * Attempt to schedule a merge of bfqq with the currently in-service queue
+ * or with a close queue among the scheduled queues.
+ * Return NULL if no merge was scheduled, a pointer to the shared bfq_queue
+ * structure otherwise.
+ */
+static struct bfq_queue *
+bfq_setup_cooperator(struct bfq_data *bfqd, struct bfq_queue *bfqq,
+		     void *io_struct, bool request)
+{
+	struct bfq_queue *in_service_bfqq, *new_bfqq;
+
+	if (bfqq->new_bfqq)
+		return bfqq->new_bfqq;
+
+	if (!io_struct)
+		return NULL;
+
+	in_service_bfqq = bfqd->in_service_queue;
+
+	if (in_service_bfqq == NULL || in_service_bfqq == bfqq ||
+	    !bfqd->in_service_cic)
+		goto check_scheduled;
+
+	if (bfq_class_idle(in_service_bfqq) || bfq_class_idle(bfqq))
+		goto check_scheduled;
+
+	if (bfq_class_rt(in_service_bfqq) != bfq_class_rt(bfqq))
+		goto check_scheduled;
+
+	if (in_service_bfqq->entity.parent != bfqq->entity.parent)
+		goto check_scheduled;
+
+	if (bfq_rq_close_to_sector(io_struct, request, bfqd->last_position) &&
+	    bfq_bfqq_sync(in_service_bfqq) && bfq_bfqq_sync(bfqq))
+		if ((new_bfqq = bfq_setup_merge(bfqq, in_service_bfqq)))
+			return new_bfqq; /* Merge with in-service queue */
+
+	/*
+	 * Check whether there is a cooperator among currently scheduled
+	 * queues. The only thing we need is that the bio/request is not
+	 * NULL, as we need it to establish whether a cooperator exists.
+	 */
+check_scheduled:
+	new_bfqq = bfq_close_cooperator(bfqd, bfqq,
+					bfq_io_struct_pos(io_struct, request));
+	if (new_bfqq)
+		return bfq_setup_merge(bfqq, new_bfqq);
+
+	return NULL;
+}
+
+static inline void
+bfq_bfqq_save_state(struct bfq_queue *bfqq)
+{
+	/*
+	 * If bfqq->cic == NULL, the queue is already shared or its requests
+	 * have already been redirected to a shared queue; both idle window
+	 * and weight raising state have already been saved. Do nothing.
+	 */
+	if (bfqq->cic == NULL)
+		return;
+	if (bfqq->cic->wr_time_left)
+		/*
+		 * This is the queue of a just-started process, and would
+		 * deserve weight raising: we set raising_time_left to the full
+		 * weight-raising duration to trigger weight-raising when
+		 * and if the queue is split and the first request of the
+		 * queue is enqueued.
+		 */
+		bfqq->cic->wr_time_left = bfq_wr_duration(bfqq->bfqd);
+	else if (bfqq->wr_coeff > 1) {
+		unsigned long wr_duration =
+			jiffies - bfqq->last_wr_start_finish;
+		/*
+		 * It may happen that a queue's weight raising period lasts
+		 * longer than its raising_cur_max_time, as weight raising is
+		 * handled only when a request is enqueued or dispatched (it
+		 * does not use any timer). If the weight raising period is
+		 * about to end, don't save it.
+		 */
+		if (bfqq->wr_cur_max_time <= wr_duration)
+			bfqq->cic->wr_time_left = 0;
+		else
+			bfqq->cic->wr_time_left =
+				bfqq->wr_cur_max_time - wr_duration;
+		/*
+		 * The bfq_queue is becoming shared or the requests of the
+		 * process owning the queue are being redirected to a shared
+		 * queue. Stop the weight raising period of the queue, as in
+		 * both cases it should not be owned by an interactive or
+		 * soft real-time application.
+		 */
+		bfq_bfqq_end_wr(bfqq);
+	} else
+		bfqq->cic->wr_time_left = 0;
+	bfqq->cic->saved_idle_window = bfq_bfqq_idle_window(bfqq);
+	bfqq->cic->saved_IO_bound = bfq_bfqq_IO_bound(bfqq);
+	bfqq->cic->cooperations++;
+	bfqq->cic->failed_cooperations = 0;
+}
+
+static inline void
+bfq_get_cic_reference(struct bfq_queue *bfqq)
+{
+	/*
+	 * If bfqq->cic has a non-NULL value, the cic to which it belongs
+	 * is about to begin using a shared bfq_queue.
+	 */
+	if (bfqq->cic)
+		atomic_long_inc(&bfqq->cic->ioc->refcount);
+}
+
+static void
+bfq_merge_bfqqs(struct bfq_data *bfqd, struct cfq_io_context *cic,
+		struct bfq_queue *bfqq, struct bfq_queue *new_bfqq)
+{
+	bfq_log_bfqq(bfqd, bfqq, "merging with queue %lu",
+		(long unsigned)new_bfqq->pid);
+	/* Save weight raising and idle window of the merged queues */
+	bfq_bfqq_save_state(bfqq);
+	bfq_bfqq_save_state(new_bfqq);
+	if (bfq_bfqq_IO_bound(bfqq))
+		bfq_mark_bfqq_IO_bound(new_bfqq);
+	bfq_clear_bfqq_IO_bound(bfqq);
+	/*
+	 * Grab a reference to the cic, to prevent it from being destroyed
+	 * before being possibly touched by a bfq_split_bfqq().
+	 */
+	bfq_get_cic_reference(bfqq);
+	bfq_get_cic_reference(new_bfqq);
+	/*
+	 * Merge queues (that is, let cic redirect its requests to new_bfqq)
+	 */
+	cic_set_bfqq(cic, new_bfqq, 1);
+	bfq_mark_bfqq_coop(new_bfqq);
+	/*
+	 * new_bfqq now belongs to at least two cics (it is a shared queue): set
+	 * new_bfqq->cic to NULL. bfqq either:
+	 * - does not belong to any cic any more, and hence bfqq->cic must
+	 *   be set to NULL, or
+	 * - is a queue whose owning cics have already been redirected to a
+	 *   different queue, hence the queue is destined to not belong to any
+	 *   cic soon and bfqq->cic is already NULL (therefore the next
+	 *   assignment causes no harm).
+	 */
+	new_bfqq->cic = NULL;
+	bfqq->cic = NULL;
+	bfq_put_queue(bfqq);
+}
+
+static inline void bfq_bfqq_increase_failed_cooperations(struct bfq_queue *bfqq)
+{
+	struct cfq_io_context *cic = bfqq->cic;
+	struct bfq_data *bfqd = bfqq->bfqd;
+
+	if (cic && bfq_bfqq_cooperations(bfqq) >= bfqd->bfq_coop_thresh) {
+		cic->failed_cooperations++;
+		if (cic->failed_cooperations >= bfqd->bfq_failed_cooperations)
+			cic->cooperations = 0;
+	}
+}
+
+static int bfq_allow_merge(struct request_queue *q, struct request *rq,
+			   struct bio *bio)
+{
+	struct bfq_data *bfqd = q->elevator->elevator_data;
+	struct cfq_io_context *cic;
+	struct bfq_queue *bfqq, *new_bfqq;
+	unsigned long flags;
+
+	/* Disallow merge of a sync bio into an async request. */
+	if (bfq_bio_sync(bio) && !rq_is_sync(rq))
+		return 0;
+
+	/*
+	 * Lookup the bfqq that this bio will be queued with. Allow
+	 * merge only if rq is queued there.
+	 */
+	cic = bfq_cic_lookup(bfqd, current->io_context);
+	if (cic == NULL)
+		return 0;
+
+	/*
+	 * The allow_merge_fn scheduler hook may be called with or without
+	 * the queue_lock being held. Access to the rq_pos_tree data
+	 * structures and to cic->bfqq[] is protected by the eqm_lock.
+	 */
+	spin_lock_irqsave(&bfqd->eqm_lock, flags);
+	bfqq = cic_to_bfqq(cic, bfq_bio_sync(bio));
+	/*
+	 * We take advantage of this function to perform an early merge
+	 * of the queues of possible cooperating processes.
+	 */
+	if (bfqq != NULL) {
+		new_bfqq = bfq_setup_cooperator(bfqd, bfqq, bio, false);
+		if (new_bfqq != NULL) {
+			bfq_merge_bfqqs(bfqd, cic, bfqq, new_bfqq);
+			/*
+			 * If we get here, the bio will be queued in the
+			 * shared queue, i.e., new_bfqq, so use new_bfqq
+			 * to decide whether bio and rq can be merged.
+			 */
+			bfqq = new_bfqq;
+		} else
+			bfq_bfqq_increase_failed_cooperations(bfqq);
+	}
+	spin_unlock_irqrestore(&bfqd->eqm_lock, flags);
+
+	return bfqq == RQ_BFQQ(rq);
+}
+
+static void __bfq_set_in_service_queue(struct bfq_data *bfqd,
+				       struct bfq_queue *bfqq)
+{
+	if (bfqq != NULL) {
+		bfq_mark_bfqq_must_alloc(bfqq);
+		bfq_mark_bfqq_budget_new(bfqq);
+		bfq_clear_bfqq_fifo_expire(bfqq);
+
+		bfqd->budgets_assigned = (bfqd->budgets_assigned*7 + 256) / 8;
+
+		bfq_log_bfqq(bfqd, bfqq,
+			     "set_in_service_queue, cur-budget = %lu",
+			     bfqq->entity.budget);
+	}
+
+	bfqd->in_service_queue = bfqq;
+}
+
+/*
+ * Get and set a new queue for service.
+ */
+static struct bfq_queue *bfq_set_in_service_queue(struct bfq_data *bfqd)
+{
+	struct bfq_queue *bfqq = bfq_get_next_queue(bfqd);
+
+	__bfq_set_in_service_queue(bfqd, bfqq);
 	return bfqq;
 }
 
@@ -867,43 +1458,16 @@ static inline unsigned long bfq_min_budget(struct bfq_data *bfqd)
 		return bfqd->bfq_max_budget / 32;
 }
 
-/*
- * Decides whether idling should be done for given device and
- * given active queue.
- */
-static inline bool bfq_queue_nonrot_noidle(struct bfq_data *bfqd,
-					   struct bfq_queue *active_bfqq)
-{
-	if (active_bfqq == NULL)
-		return false;
-	/*
-	 * If device is SSD it has no seek penalty, disable idling; but
-	 * do so only if:
-	 * - device does not support queuing, otherwise we still have
-	 *   a problem with sync vs async workloads;
-	 * - the queue is not weight-raised, to preserve guarantees.
-	 */
-	return (blk_queue_nonrot(bfqd->queue) && bfqd->hw_tag &&
-		active_bfqq->raising_coeff == 1);
-}
-
 static void bfq_arm_slice_timer(struct bfq_data *bfqd)
 {
-	struct bfq_queue *bfqq = bfqd->active_queue;
+	struct bfq_queue *bfqq = bfqd->in_service_queue;
 	struct cfq_io_context *cic;
 	unsigned long sl;
 
-	WARN_ON(!RB_EMPTY_ROOT(&bfqq->sort_list));
+	BUG_ON(!RB_EMPTY_ROOT(&bfqq->sort_list));
 
-	if (bfq_queue_nonrot_noidle(bfqd, bfqq))
-		return;
-
-	/* Idling is disabled, either manually or by past process history. */
-	if (bfqd->bfq_slice_idle == 0 || !bfq_bfqq_idle_window(bfqq))
-		return;
-
-	/* Tasks have exited, don't wait. */
-	cic = bfqd->active_cic;
+	/* Processes have exited, don't wait. */
+	cic = bfqd->in_service_cic;
 	if (cic == NULL || atomic_read(&cic->ioc->nr_tasks) == 0)
 		return;
 
@@ -920,11 +1484,17 @@ static void bfq_arm_slice_timer(struct bfq_data *bfqd)
 	 * BFQ_MIN_TT. This happened to help reduce latency.
 	 */
 	sl = bfqd->bfq_slice_idle;
-	if (bfq_sample_valid(bfqq->seek_samples) && BFQQ_SEEKY(bfqq) &&
-	    bfqq->entity.service > bfq_max_budget(bfqd) / 8 &&
-	    bfqq->raising_coeff == 1)
+	/*
+	 * Unless the queue is being weight-raised, grant only minimum idle
+	 * time if the queue either has been seeky for long enough or has
+	 * already proved to be constantly seeky.
+	 */
+	if (bfq_sample_valid(bfqq->seek_samples) &&
+	    ((BFQQ_SEEKY(bfqq) && bfqq->entity.service >
+				  bfq_max_budget(bfqq->bfqd) / 8) ||
+	      bfq_bfqq_constantly_seeky(bfqq)) && bfqq->wr_coeff == 1)
 		sl = min(sl, msecs_to_jiffies(BFQ_MIN_TT));
-	else if (bfqq->raising_coeff > 1)
+	else if (bfqq->wr_coeff > 1)
 		sl = sl * 3;
 	bfqd->last_idling_start = ktime_get();
 	mod_timer(&bfqd->idle_slice_timer, jiffies + sl);
@@ -933,15 +1503,15 @@ static void bfq_arm_slice_timer(struct bfq_data *bfqd)
 }
 
 /*
- * Set the maximum time for the active queue to consume its
+ * Set the maximum time for the in-service queue to consume its
  * budget. This prevents seeky processes from lowering the disk
  * throughput (always guaranteed with a time slice scheme as in CFQ).
  */
 static void bfq_set_budget_timeout(struct bfq_data *bfqd)
 {
-	struct bfq_queue *bfqq = bfqd->active_queue;
+	struct bfq_queue *bfqq = bfqd->in_service_queue;
 	unsigned int timeout_coeff;
-	if (bfqq->raising_cur_max_time == bfqd->bfq_raising_rt_max_time)
+	if (bfqq->wr_cur_max_time == bfqd->bfq_wr_rt_max_time)
 		timeout_coeff = 1;
 	else
 		timeout_coeff = bfqq->entity.weight / bfqq->entity.orig_weight;
@@ -965,8 +1535,18 @@ static void bfq_dispatch_insert(struct request_queue *q, struct request *rq)
 	struct bfq_data *bfqd = q->elevator->elevator_data;
 	struct bfq_queue *bfqq = RQ_BFQQ(rq);
 
-	bfq_remove_request(rq);
+	/*
+	 * For consistency, the next instruction should have been executed
+	 * after removing the request from the queue and dispatching it.
+	 * We execute instead this instruction before bfq_remove_request()
+	 * (and hence introduce a temporary inconsistency), for efficiency.
+	 * In fact, in a forced_dispatch, this prevents two counters related
+	 * to bfqq->dispatched to risk to be uselessly decremented if bfqq
+	 * is not in service, and then to be incremented again after
+	 * incrementing bfqq->dispatched.
+	 */
 	bfqq->dispatched++;
+	bfq_remove_request(rq);
 	elv_dispatch_sort(q, rq);
 
 	if (bfq_bfqq_sync(bfqq))
@@ -996,91 +1576,18 @@ static struct request *bfq_check_fifo(struct bfq_queue *bfqq)
 	return rq;
 }
 
-/*
- * Must be called with the queue_lock held.
- */
-static int bfqq_process_refs(struct bfq_queue *bfqq)
-{
-	int process_refs, io_refs;
-
-	io_refs = bfqq->allocated[READ] + bfqq->allocated[WRITE];
-	process_refs = atomic_read(&bfqq->ref) - io_refs - bfqq->entity.on_st;
-	BUG_ON(process_refs < 0);
-	return process_refs;
-}
-
-static void bfq_setup_merge(struct bfq_queue *bfqq, struct bfq_queue *new_bfqq)
-{
-	int process_refs, new_process_refs;
-	struct bfq_queue *__bfqq;
-
-	/*
-	 * If there are no process references on the new_bfqq, then it is
-	 * unsafe to follow the ->new_bfqq chain as other bfqq's in the chain
-	 * may have dropped their last reference (not just their last process
-	 * reference).
-	 */
-	if (!bfqq_process_refs(new_bfqq))
-		return;
-
-	/* Avoid a circular list and skip interim queue merges. */
-	while ((__bfqq = new_bfqq->new_bfqq)) {
-		if (__bfqq == bfqq)
-			return;
-		new_bfqq = __bfqq;
-	}
-
-	process_refs = bfqq_process_refs(bfqq);
-	new_process_refs = bfqq_process_refs(new_bfqq);
-	/*
-	 * If the process for the bfqq has gone away, there is no
-	 * sense in merging the queues.
-	 */
-	if (process_refs == 0 || new_process_refs == 0)
-		return;
-
-	/*
-	 * Merge in the direction of the lesser amount of work.
-	 */
-	if (new_process_refs >= process_refs) {
-		bfqq->new_bfqq = new_bfqq;
-		atomic_add(process_refs, &new_bfqq->ref);
-	} else {
-		new_bfqq->new_bfqq = bfqq;
-		atomic_add(new_process_refs, &bfqq->ref);
-	}
-	bfq_log_bfqq(bfqq->bfqd, bfqq, "scheduling merge with queue %d",
-		new_bfqq->pid);
-}
-
 static inline unsigned long bfq_bfqq_budget_left(struct bfq_queue *bfqq)
 {
 	struct bfq_entity *entity = &bfqq->entity;
 	return entity->budget - entity->service;
 }
 
+/* Must be called with eqm_lock held */
 static void __bfq_bfqq_expire(struct bfq_data *bfqd, struct bfq_queue *bfqq)
 {
-	BUG_ON(bfqq != bfqd->active_queue);
+	BUG_ON(bfqq != bfqd->in_service_queue);
 
-	__bfq_bfqd_reset_active(bfqd);
-
-	if (RB_EMPTY_ROOT(&bfqq->sort_list)) {
-		bfq_del_bfqq_busy(bfqd, bfqq, 1);
-		/*
-		 * overloading budget_timeout field to store when
-		 * the queue remains with no backlog, used by
-		 * the weight-raising mechanism
-		 */
-		bfqq->budget_timeout = jiffies ;
-	}
-	else {
-		bfq_activate_bfqq(bfqd, bfqq);
-		/*
-		 * Resort priority tree of potential close cooperators.
-		 */
-		bfq_rq_pos_tree_add(bfqd, bfqq);
-	}
+	__bfq_bfqd_reset_in_service(bfqd);
 
 	/*
 	 * If this bfqq is shared between multiple processes, check
@@ -1090,6 +1597,23 @@ static void __bfq_bfqq_expire(struct bfq_data *bfqd, struct bfq_queue *bfqq)
 	 */
 	if (bfq_bfqq_coop(bfqq) && BFQQ_SEEKY(bfqq))
 		bfq_mark_bfqq_split_coop(bfqq);
+
+	if (RB_EMPTY_ROOT(&bfqq->sort_list)) {
+		/*
+		 * Overloading budget_timeout field to store the time
+		 * at which the queue remains with no backlog; used by
+		 * the weight-raising mechanism.
+		 */
+		bfqq->budget_timeout = jiffies;
+		bfq_del_bfqq_busy(bfqd, bfqq, 1);
+	}
+	else {
+		bfq_activate_bfqq(bfqd, bfqq);
+		/*
+		 * Resort priority tree of potential close cooperators.
+		 */
+		bfq_rq_pos_tree_add(bfqd, bfqq);
+	}
 }
 
 /**
@@ -1111,14 +1635,14 @@ static void __bfq_bfqq_recalc_budget(struct bfq_data *bfqd,
 	budget = bfqq->max_budget;
 	min_budget = bfq_min_budget(bfqd);
 
-	BUG_ON(bfqq != bfqd->active_queue);
+	BUG_ON(bfqq != bfqd->in_service_queue);
 
 	bfq_log_bfqq(bfqd, bfqq, "recalc_budg: last budg %lu, budg left %lu",
 		bfqq->entity.budget, bfq_bfqq_budget_left(bfqq));
 	bfq_log_bfqq(bfqd, bfqq, "recalc_budg: last max_budg %lu, min budg %lu",
 		budget, bfq_min_budget(bfqd));
 	bfq_log_bfqq(bfqd, bfqq, "recalc_budg: sync %d, seeky %d",
-		bfq_bfqq_sync(bfqq), BFQQ_SEEKY(bfqd->active_queue));
+		bfq_bfqq_sync(bfqq), BFQQ_SEEKY(bfqd->in_service_queue));
 
 	if (bfq_bfqq_sync(bfqq)) {
 		switch (reason) {
@@ -1129,7 +1653,7 @@ static void __bfq_bfqq_recalc_budget(struct bfq_data *bfqd,
 		case BFQ_BFQQ_TOO_IDLE:
 			/*
 			 * This is the only case where we may reduce
-			 * the budget: if there is no requets of the
+			 * the budget: if there is no request of the
 			 * process still waiting for completion, then
 			 * we assume (tentatively) that the timer has
 			 * expired because the batch of requests of
@@ -1145,13 +1669,13 @@ static void __bfq_bfqq_recalc_budget(struct bfq_data *bfqd,
 			 * requests, then the process may have not yet
 			 * issued its next request just because it is
 			 * still waiting for the completion of some of
-			 * the still oustanding ones.  So in this
+			 * the still outstanding ones.  So in this
 			 * subcase we do not reduce its budget, on the
 			 * contrary we increase it to possibly boost
 			 * the throughput, as discussed in the
 			 * comments to the BUDGET_TIMEOUT case.
 			 */
-			if (bfqq->dispatched > 0) /* still oustanding reqs */
+			if (bfqq->dispatched > 0) /* still outstanding reqs */
 				budget = min(budget * 2, bfqd->bfq_max_budget);
 			else {
 				if (budget > 5 * min_budget)
@@ -1292,6 +1816,8 @@ static int bfq_update_peak_rate(struct bfq_data *bfqd, struct bfq_queue *bfqq,
 			 * new_rate = (7/8) * old_rate + (1/8) * bw
 			 */
 			do_div(bw, 8);
+			if (bw == 0)
+				return 0;
 			bfqd->peak_rate *= 7;
 			do_div(bfqd->peak_rate, 8);
 			bfqd->peak_rate += bw;
@@ -1305,11 +1831,26 @@ static int bfq_update_peak_rate(struct bfq_data *bfqd, struct bfq_queue *bfqq,
 			bfqd->peak_rate_samples++;
 
 		if (bfqd->peak_rate_samples == BFQ_PEAK_RATE_SAMPLES &&
-		    update && bfqd->bfq_user_max_budget == 0) {
-			bfqd->bfq_max_budget =
-				bfq_calc_max_budget(bfqd->peak_rate, timeout);
-			bfq_log(bfqd, "new max_budget=%lu",
-				bfqd->bfq_max_budget);
+		    update) {
+			int dev_type = blk_queue_nonrot(bfqd->queue);
+			if (bfqd->bfq_user_max_budget == 0) {
+				bfqd->bfq_max_budget =
+					bfq_calc_max_budget(bfqd->peak_rate,
+							    timeout);
+				bfq_log(bfqd, "new max_budget=%lu",
+					bfqd->bfq_max_budget);
+			}
+			if (bfqd->device_speed == BFQ_BFQD_FAST &&
+			    bfqd->peak_rate < device_speed_thresh[dev_type]) {
+				bfqd->device_speed = BFQ_BFQD_SLOW;
+				bfqd->RT_prod = R_slow[dev_type] *
+						T_slow[dev_type];
+			} else if (bfqd->device_speed == BFQ_BFQD_SLOW &&
+			    bfqd->peak_rate > device_speed_thresh[dev_type]) {
+				bfqd->device_speed = BFQ_BFQD_FAST;
+				bfqd->RT_prod = R_fast[dev_type] *
+						T_fast[dev_type];
+			}
 		}
 	}
 
@@ -1342,6 +1883,77 @@ static int bfq_update_peak_rate(struct bfq_data *bfqd, struct bfq_queue *bfqq,
 	 * process slow.
 	 */
 	return expected > (4 * bfqq->entity.budget) / 3;
+}
+
+/*
+ * To be deemed as soft real-time, an application must meet two
+ * requirements. First, the application must not require an average
+ * bandwidth higher than the approximate bandwidth required to playback or
+ * record a compressed high-definition video.
+ * The next function is invoked on the completion of the last request of a
+ * batch, to compute the next-start time instant, soft_rt_next_start, such
+ * that, if the next request of the application does not arrive before
+ * soft_rt_next_start, then the above requirement on the bandwidth is met.
+ *
+ * The second requirement is that the request pattern of the application is
+ * isochronous, i.e., that, after issuing a request or a batch of requests,
+ * the application stops issuing new requests until all its pending requests
+ * have been completed. After that, the application may issue a new batch,
+ * and so on.
+ * For this reason the next function is invoked to compute
+ * soft_rt_next_start only for applications that meet this requirement,
+ * whereas soft_rt_next_start is set to infinity for applications that do
+ * not.
+ *
+ * Unfortunately, even a greedy application may happen to behave in an
+ * isochronous way if the CPU load is high. In fact, the application may
+ * stop issuing requests while the CPUs are busy serving other processes,
+ * then restart, then stop again for a while, and so on. In addition, if
+ * the disk achieves a low enough throughput with the request pattern
+ * issued by the application (e.g., because the request pattern is random
+ * and/or the device is slow), then the application may meet the above
+ * bandwidth requirement too. To prevent such a greedy application to be
+ * deemed as soft real-time, a further rule is used in the computation of
+ * soft_rt_next_start: soft_rt_next_start must be higher than the current
+ * time plus the maximum time for which the arrival of a request is waited
+ * for when a sync queue becomes idle, namely bfqd->bfq_slice_idle.
+ * This filters out greedy applications, as the latter issue instead their
+ * next request as soon as possible after the last one has been completed
+ * (in contrast, when a batch of requests is completed, a soft real-time
+ * application spends some time processing data).
+ *
+ * Unfortunately, the last filter may easily generate false positives if
+ * only bfqd->bfq_slice_idle is used as a reference time interval and one
+ * or both the following cases occur:
+ * 1) HZ is so low that the duration of a jiffy is comparable to or higher
+ *    than bfqd->bfq_slice_idle. This happens, e.g., on slow devices with
+ *    HZ=100.
+ * 2) jiffies, instead of increasing at a constant rate, may stop increasing
+ *    for a while, then suddenly 'jump' by several units to recover the lost
+ *    increments. This seems to happen, e.g., inside virtual machines.
+ * To address this issue, we do not use as a reference time interval just
+ * bfqd->bfq_slice_idle, but bfqd->bfq_slice_idle plus a few jiffies. In
+ * particular we add the minimum number of jiffies for which the filter
+ * seems to be quite precise also in embedded systems and KVM/QEMU virtual
+ * machines.
+ */
+static inline unsigned long bfq_bfqq_softrt_next_start(struct bfq_data *bfqd,
+						       struct bfq_queue *bfqq)
+{
+	return max(bfqq->last_idle_bklogged +
+		   HZ * bfqq->service_from_backlogged /
+		   bfqd->bfq_wr_max_softrt_rate,
+		   jiffies + bfqq->bfqd->bfq_slice_idle + 4);
+}
+
+/*
+ * Return the largest-possible time instant such that, for as long as possible,
+ * the current time will be lower than this time instant according to the macro
+ * time_is_before_jiffies().
+ */
+static inline unsigned long bfq_infinity_from_now(unsigned long now)
+{
+	return now + ULONG_MAX / 2;
 }
 
 /**
@@ -1380,7 +1992,7 @@ static void bfq_bfqq_expire(struct bfq_data *bfqd,
 			    enum bfqq_expiration reason)
 {
 	int slow;
-	BUG_ON(bfqq != bfqd->active_queue);
+	BUG_ON(bfqq != bfqd->in_service_queue);
 
 	/* Update disk peak rate for autotuning and check whether the
 	 * process is slow (see bfq_update_peak_rate).
@@ -1391,7 +2003,7 @@ static void bfq_bfqq_expire(struct bfq_data *bfqd,
 	 * As above explained, 'punish' slow (i.e., seeky), timed-out
 	 * and async queues, to favor sequential sync workloads.
 	 *
-	 * Processes doing IO in the slower disk zones will tend to be
+	 * Processes doing I/O in the slower disk zones will tend to be
 	 * slow(er) even if not seeky. Hence, since the estimated peak
 	 * rate is actually an average over the disk surface, these
 	 * processes may timeout just for bad luck. To avoid punishing
@@ -1402,25 +2014,75 @@ static void bfq_bfqq_expire(struct bfq_data *bfqd,
 		     bfq_bfqq_budget_left(bfqq) >=  bfqq->entity.budget / 3))
 		bfq_bfqq_charge_full_budget(bfqq);
 
-	if (bfqd->low_latency && bfqq->raising_coeff == 1)
-		bfqq->last_rais_start_finish = jiffies;
+	bfqq->service_from_backlogged += bfqq->entity.service;
 
-	if (bfqd->low_latency && bfqd->bfq_raising_max_softrt_rate > 0) {
-	    if(reason != BFQ_BFQQ_BUDGET_TIMEOUT)
-		bfqq->soft_rt_next_start =
-			jiffies +
-			HZ * bfqq->entity.service /
-			bfqd->bfq_raising_max_softrt_rate;
-		else
-			bfqq->soft_rt_next_start = -1; /* infinity */
+	if (BFQQ_SEEKY(bfqq) && reason == BFQ_BFQQ_BUDGET_TIMEOUT &&
+	    !bfq_bfqq_constantly_seeky(bfqq)) {
+		bfq_mark_bfqq_constantly_seeky(bfqq);
+		if (!blk_queue_nonrot(bfqd->queue))
+			bfqd->const_seeky_busy_in_flight_queues++;
 	}
-	bfq_log_bfqq(bfqd, bfqq,
-		"expire (%d, slow %d, num_disp %d, idle_win %d)", reason, slow,
-		bfqq->dispatched, bfq_bfqq_idle_window(bfqq));
 
-	/* Increase, decrease or leave budget unchanged according to reason */
+	if (reason == BFQ_BFQQ_TOO_IDLE &&
+	    bfqq->entity.service <= 2 * bfqq->entity.budget / 10 )
+		bfq_clear_bfqq_IO_bound(bfqq);
+
+	if (bfqd->low_latency && bfqq->wr_coeff == 1)
+		bfqq->last_wr_start_finish = jiffies;
+
+	if (bfqd->low_latency && bfqd->bfq_wr_max_softrt_rate > 0 &&
+	    RB_EMPTY_ROOT(&bfqq->sort_list)) {
+		/*
+		 * If we get here, and there are no outstanding requests,
+		 * then the request pattern is isochronous (see the comments
+		 * to the function bfq_bfqq_softrt_next_start()). Hence we
+		 * can compute soft_rt_next_start. If, instead, the queue
+		 * still has outstanding requests, then we have to wait
+		 * for the completion of all the outstanding requests to
+		 * discover whether the request pattern is actually
+		 * isochronous.
+		 */
+		if (bfqq->dispatched == 0)
+			bfqq->soft_rt_next_start =
+				bfq_bfqq_softrt_next_start(bfqd, bfqq);
+		else {
+			/*
+			 * The application is still waiting for the
+			 * completion of one or more requests:
+			 * prevent it from possibly being incorrectly
+			 * deemed as soft real-time by setting its
+			 * soft_rt_next_start to infinity. In fact,
+			 * without this assignment, the application
+			 * would be incorrectly deemed as soft
+			 * real-time if:
+			 * 1) it issued a new request before the
+			 *    completion of all its in-flight
+			 *    requests, and
+			 * 2) at that time, its soft_rt_next_start
+			 *    happened to be in the past.
+			 */
+			bfqq->soft_rt_next_start =
+				bfq_infinity_from_now(jiffies);
+			/*
+			 * Schedule an update of soft_rt_next_start to when
+			 * the task may be discovered to be isochronous.
+			 */
+			bfq_mark_bfqq_softrt_update(bfqq);
+		}
+	}
+
+	bfq_log_bfqq(bfqd, bfqq,
+		"expire (%d, slow %d, num_disp %d, idle_win %d)", reason,
+		slow, bfqq->dispatched, bfq_bfqq_idle_window(bfqq));
+
+	/*
+	 * Increase, decrease or leave budget unchanged according to
+	 * reason.
+	 */
 	__bfq_bfqq_recalc_budget(bfqd, bfqq, reason);
+	spin_lock(&bfqd->eqm_lock);
 	__bfq_bfqq_expire(bfqd, bfqq);
+	spin_unlock(&bfqd->eqm_lock);
 }
 
 /*
@@ -1430,18 +2092,15 @@ static void bfq_bfqq_expire(struct bfq_data *bfqd,
  */
 static int bfq_bfqq_budget_timeout(struct bfq_queue *bfqq)
 {
-	if (bfq_bfqq_budget_new(bfqq))
+	if (bfq_bfqq_budget_new(bfqq) ||
+	    time_before(jiffies, bfqq->budget_timeout))
 		return 0;
-
-	if (time_before(jiffies, bfqq->budget_timeout))
-		return 0;
-
 	return 1;
 }
 
 /*
  * If we expire a queue that is waiting for the arrival of a new
- * request, we may prevent the fictitious timestamp backshifting that
+ * request, we may prevent the fictitious timestamp back-shifting that
  * allows the guarantees of the queue to be preserved (see [1] for
  * this tricky aspect). Hence we return true only if this condition
  * does not hold, or if the queue is slow enough to deserve only to be
@@ -1450,7 +2109,7 @@ static int bfq_bfqq_budget_timeout(struct bfq_queue *bfqq)
 static inline int bfq_may_expire_for_budg_timeout(struct bfq_queue *bfqq)
 {
 	bfq_log_bfqq(bfqq->bfqd, bfqq,
-		"may_budget_timeout: wr %d left %d timeout %d",
+		"may_budget_timeout: wait_request %d left %d timeout %d",
 		bfq_bfqq_wait_request(bfqq),
 			bfq_bfqq_budget_left(bfqq) >=  bfqq->entity.budget / 3,
 		bfq_bfqq_budget_timeout(bfqq));
@@ -1462,33 +2121,195 @@ static inline int bfq_may_expire_for_budg_timeout(struct bfq_queue *bfqq)
 }
 
 /*
- * Select a queue for service.  If we have a current active queue,
+ * Device idling is allowed only for the queues for which this function
+ * returns true. For this reason, the return value of this function plays a
+ * critical role for both throughput boosting and service guarantees. The
+ * return value is computed through a logical expression. In this rather
+ * long comment, we try to briefly describe all the details and motivations
+ * behind the components of this logical expression.
+ *
+ * First, the expression may be true only for sync queues. Besides, if
+ * bfqq is also being weight-raised, then the expression always evaluates
+ * to true, as device idling is instrumental for preserving low-latency
+ * guarantees (see [1]). Otherwise, the expression evaluates to true only
+ * if bfqq has a non-null idle window and at least one of the following
+ * two conditions holds. The first condition is that the device is not
+ * performing NCQ, because idling the device most certainly boosts the
+ * throughput if this condition holds and bfqq has been granted a non-null
+ * idle window. The second compound condition is made of the logical AND of
+ * two components.
+ *
+ * The first component is true only if there is no weight-raised busy
+ * queue. This guarantees that the device is not idled for a sync non-
+ * weight-raised queue when there are busy weight-raised queues. The former
+ * is then expired immediately if empty. Combined with the timestamping
+ * rules of BFQ (see [1] for details), this causes sync non-weight-raised
+ * queues to get a lower number of requests served, and hence to ask for a
+ * lower number of requests from the request pool, before the busy weight-
+ * raised queues get served again.
+ *
+ * This is beneficial for the processes associated with weight-raised
+ * queues, when the request pool is saturated (e.g., in the presence of
+ * write hogs). In fact, if the processes associated with the other queues
+ * ask for requests at a lower rate, then weight-raised processes have a
+ * higher probability to get a request from the pool immediately (or at
+ * least soon) when they need one. Hence they have a higher probability to
+ * actually get a fraction of the disk throughput proportional to their
+ * high weight. This is especially true with NCQ-capable drives, which
+ * enqueue several requests in advance and further reorder internally-
+ * queued requests.
+ *
+ * In the end, mistreating non-weight-raised queues when there are busy
+ * weight-raised queues seems to mitigate starvation problems in the
+ * presence of heavy write workloads and NCQ, and hence to guarantee a
+ * higher application and system responsiveness in these hostile scenarios.
+ *
+ * If the first component of the compound condition is instead true, i.e.,
+ * there is no weight-raised busy queue, then the second component of the
+ * compound condition takes into account service-guarantee and throughput
+ * issues related to NCQ (recall that the compound condition is evaluated
+ * only if the device is detected as supporting NCQ).
+ *
+ * As for service guarantees, allowing the drive to enqueue more than one
+ * request at a time, and hence delegating de facto final scheduling
+ * decisions to the drive's internal scheduler, causes loss of control on
+ * the actual request service order. In this respect, when the drive is
+ * allowed to enqueue more than one request at a time, the service
+ * distribution enforced by the drive's internal scheduler is likely to
+ * coincide with the desired device-throughput distribution only in the
+ * following, perfectly symmetric, scenario:
+ * 1) all active queues have the same weight,
+ * 2) all active groups at the same level in the groups tree have the same
+ *    weight,
+ * 3) all active groups at the same level in the groups tree have the same
+ *    number of children.
+ *
+ * Even in such a scenario, sequential I/O may still receive a preferential
+ * treatment, but this is not likely to be a big issue with flash-based
+ * devices, because of their non-dramatic loss of throughput with random
+ * I/O. Things do differ with HDDs, for which additional care is taken, as
+ * explained after completing the discussion for flash-based devices.
+ *
+ * Unfortunately, keeping the necessary state for evaluating exactly the
+ * above symmetry conditions would be quite complex and time-consuming.
+ * Therefore BFQ evaluates instead the following stronger sub-conditions,
+ * for which it is much easier to maintain the needed state:
+ * 1) all active queues have the same weight,
+ * 2) all active groups have the same weight,
+ * 3) all active groups have at most one active child each.
+ * In particular, the last two conditions are always true if hierarchical
+ * support and the cgroups interface are not enabled, hence no state needs
+ * to be maintained in this case.
+ *
+ * According to the above considerations, the second component of the
+ * compound condition evaluates to true if any of the above symmetry
+ * sub-condition does not hold, or the device is not flash-based. Therefore,
+ * if also the first component is true, then idling is allowed for a sync
+ * queue. These are the only sub-conditions considered if the device is
+ * flash-based, as, for such a device, it is sensible to force idling only
+ * for service-guarantee issues. In fact, as for throughput, idling
+ * NCQ-capable flash-based devices would not boost the throughput even
+ * with sequential I/O; rather it would lower the throughput in proportion
+ * to how fast the device is. In the end, (only) if all the three
+ * sub-conditions hold and the device is flash-based, the compound
+ * condition evaluates to false and therefore no idling is performed.
+ *
+ * As already said, things change with a rotational device, where idling
+ * boosts the throughput with sequential I/O (even with NCQ). Hence, for
+ * such a device the second component of the compound condition evaluates
+ * to true also if the following additional sub-condition does not hold:
+ * the queue is constantly seeky. Unfortunately, this different behavior
+ * with respect to flash-based devices causes an additional asymmetry: if
+ * some sync queues enjoy idling and some other sync queues do not, then
+ * the latter get a low share of the device throughput, simply because the
+ * former get many requests served after being set as in service, whereas
+ * the latter do not. As a consequence, to guarantee the desired throughput
+ * distribution, on HDDs the compound expression evaluates to true (and
+ * hence device idling is performed) also if the following last symmetry
+ * condition does not hold: no other queue is benefiting from idling. Also
+ * this last condition is actually replaced with a simpler-to-maintain and
+ * stronger condition: there is no busy queue which is not constantly seeky
+ * (and hence may also benefit from idling).
+ *
+ * To sum up, when all the required symmetry and throughput-boosting
+ * sub-conditions hold, the second component of the compound condition
+ * evaluates to false, and hence no idling is performed. This helps to
+ * keep the drives' internal queues full on NCQ-capable devices, and hence
+ * to boost the throughput, without causing 'almost' any loss of service
+ * guarantees. The 'almost' follows from the fact that, if the internal
+ * queue of one such device is filled while all the sub-conditions hold,
+ * but at some point in time some sub-condition stops to hold, then it may
+ * become impossible to let requests be served in the new desired order
+ * until all the requests already queued in the device have been served.
+ */
+static inline bool bfq_bfqq_must_not_expire(struct bfq_queue *bfqq)
+{
+	struct bfq_data *bfqd = bfqq->bfqd;
+#ifdef CONFIG_CGROUP_BFQIO
+#define symmetric_scenario	  (!bfqd->active_numerous_groups && \
+				   !bfq_differentiated_weights(bfqd))
+#else
+#define symmetric_scenario	  (!bfq_differentiated_weights(bfqd))
+#endif
+#define cond_for_seeky_on_ncq_hdd (bfq_bfqq_constantly_seeky(bfqq) && \
+				   bfqd->busy_in_flight_queues == \
+				   bfqd->const_seeky_busy_in_flight_queues)
+/*
+ * Condition for expiring a non-weight-raised queue (and hence not idling
+ * the device).
+ */
+#define cond_for_expiring_non_wr  (bfqd->hw_tag && \
+				   (bfqd->wr_busy_queues > 0 || \
+				    (symmetric_scenario && \
+				     (blk_queue_nonrot(bfqd->queue) || \
+				      cond_for_seeky_on_ncq_hdd))))
+
+	return bfq_bfqq_sync(bfqq) &&
+		(bfq_bfqq_IO_bound(bfqq) || bfqq->wr_coeff > 1) &&
+		(bfqq->wr_coeff > 1 ||
+		 (bfq_bfqq_idle_window(bfqq) &&
+		  !cond_for_expiring_non_wr)
+	);
+}
+
+/*
+ * If the in-service queue is empty but sync, and the function
+ * bfq_bfqq_must_not_expire returns true, then:
+ * 1) the queue must remain in service and cannot be expired, and
+ * 2) the disk must be idled to wait for the possible arrival of a new
+ *    request for the queue.
+ * See the comments to the function bfq_bfqq_must_not_expire for the reasons
+ * why performing device idling is the best choice to boost the throughput
+ * and preserve service guarantees when bfq_bfqq_must_not_expire itself
+ * returns true.
+ */
+static inline bool bfq_bfqq_must_idle(struct bfq_queue *bfqq)
+{
+	struct bfq_data *bfqd = bfqq->bfqd;
+
+	return RB_EMPTY_ROOT(&bfqq->sort_list) && bfqd->bfq_slice_idle != 0 &&
+	       bfq_bfqq_must_not_expire(bfqq);
+}
+
+/*
+ * Select a queue for service.  If we have a current in-service queue,
  * check whether to continue servicing it, or retrieve and set a new one.
  */
 static struct bfq_queue *bfq_select_queue(struct bfq_data *bfqd)
 {
-	struct bfq_queue *bfqq, *new_bfqq = NULL;
+	struct bfq_queue *bfqq;
 	struct request *next_rq;
 	enum bfqq_expiration reason = BFQ_BFQQ_BUDGET_TIMEOUT;
 
-	bfqq = bfqd->active_queue;
+	bfqq = bfqd->in_service_queue;
 	if (bfqq == NULL)
 		goto new_queue;
 
-	bfq_log_bfqq(bfqd, bfqq, "select_queue: already active queue");
+	bfq_log_bfqq(bfqd, bfqq, "select_queue: already in-service queue");
 
-	/*
-         * If another queue has a request waiting within our mean seek
-         * distance, let it run. The expire code will check for close
-         * cooperators and put the close queue at the front of the
-         * service tree. If possible, merge the expiring queue with the
-         * new bfqq.
-         */
-        new_bfqq = bfq_close_cooperator(bfqd, bfqq);
-        if (new_bfqq != NULL && bfqq->new_bfqq == NULL)
-                bfq_setup_merge(bfqq, new_bfqq);
-
-	if (bfq_may_expire_for_budg_timeout(bfqq))
+	if (bfq_may_expire_for_budg_timeout(bfqq) &&
+	    !timer_pending(&bfqd->idle_slice_timer) &&
+	    !bfq_bfqq_must_idle(bfqq))
 		goto expire;
 
 	next_rq = bfqq->next_rq;
@@ -1503,16 +2324,18 @@ static struct bfq_queue *bfq_select_queue(struct bfq_data *bfqd)
 			goto expire;
 		} else {
 			/*
-			 * The idle timer may be pending because we may not
-			 * disable disk idling even when a new request arrives
+			 * The idle timer may be pending because we may
+			 * not disable disk idling even when a new request
+			 * arrives.
 			 */
 			if (timer_pending(&bfqd->idle_slice_timer)) {
 				/*
 				 * If we get here: 1) at least a new request
 				 * has arrived but we have not disabled the
 				 * timer because the request was too small,
-				 * 2) then the block layer has unplugged the
-				 * device, causing the dispatch to be invoked.
+				 * 2) then the block layer has unplugged
+				 * the device, causing the dispatch to be
+				 * invoked.
 				 *
 				 * Since the device is unplugged, now the
 				 * requests are probably large enough to
@@ -1522,87 +2345,71 @@ static struct bfq_queue *bfq_select_queue(struct bfq_data *bfqd)
 				bfq_clear_bfqq_wait_request(bfqq);
 				del_timer(&bfqd->idle_slice_timer);
 			}
-			if (new_bfqq == NULL)
-				goto keep_queue;
-			else
-				goto expire;
+			goto keep_queue;
 		}
 	}
 
 	/*
-	 * No requests pending.  If there is no cooperator, and the active
-	 * queue still has requests in flight or is idling for a new request,
-	 * then keep it.
+	 * No requests pending.  If the in-service queue still has requests
+	 * in flight (possibly waiting for a completion) or is idling for a
+	 * new request, then keep it.
 	 */
-	if (new_bfqq == NULL && (timer_pending(&bfqd->idle_slice_timer) ||
-		(bfqq->dispatched != 0 && bfq_bfqq_idle_window(bfqq) &&
-		 !bfq_queue_nonrot_noidle(bfqd, bfqq)))) {
+	if (timer_pending(&bfqd->idle_slice_timer) ||
+	    (bfqq->dispatched != 0 && bfq_bfqq_must_not_expire(bfqq))) {
 		bfqq = NULL;
 		goto keep_queue;
-	} else if (new_bfqq != NULL && timer_pending(&bfqd->idle_slice_timer)) {
-		/*
-		 * Expiring the queue because there is a close cooperator,
-		 * cancel timer.
-		 */
-		bfq_clear_bfqq_wait_request(bfqq);
-		del_timer(&bfqd->idle_slice_timer);
 	}
 
 	reason = BFQ_BFQQ_NO_MORE_REQUESTS;
 expire:
 	bfq_bfqq_expire(bfqd, bfqq, 0, reason);
 new_queue:
-	bfqq = bfq_set_active_queue(bfqd, new_bfqq);
+	bfqq = bfq_set_in_service_queue(bfqd);
 	bfq_log(bfqd, "select_queue: new queue %d returned",
 		bfqq != NULL ? bfqq->pid : 0);
 keep_queue:
 	return bfqq;
 }
 
-static void update_raising_data(struct bfq_data *bfqd, struct bfq_queue *bfqq)
+static void bfq_update_wr_data(struct bfq_data *bfqd, struct bfq_queue *bfqq)
 {
-	if (bfqq->raising_coeff > 1) { /* queue is being boosted */
-		struct bfq_entity *entity = &bfqq->entity;
-
+	struct bfq_entity *entity = &bfqq->entity;
+	if (bfqq->wr_coeff > 1) { /* queue is being weight-raised */
 		bfq_log_bfqq(bfqd, bfqq,
-			"raising period dur %u/%u msec, "
-			"old raising coeff %u, w %d(%d)",
-			jiffies_to_msecs(jiffies -
-				bfqq->last_rais_start_finish),
-			jiffies_to_msecs(bfqq->raising_cur_max_time),
-			bfqq->raising_coeff,
+			"raising period dur %u/%u msec, old coeff %u, w %d(%d)",
+			jiffies_to_msecs(jiffies - bfqq->last_wr_start_finish),
+			jiffies_to_msecs(bfqq->wr_cur_max_time),
+			bfqq->wr_coeff,
 			bfqq->entity.weight, bfqq->entity.orig_weight);
 
-		BUG_ON(bfqq != bfqd->active_queue && entity->weight !=
-			entity->orig_weight * bfqq->raising_coeff);
-		if(entity->ioprio_changed)
-			bfq_log_bfqq(bfqd, bfqq,
-			"WARN: pending prio change");
+		BUG_ON(bfqq != bfqd->in_service_queue && entity->weight !=
+		       entity->orig_weight * bfqq->wr_coeff);
+		if (entity->ioprio_changed)
+			bfq_log_bfqq(bfqd, bfqq, "WARN: pending prio change");
+
 		/*
 		 * If too much time has elapsed from the beginning
-		 * of this weight-raising period and process is not soft
-		 * real-time, stop it
+		 * of this weight-raising period, or the queue has
+		 * exceeded the acceptable number of cooperations,
+		 * stop it.
 		 */
-		if (jiffies - bfqq->last_rais_start_finish >
-			bfqq->raising_cur_max_time) {
-			int soft_rt = bfqd->bfq_raising_max_softrt_rate > 0 &&
-				bfqq->soft_rt_next_start < jiffies;
-
-			bfqq->last_rais_start_finish = jiffies;
-			if (soft_rt)
-				bfqq->raising_cur_max_time =
-					bfqd->bfq_raising_rt_max_time;
-			else {
-				bfqq->raising_coeff = 1;
-				entity->ioprio_changed = 1;
-				__bfq_entity_update_weight_prio(
-					bfq_entity_service_tree(entity),
-					entity);
-			}
+		if (bfq_bfqq_cooperations(bfqq) >= bfqd->bfq_coop_thresh ||
+		    time_is_before_jiffies(bfqq->last_wr_start_finish +
+					   bfqq->wr_cur_max_time)) {
+			bfqq->last_wr_start_finish = jiffies;
+			bfq_log_bfqq(bfqd, bfqq,
+				     "wrais ending at %lu, rais_max_time %u",
+				     bfqq->last_wr_start_finish,
+				     jiffies_to_msecs(bfqq->wr_cur_max_time));
+			bfq_bfqq_end_wr(bfqq);
 		}
 	}
+	/* Update weight both if it must be raised and if it must be lowered */
+	if ((entity->weight > entity->orig_weight) != (bfqq->wr_coeff > 1))
+		__bfq_entity_update_weight_prio(
+			bfq_entity_service_tree(entity),
+			entity);
 }
-
 
 /*
  * Dispatch one request from bfqq, moving it to the request queue
@@ -1625,20 +2432,18 @@ static int bfq_dispatch_request(struct bfq_data *bfqd,
 
 	if (service_to_charge > bfq_bfqq_budget_left(bfqq)) {
 		/*
-		 * This may happen if the next rq is chosen
-		 * in fifo order instead of sector order.
-		 * The budget is properly dimensioned
-		 * to be always sufficient to serve the next request
-		 * only if it is chosen in sector order. The reason is
-		 * that it would be quite inefficient and little useful
-		 * to always make sure that the budget is large enough
-		 * to serve even the possible next rq in fifo order.
+		 * This may happen if the next rq is chosen in fifo order
+		 * instead of sector order. The budget is properly
+		 * dimensioned to be always sufficient to serve the next
+		 * request only if it is chosen in sector order. The reason
+		 * is that it would be quite inefficient and little useful
+		 * to always make sure that the budget is large enough to
+		 * serve even the possible next rq in fifo order.
 		 * In fact, requests are seldom served in fifo order.
 		 *
-		 * Expire the queue for budget exhaustion, and
-		 * make sure that the next act_budget is enough
-		 * to serve the next request, even if it comes
-		 * from the fifo expired path.
+		 * Expire the queue for budget exhaustion, and make sure
+		 * that the next act_budget is enough to serve the next
+		 * request, even if it comes from the fifo expired path.
 		 */
 		bfqq->next_rq = rq;
 		/*
@@ -1654,19 +2459,19 @@ static int bfq_dispatch_request(struct bfq_data *bfqd,
 	bfq_bfqq_served(bfqq, service_to_charge);
 	bfq_dispatch_insert(bfqd->queue, rq);
 
-	update_raising_data(bfqd, bfqq);
+	bfq_update_wr_data(bfqd, bfqq);
 
-	bfq_log_bfqq(bfqd, bfqq, "dispatched %u sec req (%llu), "
-			"budg left %lu",
+	bfq_log_bfqq(bfqd, bfqq,
+			"dispatched %u sec req (%llu), budg left %lu",
 			blk_rq_sectors(rq),
 			(long long unsigned)blk_rq_pos(rq),
 			bfq_bfqq_budget_left(bfqq));
 
 	dispatched++;
 
-	if (bfqd->active_cic == NULL) {
+	if (bfqd->in_service_cic == NULL) {
 		atomic_long_inc(&RQ_CIC(rq)->ioc->refcount);
-		bfqd->active_cic = RQ_CIC(rq);
+		bfqd->in_service_cic = RQ_CIC(rq);
 	}
 
 	if (bfqd->busy_queues > 1 && ((!bfq_bfqq_sync(bfqq) &&
@@ -1695,8 +2500,8 @@ static int __bfq_forced_dispatch_bfqq(struct bfq_queue *bfqq)
 }
 
 /*
- * Drain our current requests.  Used for barriers and when switching
- * io schedulers on-the-fly.
+ * Drain our current requests.
+ * Used for barriers and when switching io schedulers on-the-fly.
  */
 static int bfq_forced_dispatch(struct bfq_data *bfqd)
 {
@@ -1704,9 +2509,12 @@ static int bfq_forced_dispatch(struct bfq_data *bfqd)
 	struct bfq_service_tree *st;
 	int dispatched = 0;
 
-	bfqq = bfqd->active_queue;
-	if (bfqq != NULL)
+	bfqq = bfqd->in_service_queue;
+	if (bfqq != NULL) {
+		spin_lock(&bfqd->eqm_lock);
 		__bfq_bfqq_expire(bfqd, bfqq);
+		spin_unlock(&bfqd->eqm_lock);
+	}
 
 	/*
 	 * Loop through classes, and be careful to leave the scheduler
@@ -1740,7 +2548,8 @@ static int bfq_dispatch_requests(struct request_queue *q, int force)
 	if (unlikely(force))
 		return bfq_forced_dispatch(bfqd);
 
-	if((bfqq = bfq_select_queue(bfqd)) == NULL)
+	bfqq = bfq_select_queue(bfqd);
+	if (bfqq == NULL)
 		return 0;
 
 	max_dispatch = bfqd->bfq_quantum;
@@ -1763,11 +2572,11 @@ static int bfq_dispatch_requests(struct request_queue *q, int force)
 	bfq_clear_bfqq_wait_request(bfqq);
 	BUG_ON(timer_pending(&bfqd->idle_slice_timer));
 
-	if (! bfq_dispatch_request(bfqd, bfqq))
+	if (!bfq_dispatch_request(bfqd, bfqq))
 		return 0;
 
-	bfq_log_bfqq(bfqd, bfqq, "dispatched one request of %d"
-		     "(max_disp %d)", bfqq->pid, max_dispatch);
+	bfq_log_bfqq(bfqd, bfqq, "dispatched one request of %d (max_disp %d)",
+			bfqq->pid, max_dispatch);
 
 	return 1;
 }
@@ -1793,7 +2602,7 @@ static void bfq_put_queue(struct bfq_queue *bfqq)
 	BUG_ON(bfqq->allocated[READ] + bfqq->allocated[WRITE] != 0);
 	BUG_ON(bfqq->entity.tree != NULL);
 	BUG_ON(bfq_bfqq_busy(bfqq));
-	BUG_ON(bfqd->active_queue == bfqq);
+	BUG_ON(bfqd->in_service_queue == bfqq);
 
 	bfq_log_bfqq(bfqd, bfqq, "put_queue: %p freed", bfqq);
 
@@ -1811,19 +2620,18 @@ static void bfq_put_cooperator(struct bfq_queue *bfqq)
 	 */
 	__bfqq = bfqq->new_bfqq;
 	while (__bfqq) {
-		if (__bfqq == bfqq) {
-			WARN(1, "bfqq->new_bfqq loop detected.\n");
+		if (__bfqq == bfqq)
 			break;
-		}
 		next = __bfqq->new_bfqq;
 		bfq_put_queue(__bfqq);
 		__bfqq = next;
 	}
 }
 
+/* Coop lock is taken in __bfq_exit_single_io_context() */
 static void bfq_exit_bfqq(struct bfq_data *bfqd, struct bfq_queue *bfqq)
 {
-	if (bfqq == bfqd->active_queue) {
+	if (bfqq == bfqd->in_service_queue) {
 		__bfq_bfqq_expire(bfqd, bfqq);
 		bfq_schedule_dispatch(bfqd);
 	}
@@ -1851,7 +2659,8 @@ static void bfq_init_prio_data(struct bfq_queue *bfqq, struct io_context *ioc)
 	ioprio_class = IOPRIO_PRIO_CLASS(ioc->ioprio);
 	switch (ioprio_class) {
 	default:
-		printk(KERN_ERR "bfq: bad prio %x\n", ioprio_class);
+		dev_err(bfqq->bfqd->queue->backing_dev_info.dev,
+			"bfq: bad prio %x\n", ioprio_class);
 	case IOPRIO_CLASS_NONE:
 		/*
 		 * No prio set, inherit CPU scheduling settings.
@@ -1876,12 +2685,6 @@ static void bfq_init_prio_data(struct bfq_queue *bfqq, struct io_context *ioc)
 
 	bfqq->entity.ioprio_changed = 1;
 
-	/*
-	 * Keep track of original prio settings in case we have to temporarily
-	 * elevate the priority of this queue.
-	 */
-	bfqq->org_ioprio = bfqq->entity.new_ioprio;
-	bfqq->org_ioprio_class = bfqq->entity.new_ioprio_class;
 	bfq_clear_bfqq_prio_changed(bfqq);
 }
 
@@ -1897,6 +2700,7 @@ static void bfq_changed_ioprio(struct io_context *ioc,
 	if (unlikely(bfqd == NULL))
 		return;
 
+	spin_lock(&bfqd->eqm_lock);
 	bfqq = cic->cfqq[BLK_RW_ASYNC];
 	if (bfqq != NULL) {
 		bfqg = container_of(bfqq->entity.sched_data, struct bfq_group,
@@ -1913,6 +2717,7 @@ static void bfq_changed_ioprio(struct io_context *ioc,
 	}
 
 	bfqq = cic->cfqq[BLK_RW_SYNC];
+	spin_unlock(&bfqd->eqm_lock);
 	if (bfqq != NULL)
 		bfq_mark_bfqq_prio_changed(bfqq);
 
@@ -1935,14 +2740,19 @@ static void bfq_init_bfqq(struct bfq_data *bfqd, struct bfq_queue *bfqq,
 			bfq_mark_bfqq_idle_window(bfqq);
 		bfq_mark_bfqq_sync(bfqq);
 	}
+	bfq_mark_bfqq_IO_bound(bfqq);
 
 	/* Tentative initial value to trade off between thr and lat */
 	bfqq->max_budget = (2 * bfq_max_budget(bfqd)) / 3;
 	bfqq->pid = pid;
 
-	bfqq->raising_coeff = 1;
-	bfqq->last_rais_start_finish = 0;
-	bfqq->soft_rt_next_start = -1;
+	bfqq->wr_coeff = 1;
+	bfqq->last_wr_start_finish = 0;
+	/*
+	 * Set to the value for which bfqq will not be deemed as
+	 * soft rt when it becomes backlogged.
+	 */
+	bfqq->soft_rt_next_start = bfq_infinity_from_now(jiffies);
 }
 
 static struct bfq_queue *bfq_find_alloc_queue(struct bfq_data *bfqd,
@@ -1969,11 +2779,13 @@ retry:
 			bfqq = new_bfqq;
 			new_bfqq = NULL;
 		} else if (gfp_mask & __GFP_WAIT) {
+			spin_unlock(&bfqd->eqm_lock);
 			spin_unlock_irq(bfqd->queue->queue_lock);
 			new_bfqq = kmem_cache_alloc_node(bfq_pool,
 					gfp_mask | __GFP_ZERO,
 					bfqd->queue->node);
 			spin_lock_irq(bfqd->queue->queue_lock);
+			spin_lock(&bfqd->eqm_lock);
 			if (new_bfqq != NULL)
 				goto retry;
 		} else {
@@ -2035,7 +2847,8 @@ static struct bfq_queue *bfq_get_queue(struct bfq_data *bfqd,
 		bfqq = bfq_find_alloc_queue(bfqd, bfqg, is_sync, ioc, gfp_mask);
 
 	/*
-	 * Pin the queue now that it's allocated, scheduler exit will prune it.
+	 * Pin the queue now that it's allocated, scheduler exit will
+	 * prune it.
 	 */
 	if (!is_sync && *async_bfqq == NULL) {
 		atomic_inc(&bfqq->ref);
@@ -2053,12 +2866,13 @@ static struct bfq_queue *bfq_get_queue(struct bfq_data *bfqd,
 static void bfq_update_io_thinktime(struct bfq_data *bfqd,
 				    struct cfq_io_context *cic)
 {
-	unsigned long elapsed = jiffies - cic->last_end_request;
+	unsigned long elapsed = jiffies - cic->ttime.last_end_request;
 	unsigned long ttime = min(elapsed, 2UL * bfqd->bfq_slice_idle);
 
-	cic->ttime_samples = (7*cic->ttime_samples + 256) / 8;
-	cic->ttime_total = (7*cic->ttime_total + 256*ttime) / 8;
-	cic->ttime_mean = (cic->ttime_total + 128) / cic->ttime_samples;
+	cic->ttime.ttime_samples = (7*cic->ttime.ttime_samples + 256) / 8;
+	cic->ttime.ttime_total = (7*cic->ttime.ttime_total + 256*ttime) / 8;
+	cic->ttime.ttime_mean = (cic->ttime.ttime_total + 128) /
+				cic->ttime.ttime_samples;
 }
 
 static void bfq_update_io_seektime(struct bfq_data *bfqd,
@@ -2088,19 +2902,6 @@ static void bfq_update_io_seektime(struct bfq_data *bfqd,
 	bfqq->seek_total = (7*bfqq->seek_total + (u64)256*sdist) / 8;
 	total = bfqq->seek_total + (bfqq->seek_samples/2);
 	do_div(total, bfqq->seek_samples);
-	if (bfq_bfqq_coop(bfqq)) {
-		/*
-		 * If the mean seektime increases for a (non-seeky) shared
-		 * queue, some cooperator is likely to be idling too much.
-		 * On the contrary,  if it decreases, some cooperator has
-		 * probably waked up.
-		 *
-		 */
-		if ((sector_t)total < bfqq->seek_mean)
-			bfq_mark_bfqq_some_coop_idle(bfqq) ;
-		else if ((sector_t)total > bfqq->seek_mean)
-			bfq_clear_bfqq_some_coop_idle(bfqq) ;
-	}
 	bfqq->seek_mean = (sector_t)total;
 
 	bfq_log_bfqq(bfqd, bfqq, "dist=%llu mean=%llu", (u64)sdist,
@@ -2121,16 +2922,20 @@ static void bfq_update_idle_window(struct bfq_data *bfqd,
 	if (!bfq_bfqq_sync(bfqq) || bfq_class_idle(bfqq))
 		return;
 
+	/* Idle window just restored, statistics are meaningless. */
+	if (bfq_bfqq_just_split(bfqq))
+		return;
+
 	enable_idle = bfq_bfqq_idle_window(bfqq);
 
 	if (atomic_read(&cic->ioc->nr_tasks) == 0 ||
 	    bfqd->bfq_slice_idle == 0 ||
 		(bfqd->hw_tag && BFQQ_SEEKY(bfqq) &&
-			bfqq->raising_coeff == 1))
+			bfqq->wr_coeff == 1))
 		enable_idle = 0;
-	else if (bfq_sample_valid(cic->ttime_samples)) {
-		if (cic->ttime_mean > bfqd->bfq_slice_idle &&
-			bfqq->raising_coeff == 1)
+	else if (bfq_sample_valid(cic->ttime.ttime_samples)) {
+		if (cic->ttime.ttime_mean > bfqd->bfq_slice_idle &&
+			bfqq->wr_coeff == 1)
 			enable_idle = 0;
 		else
 			enable_idle = 1;
@@ -2158,9 +2963,17 @@ static void bfq_rq_enqueued(struct bfq_data *bfqd, struct bfq_queue *bfqq,
 
 	bfq_update_io_thinktime(bfqd, cic);
 	bfq_update_io_seektime(bfqd, bfqq, rq);
+	if (!BFQQ_SEEKY(bfqq) && bfq_bfqq_constantly_seeky(bfqq)) {
+		bfq_clear_bfqq_constantly_seeky(bfqq);
+		if (!blk_queue_nonrot(bfqd->queue)) {
+			BUG_ON(!bfqd->const_seeky_busy_in_flight_queues);
+			bfqd->const_seeky_busy_in_flight_queues--;
+		}
+	}
 	if (bfqq->entity.service > bfq_max_budget(bfqd) / 8 ||
 	    !BFQQ_SEEKY(bfqq))
 		bfq_update_idle_window(bfqd, bfqq, cic);
+	bfq_clear_bfqq_just_split(bfqq);
 
 	bfq_log_bfqq(bfqd, bfqq,
 		     "rq_enqueued: idle_window=%d (seeky %d, mean %llu)",
@@ -2169,56 +2982,103 @@ static void bfq_rq_enqueued(struct bfq_data *bfqd, struct bfq_queue *bfqq,
 
 	bfqq->last_request_pos = blk_rq_pos(rq) + blk_rq_sectors(rq);
 
-	if (bfqq == bfqd->active_queue) {
+	if (bfqq == bfqd->in_service_queue && bfq_bfqq_wait_request(bfqq)) {
+		int small_req = bfqq->queued[rq_is_sync(rq)] == 1 &&
+				blk_rq_sectors(rq) < 32;
+		int budget_timeout = bfq_bfqq_budget_timeout(bfqq);
+
 		/*
-		 * If there is just this request queued and the request
-		 * is small, just exit.
-		 * In this way, if the disk is being idled to wait for a new
-		 * request from the active queue, we avoid unplugging the
-		 * device now.
+		 * There is just this request queued: if the request
+		 * is small and the queue is not to be expired, then
+		 * just exit.
 		 *
-		 * By doing so, we spare the disk to be committed
-		 * to serve just a small request. On the contrary, we wait for
+		 * In this way, if the disk is being idled to wait for
+		 * a new request from the in-service queue, we avoid
+		 * unplugging the device and committing the disk to serve
+		 * just a small request. On the contrary, we wait for
 		 * the block layer to decide when to unplug the device:
-		 * hopefully, new requests will be merged to this
-		 * one quickly, then the device will be unplugged
-		 * and larger requests will be dispatched.
+		 * hopefully, new requests will be merged to this one
+		 * quickly, then the device will be unplugged and
+		 * larger requests will be dispatched.
 		 */
-	        if (bfqq->queued[rq_is_sync(rq)] == 1 &&
-		    blk_rq_sectors(rq) < 32) {
-		        return;
-		}
-		if (bfq_bfqq_wait_request(bfqq)) {
-			/*
-			 * If we are waiting for a request for this queue, let
-			 * it rip immediately and flag that we must not expire
-			 * this queue just now.
-			 */
-			bfq_clear_bfqq_wait_request(bfqq);
-			del_timer(&bfqd->idle_slice_timer);
-			/*
-			 * Here we can safely expire the queue, in
-			 * case of budget timeout, without wasting
-			 * guarantees
-			 */
-			if (bfq_bfqq_budget_timeout(bfqq))
-				bfq_bfqq_expire(bfqd, bfqq, 0,
-						BFQ_BFQQ_BUDGET_TIMEOUT);
-			__blk_run_queue(bfqd->queue);
-		}
+		if (small_req && !budget_timeout)
+			return;
+
+		/*
+		 * A large enough request arrived, or the queue is to
+		 * be expired: in both cases disk idling is to be
+		 * stopped, so clear wait_request flag and reset
+		 * timer.
+		 */
+		bfq_clear_bfqq_wait_request(bfqq);
+		del_timer(&bfqd->idle_slice_timer);
+
+		/*
+		 * The queue is not empty, because a new request just
+		 * arrived. Hence we can safely expire the queue, in
+		 * case of budget timeout, without risking that the
+		 * timestamps of the queue are not updated correctly.
+		 * See [1] for more details.
+		 */
+		if (budget_timeout)
+			bfq_bfqq_expire(bfqd, bfqq, 0, BFQ_BFQQ_BUDGET_TIMEOUT);
+
+		/*
+		 * Let the request rip immediately, or let a new queue be
+		 * selected if bfqq has just been expired.
+		 */
+		__blk_run_queue(bfqd->queue);
 	}
 }
 
 static void bfq_insert_request(struct request_queue *q, struct request *rq)
 {
 	struct bfq_data *bfqd = q->elevator->elevator_data;
-	struct bfq_queue *bfqq = RQ_BFQQ(rq);
+	struct bfq_queue *bfqq = RQ_BFQQ(rq), *new_bfqq;
 
 	assert_spin_locked(bfqd->queue->queue_lock);
+
+	/*
+	 * An unplug may trigger a requeue of a request from the device
+	 * driver: make sure we are in process context while trying to
+	 * merge two bfq_queues.
+	 */
+	spin_lock(&bfqd->eqm_lock);
+	if (!in_interrupt()) {
+		new_bfqq = bfq_setup_cooperator(bfqd, bfqq, rq, true);
+		if (new_bfqq != NULL) {
+			if (cic_to_bfqq(RQ_CIC(rq), 1) != bfqq)
+				new_bfqq = cic_to_bfqq(RQ_CIC(rq), 1);
+			/*
+			 * Release the request's reference to the old bfqq
+			 * and make sure one is taken to the shared queue.
+			 */
+			new_bfqq->allocated[rq_data_dir(rq)]++;
+			bfqq->allocated[rq_data_dir(rq)]--;
+			atomic_inc(&new_bfqq->ref);
+			bfq_put_queue(bfqq);
+			if (cic_to_bfqq(RQ_CIC(rq), 1) == bfqq)
+				bfq_merge_bfqqs(bfqd, RQ_CIC(rq),
+						bfqq, new_bfqq);
+			rq->elevator_private[1] = new_bfqq;
+			bfqq = new_bfqq;
+		} else
+			bfq_bfqq_increase_failed_cooperations(bfqq);
+	}
+	spin_unlock(&bfqd->eqm_lock);
+
 	bfq_init_prio_data(bfqq, RQ_CIC(rq)->ioc);
 
-	bfq_add_rq_rb(rq);
+	bfq_add_request(rq);
 
+	/*
+	 * Here a newly-created bfq_queue has already started a weight-raising
+	 * period: clear wr_time_left to prevent bfq_bfqq_save_state()
+	 * from assigning it a full weight-raising period. See the detailed
+	 * comments about this field in bfq_init_icq().
+	 */
+	if (bfqq->cic != NULL)
+		bfqq->cic->wr_time_left = 0;
 	rq_set_fifo_time(rq, jiffies + bfqd->bfq_fifo_expire[rq_is_sync(rq)]);
 	list_add_tail(&rq->queuelist, &bfqq->fifo);
 
@@ -2254,79 +3114,74 @@ static void bfq_completed_request(struct request_queue *q, struct request *rq)
 {
 	struct bfq_queue *bfqq = RQ_BFQQ(rq);
 	struct bfq_data *bfqd = bfqq->bfqd;
-	const int sync = rq_is_sync(rq);
+	bool sync = bfq_bfqq_sync(bfqq);
 
-	bfq_log_bfqq(bfqd, bfqq, "completed %u sects req (%d)",
-			blk_rq_sectors(rq), sync);
+	bfq_log_bfqq(bfqd, bfqq, "completed one req with %u sects left (%d)",
+		     blk_rq_sectors(rq), sync);
 
 	bfq_update_hw_tag(bfqd);
 
-	WARN_ON(!bfqd->rq_in_driver);
-	WARN_ON(!bfqq->dispatched);
+	BUG_ON(!bfqd->rq_in_driver);
+	BUG_ON(!bfqq->dispatched);
 	bfqd->rq_in_driver--;
 	bfqq->dispatched--;
 
-	if (bfq_bfqq_sync(bfqq))
-		bfqd->sync_flight--;
+	if (!bfqq->dispatched && !bfq_bfqq_busy(bfqq)) {
+		bfq_weights_tree_remove(bfqd, &bfqq->entity,
+					&bfqd->queue_weights_tree);
+		if (!blk_queue_nonrot(bfqd->queue)) {
+			BUG_ON(!bfqd->busy_in_flight_queues);
+			bfqd->busy_in_flight_queues--;
+			if (bfq_bfqq_constantly_seeky(bfqq)) {
+				BUG_ON(!bfqd->
+					const_seeky_busy_in_flight_queues);
+				bfqd->const_seeky_busy_in_flight_queues--;
+			}
+		}
+	}
 
-	if (sync)
-		RQ_CIC(rq)->last_end_request = jiffies;
+	if (sync) {
+		bfqd->sync_flight--;
+		RQ_CIC(rq)->ttime.last_end_request = jiffies;
+	}
 
 	/*
-	 * If this is the active queue, check if it needs to be expired,
+	 * If we are waiting to discover whether the request pattern of the
+	 * task associated with the queue is actually isochronous, and
+	 * both requisites for this condition to hold are satisfied, then
+	 * compute soft_rt_next_start (see the comments to the function
+	 * bfq_bfqq_softrt_next_start()).
+	 */
+	if (bfq_bfqq_softrt_update(bfqq) && bfqq->dispatched == 0 &&
+	    RB_EMPTY_ROOT(&bfqq->sort_list))
+		bfqq->soft_rt_next_start =
+			bfq_bfqq_softrt_next_start(bfqd, bfqq);
+
+	/*
+	 * If this is the in-service queue, check if it needs to be expired,
 	 * or if we want to idle in case it has no pending requests.
 	 */
-	if (bfqd->active_queue == bfqq) {
+	if (bfqd->in_service_queue == bfqq) {
 		if (bfq_bfqq_budget_new(bfqq))
 			bfq_set_budget_timeout(bfqd);
 
-		/* Idling is disabled also for cooperation issues:
-		 * 1) there is a close cooperator for the queue, or
-		 * 2) the queue is shared and some cooperator is likely
-		 *    to be idle (in this case, by not arming the idle timer,
-		 *    we try to slow down the queue, to prevent the zones
-		 *    of the disk accessed by the active cooperators to become
-		 *    too distant from the zone that will be accessed by the
-		 *    currently idle cooperators)
-		 */
-		if (bfq_may_expire_for_budg_timeout(bfqq))
-			bfq_bfqq_expire(bfqd, bfqq, 0, BFQ_BFQQ_BUDGET_TIMEOUT);
-		else if (sync &&
-			(bfqd->rq_in_driver == 0 ||
-				bfqq->raising_coeff > 1)
-			&& RB_EMPTY_ROOT(&bfqq->sort_list)
-			&& !bfq_close_cooperator(bfqd, bfqq)
-			&& (!bfq_bfqq_coop(bfqq) ||
-				!bfq_bfqq_some_coop_idle(bfqq)))
+		if (bfq_bfqq_must_idle(bfqq)) {
 			bfq_arm_slice_timer(bfqd);
+			goto out;
+		} else if (bfq_may_expire_for_budg_timeout(bfqq))
+			bfq_bfqq_expire(bfqd, bfqq, 0, BFQ_BFQQ_BUDGET_TIMEOUT);
+		else if (RB_EMPTY_ROOT(&bfqq->sort_list) &&
+			 (bfqq->dispatched == 0 ||
+			  !bfq_bfqq_must_not_expire(bfqq)))
+			bfq_bfqq_expire(bfqd, bfqq, 0,
+					BFQ_BFQQ_NO_MORE_REQUESTS);
 	}
 
 	if (!bfqd->rq_in_driver)
 		bfq_schedule_dispatch(bfqd);
-}
 
-/*
- * We temporarily boost lower priority queues if they are holding fs exclusive
- * resources.  They are boosted to normal prio (CLASS_BE/4).
- */
-static void bfq_prio_boost(struct bfq_queue *bfqq)
-{
-	if (has_fs_excl()) {
-		/*
-		 * Boost idle prio on transactions that would lock out other
-		 * users of the filesystem
-		 */
-		if (bfq_class_idle(bfqq))
-			bfqq->entity.new_ioprio_class = IOPRIO_CLASS_BE;
-		if (bfqq->entity.new_ioprio > IOPRIO_NORM)
-			bfqq->entity.new_ioprio = IOPRIO_NORM;
-	} else {
-		/*
-		 * Unboost the queue (if needed)
-		 */
-		bfqq->entity.new_ioprio_class = bfqq->org_ioprio_class;
-		bfqq->entity.new_ioprio = bfqq->org_ioprio;
-	}
+out:
+	return;
 }
 
 static inline int __bfq_may_queue(struct bfq_queue *bfqq)
@@ -2348,18 +3203,19 @@ static int bfq_may_queue(struct request_queue *q, int rw)
 
 	/*
 	 * Don't force setup of a queue from here, as a call to may_queue
-	 * does not necessarily imply that a request actually will be queued.
-	 * So just lookup a possibly existing queue, or return 'may queue'
-	 * if that fails.
+	 * does not necessarily imply that a request actually will be
+	 * queued. So just lookup a possibly existing queue, or return
+	 * 'may queue' if that fails.
 	 */
 	cic = bfq_cic_lookup(bfqd, tsk->io_context);
 	if (cic == NULL)
 		return ELV_MQUEUE_MAY;
 
+	spin_lock(&bfqd->eqm_lock);
 	bfqq = cic_to_bfqq(cic, rw_is_sync(rw));
+	spin_unlock(&bfqd->eqm_lock);
 	if (bfqq != NULL) {
 		bfq_init_prio_data(bfqq, cic->ioc);
-		bfq_prio_boost(bfqq);
 
 		return __bfq_may_queue(bfqq);
 	}
@@ -2391,18 +3247,6 @@ static void bfq_put_request(struct request *rq)
 	}
 }
 
-static struct bfq_queue *
-bfq_merge_bfqqs(struct bfq_data *bfqd, struct cfq_io_context *cic,
-                struct bfq_queue *bfqq)
-{
-        bfq_log_bfqq(bfqd, bfqq, "merging with queue %lu",
-		(long unsigned)bfqq->new_bfqq->pid);
-        cic_set_bfqq(cic, bfqq->new_bfqq, 1);
-        bfq_mark_bfqq_coop(bfqq->new_bfqq);
-        bfq_put_queue(bfqq);
-        return cic_to_bfqq(cic, 1);
-}
-
 /*
  * Returns NULL if a new bfqq should be allocated, or the old bfqq if this
  * was the last process referring to said bfqq.
@@ -2411,9 +3255,11 @@ static struct bfq_queue *
 bfq_split_bfqq(struct cfq_io_context *cic, struct bfq_queue *bfqq)
 {
 	bfq_log_bfqq(bfqq->bfqd, bfqq, "splitting queue");
+
+	put_io_context(cic->ioc);
+
 	if (bfqq_process_refs(bfqq) == 1) {
 		bfqq->pid = current->pid;
-		bfq_clear_bfqq_some_coop_idle(bfqq);
 		bfq_clear_bfqq_coop(bfqq);
 		bfq_clear_bfqq_split_coop(bfqq);
 		return bfqq;
@@ -2440,6 +3286,7 @@ static int bfq_set_request(struct request_queue *q, struct request *rq,
 	struct bfq_queue *bfqq;
 	struct bfq_group *bfqg;
 	unsigned long flags;
+	bool split = false;
 
 	might_sleep_if(gfp_mask & __GFP_WAIT);
 
@@ -2452,30 +3299,22 @@ static int bfq_set_request(struct request_queue *q, struct request *rq,
 
 	bfqg = bfq_cic_update_cgroup(cic);
 
+	spin_lock(&bfqd->eqm_lock);
+
 new_queue:
 	bfqq = cic_to_bfqq(cic, is_sync);
 	if (bfqq == NULL || bfqq == &bfqd->oom_bfqq) {
 		bfqq = bfq_get_queue(bfqd, bfqg, is_sync, cic->ioc, gfp_mask);
 		cic_set_bfqq(cic, bfqq, is_sync);
 	} else {
-		/*
-		 * If the queue was seeky for too long, break it apart.
-		 */
+		/* If the queue was seeky for too long, break it apart. */
 		if (bfq_bfqq_coop(bfqq) && bfq_bfqq_split_coop(bfqq)) {
 			bfq_log_bfqq(bfqd, bfqq, "breaking apart bfqq");
 			bfqq = bfq_split_bfqq(cic, bfqq);
+			split = true;
 			if (!bfqq)
 				goto new_queue;
 		}
-
-		/*
-		 * Check to see if this queue is scheduled to merge with
-		 * another closely cooperating queue. The merging of queues
-		 * happens here as it must be done in process context.
-		 * The reference on new_bfqq was taken in merge_bfqqs.
-		 */
-		if (bfqq->new_bfqq != NULL)
-			bfqq = bfq_merge_bfqqs(bfqd, cic, bfqq);
 	}
 
 	bfqq->allocated[rw]++;
@@ -2483,10 +3322,31 @@ new_queue:
 	bfq_log_bfqq(bfqd, bfqq, "set_request: bfqq %p, %d", bfqq,
 		     atomic_read(&bfqq->ref));
 
-	spin_unlock_irqrestore(q->queue_lock, flags);
-
 	rq->elevator_private[0] = cic;
 	rq->elevator_private[1] = bfqq;
+
+	/*
+	 * If a bfq_queue has only one process reference, it is owned
+	 * by only one cfq_io_context: we can set the cic field of the
+	 * bfq_queue to the address of that structure. Also, if the
+	 * queue has just been split, mark a flag so that the
+	 * information is available to the other scheduler hooks.
+	 */
+	if (bfqq_process_refs(bfqq) == 1) {
+		bfqq->cic = cic;
+		if (split) {
+			bfq_mark_bfqq_just_split(bfqq);
+			/*
+			 * If the queue has just been split from a shared
+			 * queue, restore the idle window and the possible
+			 * weight raising period.
+			 */
+			bfq_bfqq_resume_state(bfqq, cic);
+		}
+	}
+
+	spin_unlock(&bfqd->eqm_lock);
+	spin_unlock_irqrestore(q->queue_lock, flags);
 
 	return 0;
 
@@ -2512,7 +3372,7 @@ static void bfq_kick_queue(struct work_struct *work)
 }
 
 /*
- * Handler of the expiration of the timer running if the active_queue
+ * Handler of the expiration of the timer running if the in-service queue
  * is idling inside its time slice.
  */
 static void bfq_idle_slice_timer(unsigned long data)
@@ -2524,14 +3384,14 @@ static void bfq_idle_slice_timer(unsigned long data)
 
 	spin_lock_irqsave(bfqd->queue->queue_lock, flags);
 
-	bfqq = bfqd->active_queue;
+	bfqq = bfqd->in_service_queue;
 	/*
-	 * Theoretical race here: active_queue can be NULL or different
-	 * from the queue that was idling if the timer handler spins on
-	 * the queue_lock and a new request arrives for the current
-	 * queue and there is a full dispatch cycle that changes the
-	 * active_queue.  This can hardly happen, but in the worst case
-	 * we just expire a queue too early.
+	 * Theoretical race here: the in-service queue can be NULL or
+	 * different from the queue that was idling if the timer handler
+	 * spins on the queue_lock and a new request arrives for the
+	 * current queue and there is a full dispatch cycle that changes
+	 * the in-service queue.  This can hardly happen, but in the worst
+	 * case we just expire a queue too early.
 	 */
 	if (bfqq != NULL) {
 		bfq_log_bfqq(bfqd, bfqq, "slice_timer expired");
@@ -2545,9 +3405,9 @@ static void bfq_idle_slice_timer(unsigned long data)
 		else if (bfqq->queued[0] == 0 && bfqq->queued[1] == 0)
 			/*
 			 * The queue may not be empty upon timer expiration,
-			 * because we may not disable the timer when the first
-			 * request of the active queue arrives during
-			 * disk idling
+			 * because we may not disable the timer when the
+			 * first request of the in-service queue arrives
+			 * during disk idling.
 			 */
 			reason = BFQ_BFQQ_TOO_IDLE;
 		else
@@ -2588,7 +3448,7 @@ static inline void __bfq_put_async_bfqq(struct bfq_data *bfqd,
  * Release all the bfqg references to its async queues.  If we are
  * deallocating the group these queues may still contain requests, so
  * we reparent them to the root cgroup (i.e., the only one that will
- * exist for sure untill all the requests on a device are gone).
+ * exist for sure until all the requests on a device are gone).
  */
 static void bfq_put_async_queues(struct bfq_data *bfqd, struct bfq_group *bfqg)
 {
@@ -2618,7 +3478,7 @@ static void bfq_exit_queue(struct elevator_queue *e)
 		__bfq_exit_single_io_context(bfqd, cic);
 	}
 
-	BUG_ON(bfqd->active_queue != NULL);
+	BUG_ON(bfqd->in_service_queue != NULL);
 	list_for_each_entry_safe(bfqq, n, &bfqd->idle_list, bfqq_list)
 		bfq_deactivate_bfqq(bfqd, bfqq, 0);
 
@@ -2668,7 +3528,7 @@ static void *bfq_init_queue(struct request_queue *q)
 	if (i < 0)
 		return NULL;
 
-	bfqd = kmalloc_node(sizeof(*bfqd), GFP_KERNEL | __GFP_ZERO, q->node);
+	bfqd = kzalloc_node(sizeof(*bfqd), GFP_KERNEL, q->node);
 	if (bfqd == NULL)
 		return NULL;
 
@@ -2682,6 +3542,7 @@ static void *bfq_init_queue(struct request_queue *q)
 	bfq_init_bfqq(bfqd, &bfqd->oom_bfqq, 1, 0);
 	atomic_inc(&bfqd->oom_bfqq.ref);
 
+	spin_lock_init(&bfqd->eqm_lock);
 	INIT_LIST_HEAD(&bfqd->cic_list);
 
 	bfqd->queue = q;
@@ -2693,12 +3554,17 @@ static void *bfq_init_queue(struct request_queue *q)
 	}
 
 	bfqd->root_group = bfqg;
+#ifdef CONFIG_CGROUP_BFQIO
+	bfqd->active_numerous_groups = 0;
+#endif
 
 	init_timer(&bfqd->idle_slice_timer);
 	bfqd->idle_slice_timer.function = bfq_idle_slice_timer;
 	bfqd->idle_slice_timer.data = (unsigned long)bfqd;
 
 	bfqd->rq_pos_tree = RB_ROOT;
+	bfqd->queue_weights_tree = RB_ROOT;
+	bfqd->group_weights_tree = RB_ROOT;
 
 	INIT_WORK(&bfqd->unplug_work, bfq_kick_queue);
 
@@ -2720,23 +3586,35 @@ static void *bfq_init_queue(struct request_queue *q)
 	bfqd->bfq_timeout[BLK_RW_ASYNC] = bfq_timeout_async;
 	bfqd->bfq_timeout[BLK_RW_SYNC] = bfq_timeout_sync;
 
+	bfqd->bfq_coop_thresh = 2;
+	bfqd->bfq_failed_cooperations = 7000;
+	bfqd->bfq_requests_within_timer = 120;
+
 	bfqd->low_latency = true;
 
-	bfqd->bfq_raising_coeff = 20;
-	bfqd->bfq_raising_rt_max_time = msecs_to_jiffies(300);
-	bfqd->bfq_raising_max_time = 0;
-	bfqd->bfq_raising_min_idle_time = msecs_to_jiffies(2000);
-	bfqd->bfq_raising_min_inter_arr_async = msecs_to_jiffies(500);
-	bfqd->bfq_raising_max_softrt_rate = 7000;
+	bfqd->bfq_wr_coeff = 20;
+	bfqd->bfq_wr_rt_max_time = msecs_to_jiffies(300);
+	bfqd->bfq_wr_max_time = 0;
+	bfqd->bfq_wr_min_idle_time = msecs_to_jiffies(2000);
+	bfqd->bfq_wr_min_inter_arr_async = msecs_to_jiffies(500);
+	bfqd->bfq_wr_max_softrt_rate = 7000; /*
+					      * Approximate rate required
+					      * to playback or record a
+					      * high-definition compressed
+					      * video.
+					      */
+	bfqd->wr_busy_queues = 0;
+	bfqd->busy_in_flight_queues = 0;
+	bfqd->const_seeky_busy_in_flight_queues = 0;
 
-	/* Initially estimate the device's peak rate as the reference rate */
-	if (blk_queue_nonrot(bfqd->queue)) {
-		bfqd->RT_prod = R_nonrot * T_nonrot;
-		bfqd->peak_rate = R_nonrot;
-	} else {
-		bfqd->RT_prod = R_rot * T_rot;
-		bfqd->peak_rate = R_rot;
-	}
+	/*
+	 * Begin by assuming, optimistically, that the device peak rate is
+	 * equal to the highest reference rate.
+	 */
+	bfqd->RT_prod = R_fast[blk_queue_nonrot(bfqd->queue)] *
+			T_fast[blk_queue_nonrot(bfqd->queue)];
+	bfqd->peak_rate = R_fast[blk_queue_nonrot(bfqd->queue)];
+	bfqd->device_speed = BFQ_BFQD_FAST;
 
 	return bfqd;
 }
@@ -2773,10 +3651,11 @@ static ssize_t bfq_var_show(unsigned int var, char *page)
 	return sprintf(page, "%d\n", var);
 }
 
-static ssize_t bfq_var_store(unsigned long *var, const char *page, size_t count)
+static ssize_t bfq_var_store(unsigned long *var, const char *page,
+			     size_t count)
 {
 	unsigned long new_val;
-	int ret = strict_strtoul(page, 10, &new_val);
+	int ret = kstrtoul(page, 10, &new_val);
 
 	if (ret == 0)
 		*var = new_val;
@@ -2784,12 +3663,12 @@ static ssize_t bfq_var_store(unsigned long *var, const char *page, size_t count)
 	return count;
 }
 
-static ssize_t bfq_raising_max_time_show(struct elevator_queue *e, char *page)
+static ssize_t bfq_wr_max_time_show(struct elevator_queue *e, char *page)
 {
 	struct bfq_data *bfqd = e->elevator_data;
-	return sprintf(page, "%d\n", bfqd->bfq_raising_max_time > 0 ?
-		       bfqd->bfq_raising_max_time :
-		       bfq_wrais_duration(bfqd));
+	return sprintf(page, "%d\n", bfqd->bfq_wr_max_time > 0 ?
+		       jiffies_to_msecs(bfqd->bfq_wr_max_time) :
+		       jiffies_to_msecs(bfq_wr_duration(bfqd)));
 }
 
 static ssize_t bfq_weights_show(struct elevator_queue *e, char *page)
@@ -2807,8 +3686,8 @@ static ssize_t bfq_weights_show(struct elevator_queue *e, char *page)
 			bfqq->pid,
 			bfqq->entity.weight,
 			jiffies_to_msecs(jiffies -
-				bfqq->last_rais_start_finish),
-			jiffies_to_msecs(bfqq->raising_cur_max_time));
+				bfqq->last_wr_start_finish),
+			jiffies_to_msecs(bfqq->wr_cur_max_time));
 	}
 	num_char += sprintf(page + num_char, "Idle:\n");
 	list_for_each_entry(bfqq, &bfqd->idle_list, bfqq_list) {
@@ -2817,8 +3696,8 @@ static ssize_t bfq_weights_show(struct elevator_queue *e, char *page)
 				bfqq->pid,
 				bfqq->entity.weight,
 				jiffies_to_msecs(jiffies -
-					bfqq->last_rais_start_finish),
-				jiffies_to_msecs(bfqq->raising_cur_max_time));
+					bfqq->last_wr_start_finish),
+				jiffies_to_msecs(bfqq->wr_cur_max_time));
 	}
 
 	spin_unlock_irq(bfqd->queue->queue_lock);
@@ -2842,19 +3721,18 @@ SHOW_FUNCTION(bfq_back_seek_max_show, bfqd->bfq_back_max, 0);
 SHOW_FUNCTION(bfq_back_seek_penalty_show, bfqd->bfq_back_penalty, 0);
 SHOW_FUNCTION(bfq_slice_idle_show, bfqd->bfq_slice_idle, 1);
 SHOW_FUNCTION(bfq_max_budget_show, bfqd->bfq_user_max_budget, 0);
-SHOW_FUNCTION(bfq_max_budget_async_rq_show, bfqd->bfq_max_budget_async_rq, 0);
+SHOW_FUNCTION(bfq_max_budget_async_rq_show,
+	      bfqd->bfq_max_budget_async_rq, 0);
 SHOW_FUNCTION(bfq_timeout_sync_show, bfqd->bfq_timeout[BLK_RW_SYNC], 1);
 SHOW_FUNCTION(bfq_timeout_async_show, bfqd->bfq_timeout[BLK_RW_ASYNC], 1);
 SHOW_FUNCTION(bfq_low_latency_show, bfqd->low_latency, 0);
-SHOW_FUNCTION(bfq_raising_coeff_show, bfqd->bfq_raising_coeff, 0);
-SHOW_FUNCTION(bfq_raising_rt_max_time_show, bfqd->bfq_raising_rt_max_time, 1);
-SHOW_FUNCTION(bfq_raising_min_idle_time_show, bfqd->bfq_raising_min_idle_time,
+SHOW_FUNCTION(bfq_wr_coeff_show, bfqd->bfq_wr_coeff, 0);
+SHOW_FUNCTION(bfq_wr_rt_max_time_show, bfqd->bfq_wr_rt_max_time, 1);
+SHOW_FUNCTION(bfq_wr_min_idle_time_show, bfqd->bfq_wr_min_idle_time,
 	1);
-SHOW_FUNCTION(bfq_raising_min_inter_arr_async_show,
-	      bfqd->bfq_raising_min_inter_arr_async,
+SHOW_FUNCTION(bfq_wr_min_inter_arr_async_show, bfqd->bfq_wr_min_inter_arr_async,
 	      1);
-SHOW_FUNCTION(bfq_raising_max_softrt_rate_show,
-	bfqd->bfq_raising_max_softrt_rate, 0);
+SHOW_FUNCTION(bfq_wr_max_softrt_rate_show, bfqd->bfq_wr_max_softrt_rate, 0);
 #undef SHOW_FUNCTION
 
 #define STORE_FUNCTION(__FUNC, __PTR, MIN, MAX, __CONV)			\
@@ -2862,7 +3740,7 @@ static ssize_t								\
 __FUNC(struct elevator_queue *e, const char *page, size_t count)	\
 {									\
 	struct bfq_data *bfqd = e->elevator_data;			\
-	unsigned long __data;						\
+	unsigned long uninitialized_var(__data);			\
 	int ret = bfq_var_store(&__data, (page), count);		\
 	if (__data < (MIN))						\
 		__data = (MIN);						\
@@ -2887,18 +3765,16 @@ STORE_FUNCTION(bfq_max_budget_async_rq_store, &bfqd->bfq_max_budget_async_rq,
 		1, INT_MAX, 0);
 STORE_FUNCTION(bfq_timeout_async_store, &bfqd->bfq_timeout[BLK_RW_ASYNC], 0,
 		INT_MAX, 1);
-STORE_FUNCTION(bfq_raising_coeff_store, &bfqd->bfq_raising_coeff, 1,
-		INT_MAX, 0);
-STORE_FUNCTION(bfq_raising_max_time_store, &bfqd->bfq_raising_max_time, 0,
+STORE_FUNCTION(bfq_wr_coeff_store, &bfqd->bfq_wr_coeff, 1, INT_MAX, 0);
+STORE_FUNCTION(bfq_wr_max_time_store, &bfqd->bfq_wr_max_time, 0, INT_MAX, 1);
+STORE_FUNCTION(bfq_wr_rt_max_time_store, &bfqd->bfq_wr_rt_max_time, 0,
 		INT_MAX, 1);
-STORE_FUNCTION(bfq_raising_rt_max_time_store, &bfqd->bfq_raising_rt_max_time, 0,
-		INT_MAX, 1);
-STORE_FUNCTION(bfq_raising_min_idle_time_store,
-	       &bfqd->bfq_raising_min_idle_time, 0, INT_MAX, 1);
-STORE_FUNCTION(bfq_raising_min_inter_arr_async_store,
-	       &bfqd->bfq_raising_min_inter_arr_async, 0, INT_MAX, 1);
-STORE_FUNCTION(bfq_raising_max_softrt_rate_store,
-	       &bfqd->bfq_raising_max_softrt_rate, 0, INT_MAX, 0);
+STORE_FUNCTION(bfq_wr_min_idle_time_store,
+	       &bfqd->bfq_wr_min_idle_time, 0, INT_MAX, 1);
+STORE_FUNCTION(bfq_wr_min_inter_arr_async_store,
+	       &bfqd->bfq_wr_min_inter_arr_async, 0, INT_MAX, 1);
+STORE_FUNCTION(bfq_wr_max_softrt_rate_store,
+	       &bfqd->bfq_wr_max_softrt_rate, 0, INT_MAX, 0);
 #undef STORE_FUNCTION
 
 /* do nothing for the moment */
@@ -2922,7 +3798,7 @@ static ssize_t bfq_max_budget_store(struct elevator_queue *e,
 				    const char *page, size_t count)
 {
 	struct bfq_data *bfqd = e->elevator_data;
-	unsigned long __data;
+	unsigned long uninitialized_var(__data);
 	int ret = bfq_var_store(&__data, (page), count);
 
 	if (__data == 0)
@@ -2942,7 +3818,7 @@ static ssize_t bfq_timeout_sync_store(struct elevator_queue *e,
 				      const char *page, size_t count)
 {
 	struct bfq_data *bfqd = e->elevator_data;
-	unsigned long __data;
+	unsigned long uninitialized_var(__data);
 	int ret = bfq_var_store(&__data, (page), count);
 
 	if (__data < 1)
@@ -2961,11 +3837,13 @@ static ssize_t bfq_low_latency_store(struct elevator_queue *e,
 				     const char *page, size_t count)
 {
 	struct bfq_data *bfqd = e->elevator_data;
-	unsigned long __data;
+	unsigned long uninitialized_var(__data);
 	int ret = bfq_var_store(&__data, (page), count);
 
 	if (__data > 1)
 		__data = 1;
+	if (__data == 0 && bfqd->low_latency != 0)
+		bfq_end_wr(bfqd);
 	bfqd->low_latency = __data;
 
 	return ret;
@@ -2986,12 +3864,12 @@ static struct elv_fs_entry bfq_attrs[] = {
 	BFQ_ATTR(timeout_sync),
 	BFQ_ATTR(timeout_async),
 	BFQ_ATTR(low_latency),
-	BFQ_ATTR(raising_coeff),
-	BFQ_ATTR(raising_max_time),
-	BFQ_ATTR(raising_rt_max_time),
-	BFQ_ATTR(raising_min_idle_time),
-	BFQ_ATTR(raising_min_inter_arr_async),
-	BFQ_ATTR(raising_max_softrt_rate),
+	BFQ_ATTR(wr_coeff),
+	BFQ_ATTR(wr_max_time),
+	BFQ_ATTR(wr_rt_max_time),
+	BFQ_ATTR(wr_min_idle_time),
+	BFQ_ATTR(wr_min_inter_arr_async),
+	BFQ_ATTR(wr_max_softrt_rate),
 	BFQ_ATTR(weights),
 	__ATTR_NULL
 };
@@ -3035,7 +3913,25 @@ static int __init bfq_init(void)
 	if (bfq_slab_setup())
 		return -ENOMEM;
 
+	/*
+	 * Times to load large popular applications for the typical systems
+	 * installed on the reference devices (see the comments before the
+	 * definitions of the two arrays).
+	 */
+	T_slow[0] = msecs_to_jiffies(2600);
+	T_slow[1] = msecs_to_jiffies(1000);
+	T_fast[0] = msecs_to_jiffies(5500);
+	T_fast[1] = msecs_to_jiffies(2000);
+
+	/*
+	 * Thresholds that determine the switch between speed classes (see
+	 * the comments before the definition of the array).
+	 */
+	device_speed_thresh[0] = (R_fast[0] + R_slow[0]) / 2;
+	device_speed_thresh[1] = (R_fast[1] + R_slow[1]) / 2;
+
 	elv_register(&iosched_bfq);
+	pr_info("BFQ I/O-scheduler version: v7r5");
 
 	return 0;
 }
@@ -3058,5 +3954,4 @@ module_exit(bfq_exit);
 
 MODULE_AUTHOR("Fabio Checconi, Paolo Valente");
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Budget Fair Queueing IO scheduler");
 
