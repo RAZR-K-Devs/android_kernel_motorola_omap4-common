@@ -33,9 +33,6 @@
 //#define DEBUG_INTELLI_PLUG
 #undef DEBUG_INTELLI_PLUG
 
-static unsigned int int_hotplug = 0;
-module_param(int_hotplug, int, 0755);
-
 #define INTELLI_PLUG_MAJOR_VERSION	3
 #define INTELLI_PLUG_MINOR_VERSION	7
 
@@ -278,14 +275,9 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 			switch (cpu_count) {
 			case 1:
 				if (persist_count == 0) {
-				  if (int_hotplug == 0) {			
-			  	//pr_info("case 1: Hotplug locked \n");
-				break;
-			  } else if (int_hotplug == 1) {
 					//take down everyone
 					unplug_cpu(0);
 				}
-				 	}		
 #ifdef DEBUG_INTELLI_PLUG
 				pr_info("case 1: %u\n", persist_count);
 #endif
@@ -296,11 +288,7 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 				if (nr_cpus < 2) {
 					for (i = 1; i < cpu_count; i++)
 						cpu_up(i);
-				} else 
-				 if (int_hotplug == 0) {			
-				  	//pr_info("case 1: Hotplug locked \n");
-					break;
-				  } else if (int_hotplug == 1) {
+				} else {
 					unplug_cpu(1);
 				}
 #ifdef DEBUG_INTELLI_PLUG
@@ -313,12 +301,7 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 				if (nr_cpus < 3) {
 					for (i = 1; i < cpu_count; i++)
 						cpu_up(i);
-				} else 
-				 if (int_hotplug == 0) {		
-				  	//pr_info("case 1: Hotplug locked \n");
-					break;
-					}
-					else if (int_hotplug == 1) {
+				} else {
 					unplug_cpu(2);
 				}
 #ifdef DEBUG_INTELLI_PLUG
