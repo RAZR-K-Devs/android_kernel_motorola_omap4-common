@@ -568,6 +568,7 @@ int hdmi_get_current_hpd(void);
 void hdmi_get_monspecs(struct fb_monspecs *specs);
 void hdmi_inform_hpd_to_cec(int status);
 void hdmi_inform_power_on_to_cec(int status);
+void hdmi_get_audspecs(struct omap_hdmi_audio_modes *specs);
 u8 *hdmi_read_edid(struct omap_video_timings *);
 void hdmi_set_edid_state(bool val);
 
@@ -589,7 +590,7 @@ int omap_dss_ovl_set_info(struct omap_overlay *ovl,
 /*#ifdef CONFIG_PANEL_MAPPHONE_OMAP4_HDTV
 #define FB_MODE_FLAG_DVI_AUDIO   (1 << 30)
 #define FB_MODE_FLAG_DSSMGR      (1 << 29)
-int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev, int edid_only);
+//int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev, int edid_only);
 int mapphone_omapdss_hdmi_get_edid(struct omap_dss_device *dssdev, u8 *edid, int len);
 int omapdss_set_hdmi_mode(struct omap_dss_device *dssdev, int code);
 int omapdss_set_hdmi_hpd(struct omap_dss_device *dssdev, bool enable);
