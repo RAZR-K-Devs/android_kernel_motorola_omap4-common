@@ -362,7 +362,7 @@ static void screen_off_limit(bool on)
 
 	for_each_online_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
-		policy = cpufreq_cpu_get(cpu);
+		policy = cpufreq_cpu_get(0);
 
 		if (on) {
 			/* save current instance */
@@ -420,7 +420,7 @@ static void wakeup_boost(void)
 	struct ip_cpu_info *l_ip_info;
 
 	for_each_online_cpu(cpu) {
-		policy = cpufreq_cpu_get(cpu);
+		policy = cpufreq_cpu_get(0);
 		l_ip_info = &per_cpu(ip_info, 0);
 		policy->cur = l_ip_info->cur_max;
 		cpufreq_update_policy(cpu);
@@ -550,7 +550,6 @@ int __init intelli_plug_init(void)
 {
 	int rc;
 #if defined (CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
-	int cpu;
 	struct cpufreq_policy *policy;
 	struct ip_cpu_info *l_ip_info;
 #endif
@@ -570,12 +569,10 @@ int __init intelli_plug_init(void)
 	}
 
 #if defined (CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
-	for_each_online_cpu(cpu) {
-		l_ip_info = &per_cpu(ip_info, cpu);
-		policy = cpufreq_cpu_get(cpu);
-		l_ip_info->sys_max = policy->cpuinfo.max_freq;
-		l_ip_info->cur_max = policy->max;
-	}
+	l_ip_info = &per_cpu(ip_info, 0);
+	policy = cpufreq_cpu_get(0);
+	l_ip_info->sys_max = policy->cpuinfo.max_freq;
+	l_ip_info->cur_max = policy->max;
 #endif
 
 	rc = input_register_handler(&intelli_plug_input_handler);
