@@ -1,0 +1,6 @@
+81df338 OMAP: SOUND: SOC: Downgrade drivers for better compatibility
+9bf5ae6 CONFIG: Enable SLQB Memory Allocator
+21ebbf6 Init: kcofnig: add missing entry for SLQB mem allocator
+5cfbc55 CONFIG: Adapt latest changes
+a6aa094 OMAP: SOUND: VIDEO: CPU: [DRIVERS]: PATCHSET dtrail [1]
+3f53678 Intelli-Plug: Disable Touch Input Boost - causes device heating up
