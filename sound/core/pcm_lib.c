@@ -1050,7 +1050,7 @@ int snd_interval_list(struct snd_interval *i, unsigned int count, unsigned int *
 
 EXPORT_SYMBOL(snd_interval_list);
 
-int snd_interval_step(struct snd_interval *i, unsigned int min, unsigned int step)
+static int snd_interval_step(struct snd_interval *i, unsigned int min, unsigned int step)
 {
 	unsigned int n;
 	int changed = 0;
@@ -1070,7 +1070,6 @@ int snd_interval_step(struct snd_interval *i, unsigned int min, unsigned int ste
 	}
 	return changed;
 }
-EXPORT_SYMBOL(snd_interval_step);
 
 /* Info constraints helpers */
 
@@ -1723,6 +1722,9 @@ void snd_pcm_period_elapsed(struct snd_pcm_substream *substream)
 	if (PCM_RUNTIME_CHECK(substream))
 		return;
 	runtime = substream->runtime;
+
+	if (!runtime)
+		return;
 
 	if (runtime->transfer_ack_begin)
 		runtime->transfer_ack_begin(substream);

@@ -1,6 +1,7 @@
 #!/bin/bash
 set -m
 
+
 # Sync ?
 cd /media/dtrail/_home/4.4
 while true; do

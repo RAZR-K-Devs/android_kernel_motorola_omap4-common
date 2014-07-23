@@ -132,18 +132,6 @@ static int hdmi_audio_set_configuration(struct hdmi_codec_data *priv)
 	case 48000:
 		sample_freq = HDMI_AUDIO_FS_48000;
 		break;
-	case 88200:
-		sample_freq = HDMI_AUDIO_FS_88200;
-		break;
-	case 96000:
-		sample_freq = HDMI_AUDIO_FS_96000;
-		break;
-	case 176400:
-		sample_freq = HDMI_AUDIO_FS_176400;
-		break;
-	case 192000:
-		sample_freq = HDMI_AUDIO_FS_192000;
-		break;
 	default:
 		return -EINVAL;
 	}
@@ -206,6 +194,7 @@ static int hdmi_audio_set_configuration(struct hdmi_codec_data *priv)
 	core_cfg->en_parallel_aud_input = true;
 
 	/* Number of channels */
+	aud_if_cfg->db1_channel_count = priv->params.channels_nr;
 
 	switch (priv->params.channels_nr) {
 	case 2:
@@ -218,13 +207,21 @@ static int hdmi_audio_set_configuration(struct hdmi_codec_data *priv)
 		break;
 	case 6:
 		core_cfg->layout = HDMI_AUDIO_LAYOUT_8CH;
-		channel_alloc = 0xB;
+		channel_alloc = 0x13;
 		audio_format->stereo_channels = HDMI_AUDIO_STEREO_FOURCHANNELS;
 		audio_format->active_chnnls_msk = 0x3f;
 		/* Enable all of the four available serial data channels */
 		core_cfg->i2s_cfg.active_sds = HDMI_AUDIO_I2S_SD0_EN |
 				HDMI_AUDIO_I2S_SD1_EN | HDMI_AUDIO_I2S_SD2_EN |
 				HDMI_AUDIO_I2S_SD3_EN;
+		/*
+		 * Overwrite info frame with channel count = 7 (8-1) and
+		 * CA = 0x13 in order to ensure that sample_present bits
+		 * configuration matches the number of channels (2 channels
+		 * are padded with zeroes) that are sent to fullfil
+		 * multichannel certification tests.
+		 */
+		aud_if_cfg->db1_channel_count = 8;
 		break;
 	case 8:
 		core_cfg->layout = HDMI_AUDIO_LAYOUT_8CH;
@@ -249,7 +246,6 @@ static int hdmi_audio_set_configuration(struct hdmi_codec_data *priv)
 	 * info frame audio see doc CEA861-D page 74
 	 */
 	aud_if_cfg->db1_coding_type = HDMI_INFOFRAME_AUDIO_DB1CT_FROM_STREAM;
-	aud_if_cfg->db1_channel_count = priv->params.channels_nr;
 	aud_if_cfg->db2_sample_freq = HDMI_INFOFRAME_AUDIO_DB2SF_FROM_STREAM;
 	aud_if_cfg->db2_sample_size = HDMI_INFOFRAME_AUDIO_DB2SS_FROM_STREAM;
 	aud_if_cfg->db4_channel_alloc = channel_alloc;
@@ -462,9 +458,7 @@ static struct snd_soc_dai_driver hdmi_codec_dai_drv = {
 			.channels_min = 2,
 			.channels_max = 8,
 			.rates = SNDRV_PCM_RATE_32000 |
-				SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
-				SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |
-				SNDRV_PCM_RATE_176400 | SNDRV_PCM_RATE_192000,
+				SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000,
 			.formats = SNDRV_PCM_FMTBIT_S16_LE |
 				SNDRV_PCM_FMTBIT_S24_LE,
 		},
