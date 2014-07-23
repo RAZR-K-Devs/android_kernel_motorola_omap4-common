@@ -410,6 +410,7 @@ static int soc_dsp_be_dai_startup(struct snd_soc_pcm_runtime *fe, int stream)
 			dev_err(&be->dev, "BE open failed %d\n", err);
 			be->dsp[stream].users--;
 			be->dsp[stream].state = SND_SOC_DSP_STATE_CLOSE;
+			be_substream->runtime = NULL;
 			goto unwind;
 		}
 		be->dsp[stream].state = SND_SOC_DSP_STATE_OPEN;
@@ -1103,31 +1104,46 @@ disconnect:
 		if (be->dsp[stream].state != SND_SOC_DSP_STATE_START)
 				dsp_params->state = SND_SOC_DSP_LINK_STATE_FREE;
 	}
-	be_disconnect(fe, stream);
+
+//	be_disconnect(fe, stream);
 	return ret;
 }
 
-static int dsp_run_update(struct snd_soc_pcm_runtime *fe, int stream,
-	int start, int stop)
+static int dsp_run_new_update(struct snd_soc_pcm_runtime *fe, int stream)
+//static int dsp_run_update(struct snd_soc_pcm_runtime *fe, int stream,
+//	int start, int stop)
 {
-	int ret = 0;
+	int ret;
+//	int ret = 0;
 
-	fe->dsp[stream].runtime_update = SND_SOC_DSP_UPDATE_BE;
+//	fe->dsp[stream].runtime_update = SND_SOC_DSP_UPDATE_BE;
+       ret = dsp_run_update_startup(fe, stream);
+       if (ret < 0)
+               dev_err(&fe->dev, "failed to startup some BEs\n");
+        fe->dsp[stream].runtime_update = SND_SOC_DSP_UPDATE_NO;
 
-	/* startup any new BEs */
-	if (start) {
-		ret = dsp_run_update_startup(fe, stream);
-		if (ret < 0)
-			dev_err(&fe->dev, "failed to startup BEs\n");
-	}
+       return ret;
+}
+//	/* startup any new BEs */
+//	if (start) {
+//		ret = dsp_run_update_startup(fe, stream);
+//		if (ret < 0)
+//			dev_err(&fe->dev, "failed to startup BEs\n");
+//	}
 
-	/* close down old BEs */
-	if (stop) {
-		ret = dsp_run_update_shutdown(fe, stream);
-		if (ret < 0)
-			dev_err(&fe->dev, "failed to shutdown BEs\n");
-	}
-
+static int dsp_run_old_update(struct snd_soc_pcm_runtime *fe, int stream)
+{
+       int ret;
+//	/* close down old BEs */
+//	if (stop) {
+//		ret = dsp_run_update_shutdown(fe, stream);
+//		if (ret < 0)
+//			dev_err(&fe->dev, "failed to shutdown BEs\n");
+//	}
+       fe->dsp[stream].runtime_update = SND_SOC_DSP_UPDATE_BE;
+       ret = dsp_run_update_shutdown(fe, stream);
+       if (ret < 0)
+               dev_err(&fe->dev, "failed to shutdown some BEs\n");
 	fe->dsp[stream].runtime_update = SND_SOC_DSP_UPDATE_NO;
 
 	return ret;
@@ -1167,44 +1183,66 @@ int soc_dsp_runtime_update(struct snd_soc_dapm_widget *widget)
 		if (!fe->cpu_dai->driver->playback.channels_min)
 			goto capture;
 
-		/* update any playback paths */
+               /* update new playback paths */
+//		/* update any playback paths */
 		start = dsp_add_new_paths(fe, SNDRV_PCM_STREAM_PLAYBACK, 1);
+               if (start) {
+                       dsp_run_new_update(fe, SNDRV_PCM_STREAM_PLAYBACK);
+                       fe_clear_pending(fe, SNDRV_PCM_STREAM_PLAYBACK);
+               }
+
+               /* update old playback paths */
 		stop = dsp_prune_old_paths(fe, SNDRV_PCM_STREAM_PLAYBACK, 1);
-		if (!(start || stop))
-			goto capture;
-
-		/* run PCM ops on new/old playback paths */
-		ret = dsp_run_update(fe, SNDRV_PCM_STREAM_PLAYBACK, start, stop);
-		if (ret < 0) {
-			dev_err(&fe->dev, "failed to update playback FE stream %s\n",
-					fe->dai_link->stream_name);
+               if (stop) {
+                       dsp_run_old_update(fe, SNDRV_PCM_STREAM_PLAYBACK);
+                       fe_clear_pending(fe, SNDRV_PCM_STREAM_PLAYBACK);
+                       be_disconnect(fe, SNDRV_PCM_STREAM_PLAYBACK);
+//		if (!(start || stop))
+//			goto capture;
+//
+//		/* run PCM ops on new/old playback paths */
+//		ret = dsp_run_update(fe, SNDRV_PCM_STREAM_PLAYBACK, start, stop);
+//		if (ret < 0) {
+//			dev_err(&fe->dev, "failed to update playback FE stream %s\n",
+//					fe->dai_link->stream_name);
 		}
-
-		/* free old playback links */
-		be_disconnect(fe, SNDRV_PCM_STREAM_PLAYBACK);
-		fe_clear_pending(fe, SNDRV_PCM_STREAM_PLAYBACK);
-
+//
+//		/* free old playback links */
+//		be_disconnect(fe, SNDRV_PCM_STREAM_PLAYBACK);
+//		fe_clear_pending(fe, SNDRV_PCM_STREAM_PLAYBACK);
+//
 capture:
 		/* skip if FE doesn't have capture capability */
 		if (!fe->cpu_dai->driver->capture.channels_min)
 			continue;
 
-		/* update any capture paths */
+               /* update new capture paths */
+//		/* update any capture paths */
 		start = dsp_add_new_paths(fe, SNDRV_PCM_STREAM_CAPTURE, 1);
+               if (start) {
+                       dsp_run_new_update(fe, SNDRV_PCM_STREAM_CAPTURE);
+                       fe_clear_pending(fe, SNDRV_PCM_STREAM_CAPTURE);
+               }
+
+               /* update old capture paths */
 		stop = dsp_prune_old_paths(fe, SNDRV_PCM_STREAM_CAPTURE, 1);
-		if (!(start || stop))
-			continue;
-
-		/* run PCM ops on new/old capture paths */
-		ret = dsp_run_update(fe, SNDRV_PCM_STREAM_CAPTURE, start, stop);
-		if (ret < 0) {
-			dev_err(&fe->dev, "failed to update capture FE stream %s\n",
-					fe->dai_link->stream_name);
+               if (stop) {
+                       dsp_run_old_update(fe, SNDRV_PCM_STREAM_CAPTURE);
+                       fe_clear_pending(fe, SNDRV_PCM_STREAM_CAPTURE);
+                       be_disconnect(fe, SNDRV_PCM_STREAM_CAPTURE);
+//		if (!(start || stop))
+//			continue;
+//
+//		/* run PCM ops on new/old capture paths */
+//		ret = dsp_run_update(fe, SNDRV_PCM_STREAM_CAPTURE, start, stop);
+//		if (ret < 0) {
+//			dev_err(&fe->dev, "failed to update capture FE stream %s\n",
+//					fe->dai_link->stream_name);
 		}
-
-		/* free old capture links */
-		be_disconnect(fe, SNDRV_PCM_STREAM_CAPTURE);
-		fe_clear_pending(fe, SNDRV_PCM_STREAM_CAPTURE);
+//
+//		/* free old capture links */
+//		be_disconnect(fe, SNDRV_PCM_STREAM_CAPTURE);
+//		fe_clear_pending(fe, SNDRV_PCM_STREAM_CAPTURE);
 	}
 
 	mutex_unlock(&widget->dapm->card->dsp_mutex);
@@ -1218,6 +1256,7 @@ int soc_dsp_be_digital_mute(struct snd_soc_pcm_runtime *fe, int mute)
 	list_for_each_entry(dsp_params,
 			&fe->dsp[SNDRV_PCM_STREAM_PLAYBACK].be_clients, list_be) {
 
+		
 		struct snd_soc_pcm_runtime *be = dsp_params->be;
 		struct snd_soc_dai *dai = be->codec_dai;
 		struct snd_soc_dai_driver *drv = dai->driver;
@@ -1661,13 +1700,15 @@ static ssize_t soc_dsp_show_state(struct snd_soc_pcm_runtime *fe,
 
 	list_for_each_entry(dsp_params, &fe->dsp[stream].be_clients, list_be) {
 		struct snd_soc_pcm_runtime *be = dsp_params->be;
+		params = &dsp_params->hw_params;
 
 		offset += snprintf(buf + offset, size - offset,
 				"- %s\n", be->dai_link->name);
 
 		offset += snprintf(buf + offset, size - offset,
 				"   State: %s\n",
-				dsp_state_string(fe->dsp[stream].state));
+                               dsp_state_string(be->dsp[stream].state));
+//				dsp_state_string(fe->dsp[stream].state));
 
 		if ((be->dsp[stream].state >= SND_SOC_DSP_STATE_HW_PARAMS) &&
 		    (be->dsp[stream].state <= SND_SOC_DSP_STATE_STOP))

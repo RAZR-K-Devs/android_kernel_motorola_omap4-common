@@ -222,7 +222,7 @@ int omap4_core_dpll_m2_set_rate(struct clk *clk, unsigned long rate)
  */
 int omap4_core_dpll_set_rate(struct clk *clk, unsigned long rate)
 {
-	int i = 0, m2_div;
+	int i = 0, m2_div, m5_div;
 	u32 mask, reg;
 	u32 shadow_freq_cfg1 = 0, shadow_freq_cfg2 = 0;
 	struct clk *new_parent;
@@ -295,6 +295,34 @@ int omap4_core_dpll_set_rate(struct clk *clk, unsigned long rate)
 	if (rate == dd->clk_bypass->rate &&
 			clk->dpll_data->modes & (1 << DPLL_LOW_POWER_BYPASS)) {
 		/*
+		 * DDR clock = DPLL_CORE_M2_CK / 2.  Program EMIF timing
+		 * parameters in EMIF shadow registers for bypass clock rate
+		 * divided by 2
+		 */
+		omap_emif_setup_registers(rate / 2, LPDDR2_VOLTAGE_STABLE);
+
+		/*
+		 * program CM_DIV_M5_DPLL_CORE.DPLL_CLKOUT_DIV into shadow
+		 * register as well as L3_CLK freq and update GPMC frequency
+		 *
+		 * HACK: hardcode L3_CLK = CORE_CLK / 2 for DPLL cascading
+		 * HACK: hardcode CORE_CLK = CORE_X2_CLK / 2 for DPLL
+		 * cascading
+		 */
+		m5_div = omap4_prm_read_bits_shift(
+				dpll_core_m5x2_ck->clksel_reg,
+				dpll_core_m5x2_ck->clksel_mask);
+
+		shadow_freq_cfg2 =
+			(m5_div << OMAP4430_DPLL_CORE_M5_DIV_SHIFT) |
+			(1 << OMAP4430_CLKSEL_L3_SHADOW_SHIFT) |
+			(0 << OMAP4430_CLKSEL_CORE_1_1_SHIFT) |
+			(1 << OMAP4430_GPMC_FREQ_UPDATE_SHIFT);
+
+		__raw_writel(shadow_freq_cfg2, OMAP4430_CM_SHADOW_FREQ_CONFIG2);
+
+
+		/*
 		 * program CM_DIV_M2_DPLL_CORE.DPLL_CLKOUT_DIV
 		 * for divide by two, ensure DLL_OVERRIDE = '1'
 		 * and put DPLL_CORE into LP Bypass
@@ -351,6 +379,26 @@ int omap4_core_dpll_set_rate(struct clk *clk, unsigned long rate)
 
 		/* program mn divider values */
 		omap4_prm_rmw_reg_bits(mask, reg, dd->mult_div1_reg);
+
+		/*
+		 * program CM_DIV_M5_DPLL_CORE.DPLL_CLKOUT_DIV into shadow
+		 * register as well as L3_CLK freq and update GPMC frequency
+		 *
+		 * HACK: hardcode L3_CLK = CORE_CLK / 2 for DPLL cascading
+		 * HACK: hardcode CORE_CLK = CORE_X2_CLK / 1 for DPLL
+		 * cascading
+		 */
+		m5_div = omap4_prm_read_bits_shift(
+				dpll_core_m5x2_ck->clksel_reg,
+				dpll_core_m5x2_ck->clksel_mask);
+
+		shadow_freq_cfg2 =
+			(m5_div << OMAP4430_DPLL_CORE_M5_DIV_SHIFT) |
+			(1 << OMAP4430_CLKSEL_L3_SHADOW_SHIFT) |
+			(0 << OMAP4430_CLKSEL_CORE_1_1_SHIFT) |
+			(1 << OMAP4430_GPMC_FREQ_UPDATE_SHIFT);
+
+		__raw_writel(shadow_freq_cfg2, OMAP4430_CM_SHADOW_FREQ_CONFIG2);
 
 		/*
 		 * program DPLL_CORE_M2_DIV with same value

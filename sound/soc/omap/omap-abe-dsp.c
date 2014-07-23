@@ -1174,7 +1174,6 @@ static const struct snd_kcontrol_new abe_controls[] = {
 };
 
 static const struct snd_soc_dapm_widget abe_dapm_widgets[] = {
-
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
 	/* Frontend AIFs */
 	SND_SOC_DAPM_AIF_IN_E("TONES_DL", "Tones Playback", 0,
@@ -3015,8 +3014,9 @@ static int __devinit abe_engine_probe(struct platform_device *pdev)
 
 	ret = snd_soc_register_platform(abe->dev,
 			&omap_aess_platform);
-	if (ret < 0)
-		return ret;
+
+	if (ret)
+		goto err;
 
 	abe_init_debugfs(abe);
 	return ret;

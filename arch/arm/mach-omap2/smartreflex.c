@@ -278,9 +278,9 @@ static void sr_set_clk_length(struct omap_sr *sr)
 #ifdef CONFIG_OMAP4_DPLL_CASCADING
 	if (omap4_is_in_dpll_cascading())
 		sys_clk_speed = 12288000;
-#else
-		sys_clk_speed = clk_get_rate(sys_ck);
+	else
 #endif
+		sys_clk_speed = clk_get_rate(sys_ck);
 	clk_put(sys_ck);
 
 	switch (sys_clk_speed) {
@@ -589,9 +589,9 @@ int sr_configure_errgen(struct voltagedomain *voltdm)
 
 #ifndef CONFIG_OMAP4_DPLL_CASCADING
 	if (!sr->clk_length)
-
 #endif
-	sr_set_clk_length(sr);
+		sr_set_clk_length(sr);
+
 	senp_en = sr->senp_mod;
 	senn_en = sr->senn_mod;
 
@@ -704,7 +704,6 @@ int sr_configure_minmax(struct voltagedomain *voltdm)
 
 #ifndef CONFIG_OMAP4_DPLL_CASCADING
 	if (!sr->clk_length)
-		sr_set_clk_length(sr);
 #endif
 		sr_set_clk_length(sr);
 

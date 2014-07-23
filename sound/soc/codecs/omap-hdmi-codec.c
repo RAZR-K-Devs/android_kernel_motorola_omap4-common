@@ -430,6 +430,7 @@ dssdev_err:
 	iounmap(hdmi_data.ip_data.base_wp);
 res_err:
 	return ret;
+
 }
 
 static int hdmi_remove(struct snd_soc_codec *codec)

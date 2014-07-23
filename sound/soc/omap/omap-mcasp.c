@@ -289,20 +289,12 @@ static int mcasp_compute_clock_dividers(long fclk_rate, int tgt_sample_rate,
 	BUG_ON(!out_div_lo);
 	BUG_ON(!out_div_hi);
 
-	/* Start by making sure the fclk is divisible by 128 (the number of
-	 * clocks present in a single S/PDIF frame.
-	 */
-	if (fclk_rate & 0x7F)
-		return -EINVAL;
-
-	fclk_rate >>= 7;
-
-	/* rounded division: fclk_rate / tgt_sample_rate + 0.5 */
-	divisor = (2 * fclk_rate + tgt_sample_rate) / (2 * tgt_sample_rate);
+	/* A single S/PDIF frame requires 128 clocks */
+	divisor = DIV_ROUND_CLOSEST(fclk_rate, tgt_sample_rate << 7);
 	if (!divisor)
 		return -EINVAL;
 
-	sample_rate = fclk_rate / divisor;
+	sample_rate = (fclk_rate >> 7) / divisor;
 
 	/* ppm calculation in two steps to avoid overflow */
 	ppm = abs(tgt_sample_rate - sample_rate);
@@ -403,22 +395,10 @@ static int omap_mcasp_setup(struct omap_mcasp *mcasp, unsigned int rate)
 	 * setting. Lookup the appropriate dividers for the sampling
 	 * frequency that we are playing.
 	 */
-
-	/* Unfortunately TI release doesn't support 44.1Khz S/PDIF, so
-	   hard-code values for Motsnd configuration as a special case.
-	   Note that this depends on platform driver making the
-	   necessary changes to ABE DPLL rate */
-	if (rate == 44100) {
-		res = 0;
-		aclkxdiv = 0;
-		ahclkxdiv = 3;
-	} else {
-		res = mcasp_compute_clock_dividers(clk_get_rate(mcasp->fclk),
-					rate,
-					&aclkxdiv,
-					&ahclkxdiv);
-	}
-
+	res = mcasp_compute_clock_dividers(clk_get_rate(mcasp->fclk),
+				rate,
+				&aclkxdiv,
+				&ahclkxdiv);
 	if (res) {
 		dev_err(mcasp->dev,
 			"%s: No valid McASP config for sampling rate (%d)!\n",

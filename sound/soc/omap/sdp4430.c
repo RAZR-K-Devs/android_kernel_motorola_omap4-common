@@ -25,6 +25,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c/twl.h>
 #include <linux/regulator/consumer.h>
+#include <linux/cdc_tcxo.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -133,32 +134,75 @@ static struct snd_soc_ops sdp4430_modem_ops = {
 	.hw_free = sdp4430_modem_hw_free,
 };
 
-static int sdp4430_mcpdm_hw_params(struct snd_pcm_substream *substream,
-	struct snd_pcm_hw_params *params)
+static int sdp4430_mcpdm_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct twl6040 *twl6040 = codec->control_data;
 	int clk_id, freq, ret;
 
+	/* TWL6040 supplies McPDM PAD_CLKS */
+	ret = twl6040_enable(twl6040);
+	if (ret) {
+		printk(KERN_ERR "failed to enable TWL6040\n");
+		return ret;
+	}
+
 	if (twl6040_power_mode) {
-		clk_id = TWL6040_SYSCLK_SEL_HPPLL;
+		clk_id = TWL6040_HPPLL_ID;
 		freq = 38400000;
+
+		/*
+		 * TWL6040 requires MCLK to be active as long as
+		 * high-performance mode is in use. Glitch-free mux
+		 * cannot tolerate MCLK gating
+		 */
+		ret = cdc_tcxo_set_req_int(CDC_TCXO_CLK2, 1);
+		if (ret) {
+			printk(KERN_ERR "failed to enable twl6040 MCLK\n");
+			goto err;
+		}
 	} else {
-		clk_id = TWL6040_SYSCLK_SEL_LPPLL;
+		clk_id = TWL6040_LPPLL_ID;
 		freq = 32768;
 	}
 
 	/* set the codec mclk */
 	ret = snd_soc_dai_set_sysclk(codec_dai, clk_id, freq,
 				SND_SOC_CLOCK_IN);
-	if (ret)
+	if (ret) {
 		printk(KERN_ERR "can't set codec system clock\n");
+		goto err;
+	}
 
+	/* low-power mode uses 32k clock, MCLK is not required */
+	if (!twl6040_power_mode) {
+		ret = cdc_tcxo_set_req_int(CDC_TCXO_CLK2, 0);
+		if (ret)
+			printk(KERN_ERR "failed to disable twl6040 MCLK\n");
+	}
+
+	return 0;
+
+err:
+	twl6040_disable(twl6040);
 	return ret;
 }
 
+static void sdp4430_mcpdm_shutdown(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_codec *codec = rtd->codec;
+	struct twl6040 *twl6040 = codec->control_data;
+
+	/* TWL6040 supplies McPDM PAD_CLKS */
+	twl6040_disable(twl6040);
+}
+
 static struct snd_soc_ops sdp4430_mcpdm_ops = {
-	.hw_params = sdp4430_mcpdm_hw_params,
+	.startup = sdp4430_mcpdm_startup,
+	.shutdown = sdp4430_mcpdm_shutdown,
 };
 
 static int sdp4430_mcbsp_hw_params(struct snd_pcm_substream *substream,
@@ -167,22 +211,12 @@ static int sdp4430_mcbsp_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int ret = 0;
-	unsigned int be_id, channels;
+	unsigned int channels;
 
-	be_id = rtd->dai_link->be_id;
-
-	 if (be_id == OMAP_ABE_DAI_BT_VX) {
-		ret = snd_soc_dai_set_fmt(cpu_dai,
-			SND_SOC_DAIFMT_DSP_B |
-			SND_SOC_DAIFMT_NB_IF |
+	ret = snd_soc_dai_set_fmt(cpu_dai,
+			SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF |
 			SND_SOC_DAIFMT_CBM_CFM);
-	} else {
-		/* Set cpu DAI configuration */
-		ret = snd_soc_dai_set_fmt(cpu_dai,
-				  SND_SOC_DAIFMT_I2S |
-				  SND_SOC_DAIFMT_NB_NF |
-				  SND_SOC_DAIFMT_CBM_CFM);
-	}
 
 	if (ret < 0) {
 		printk(KERN_ERR "can't set cpu DAI configuration\n");
@@ -219,6 +253,21 @@ static struct snd_soc_ops sdp4430_mcbsp_ops = {
 	.hw_params = sdp4430_mcbsp_hw_params,
 };
 
+static int sdp4430_dmic_startup(struct snd_pcm_substream *substream)
+{
+	struct twl6040 *twl6040 = twl6040_codec->control_data;
+	/* In order for the DMIC's to use the PAD CLOCKS, the twl6040
+	 * must be powered up, since it supplies the clock source.
+	 */
+	return twl6040_enable(twl6040);
+}
+
+static void sdp4430_dmic_shutdown(struct snd_pcm_substream *substream)
+{
+	struct twl6040 *twl6040 = twl6040_codec->control_data;
+	twl6040_disable(twl6040);
+}
+
 static int sdp4430_dmic_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
@@ -226,13 +275,25 @@ static int sdp4430_dmic_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int ret = 0;
 
-	ret = snd_soc_dai_set_sysclk(cpu_dai, OMAP_DMIC_SYSCLK_PAD_CLKS,
-				     19200000, SND_SOC_CLOCK_IN);
+	if (!rtd->dai_link->no_pcm)
+		ret = snd_soc_dai_set_sysclk(cpu_dai,
+				OMAP_DMIC_SYSCLK_SYNC_MUX_CLKS, 24000000,
+				SND_SOC_CLOCK_IN);
+	else
+		ret = snd_soc_dai_set_sysclk(cpu_dai,
+				OMAP_DMIC_SYSCLK_PAD_CLKS, 19200000,
+				SND_SOC_CLOCK_IN);
+
 	if (ret < 0) {
 		printk(KERN_ERR "can't set DMIC cpu system clock\n");
 		return ret;
 	}
-	ret = snd_soc_dai_set_clkdiv(cpu_dai, OMAP_DMIC_CLKDIV, 8);
+
+	if (!rtd->dai_link->no_pcm)
+		ret = snd_soc_dai_set_clkdiv(cpu_dai, OMAP_DMIC_CLKDIV, 10);
+	else
+		ret = snd_soc_dai_set_clkdiv(cpu_dai, OMAP_DMIC_CLKDIV, 8);
+
 	if (ret < 0) {
 		printk(KERN_ERR "can't set DMIC cpu clock divider\n");
 		return ret;
@@ -241,6 +302,8 @@ static int sdp4430_dmic_hw_params(struct snd_pcm_substream *substream,
 }
 
 static struct snd_soc_ops sdp4430_dmic_ops = {
+	.startup = sdp4430_dmic_startup,
+	.shutdown = sdp4430_dmic_shutdown,
 	.hw_params = sdp4430_dmic_hw_params,
 };
 
@@ -249,13 +312,8 @@ static int mcbsp_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 {
 	struct snd_interval *channels = hw_param_interval(params,
                                        SNDRV_PCM_HW_PARAM_CHANNELS);
-	unsigned int be_id = rtd->dai_link->be_id;
 
-	if (be_id == OMAP_ABE_DAI_BT_VX)
-		channels->min = 1;
-	else
-		channels->min = 2;
-
+	channels->min = 2;
 	snd_mask_set(&params->masks[SNDRV_PCM_HW_PARAM_FORMAT -
 	                            SNDRV_PCM_HW_PARAM_FIRST_MASK],
 	                            SNDRV_PCM_FORMAT_S16_LE);
@@ -267,9 +325,12 @@ static int dmic_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 {
 	struct snd_interval *rate = hw_param_interval(params,
 			SNDRV_PCM_HW_PARAM_RATE);
+	struct snd_interval *channels = hw_param_interval(params,
+			SNDRV_PCM_HW_PARAM_CHANNELS);
 
 	/* The ABE will covert the FE rate to 96k */
 	rate->min = rate->max = 96000;
+	channels->min = channels->max = 2;
 
 	snd_mask_set(&params->masks[SNDRV_PCM_HW_PARAM_FORMAT -
 	                            SNDRV_PCM_HW_PARAM_FIRST_MASK],
@@ -402,46 +463,15 @@ static int sdp4430_set_pdm_dl1_gains(struct snd_soc_dapm_context *dapm)
 		else
 			/* HSDACL in HP mode */
 			output = OMAP_ABE_DL1_HEADSET_HP;
+#if !defined(CONFIG_SND_OMAP_SOC_ABE_DL2)
+	} else if (snd_soc_dapm_get_pin_power(dapm, "Ext Spk")) {
+		output = OMAP_ABE_DL1_HANDSFREE;
+#endif
 	} else {
 		output = OMAP_ABE_DL1_NO_PDM;
 	}
 
 	return omap_abe_set_dl1_output(output);
-}
-
-static int sdp4430_mcpdm_twl6040_pre(struct snd_pcm_substream *substream)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_codec *codec = rtd->codec;
-	struct twl6040 *twl6040 = codec->control_data;
-
-	/* TWL6040 supplies McPDM PAD_CLKS */
-	return twl6040_enable(twl6040);
-}
-
-static void sdp4430_mcpdm_twl6040_post(struct snd_pcm_substream *substream)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_codec *codec = rtd->codec;
-	struct twl6040 *twl6040 = codec->control_data;
-
-	/* TWL6040 supplies McPDM PAD_CLKS */
-	twl6040_disable(twl6040);
-}
-
-static int sdp4430_dmic_twl6040_pre(struct snd_pcm_substream *substream)
-{
-	struct twl6040 *twl6040 = twl6040_codec->control_data;
-	/* In order for the DMIC's to use the PAD CLOCKS, the twl6040
-	 * must be powered up, since it supplies the clock source.
-	 */
-	return twl6040_enable(twl6040);
-}
-
-static void sdp4430_dmic_twl6040_post(struct snd_pcm_substream *substream)
-{
-	struct twl6040 *twl6040 = twl6040_codec->control_data;
-	twl6040_disable(twl6040);
 }
 
 static int sdp4430_twl6040_init(struct snd_soc_pcm_runtime *rtd)
@@ -809,8 +839,6 @@ static struct snd_soc_dai_link sdp4430_dai[] = {
 		.codec_dai_name =  "twl6040-dl1",
 		.codec_name = "twl6040-codec",
 
-		.pre = sdp4430_mcpdm_twl6040_pre,
-		.post = sdp4430_mcpdm_twl6040_post,
 		.ops = &sdp4430_mcpdm_ops,
 		.ignore_suspend = 1,
 	},
@@ -850,8 +878,6 @@ static struct snd_soc_dai_link sdp4430_dai[] = {
 
 		.no_pcm = 1, /* don't create ALSA pcm for this */
 		.init = sdp4430_twl6040_init,
-		.pre = sdp4430_mcpdm_twl6040_pre,
-		.post = sdp4430_mcpdm_twl6040_post,
 		.ops = &sdp4430_mcpdm_ops,
 		.be_id = OMAP_ABE_DAI_PDM_DL1,
 		.ignore_suspend = 1,
@@ -870,8 +896,6 @@ static struct snd_soc_dai_link sdp4430_dai[] = {
 
 		.no_pcm = 1, /* don't create ALSA pcm for this */
 		.ops = &sdp4430_mcpdm_ops,
-		.pre = sdp4430_mcpdm_twl6040_pre,
-		.post = sdp4430_mcpdm_twl6040_post,
 		.be_id = OMAP_ABE_DAI_PDM_UL,
 		.ignore_suspend = 1,
 	},
@@ -889,8 +913,6 @@ static struct snd_soc_dai_link sdp4430_dai[] = {
 
 		.no_pcm = 1, /* don't create ALSA pcm for this */
 		.init = sdp4430_twl6040_dl2_init,
-		.pre = sdp4430_mcpdm_twl6040_pre,
-		.post = sdp4430_mcpdm_twl6040_post,
 		.ops = &sdp4430_mcpdm_ops,
 		.be_id = OMAP_ABE_DAI_PDM_DL2,
 		.ignore_suspend = 1,
@@ -908,8 +930,6 @@ static struct snd_soc_dai_link sdp4430_dai[] = {
 		.codec_name = "twl6040-codec",
 
 		.no_pcm = 1, /* don't create ALSA pcm for this */
-		.pre = sdp4430_mcpdm_twl6040_pre,
-		.post = sdp4430_mcpdm_twl6040_post,
 		.ops = &sdp4430_mcpdm_ops,
 		.be_id = OMAP_ABE_DAI_PDM_VIB,
 	},
@@ -999,8 +1019,6 @@ static struct snd_soc_dai_link sdp4430_dai[] = {
 		.ops = &sdp4430_dmic_ops,
 
 		.no_pcm = 1, /* don't create ALSA pcm for this */
-		.pre = sdp4430_dmic_twl6040_pre,
-		.post = sdp4430_dmic_twl6040_post,
 		.be_hw_params_fixup = dmic_be_hw_params_fixup,
 		.be_id = OMAP_ABE_DAI_DMIC0,
 	},
@@ -1018,8 +1036,6 @@ static struct snd_soc_dai_link sdp4430_dai[] = {
 		.ops = &sdp4430_dmic_ops,
 
 		.no_pcm = 1, /* don't create ALSA pcm for this */
-		.pre = sdp4430_dmic_twl6040_pre,
-		.post = sdp4430_dmic_twl6040_post,
 		.be_hw_params_fixup = dmic_be_hw_params_fixup,
 		.be_id = OMAP_ABE_DAI_DMIC1,
 	},
@@ -1037,10 +1053,24 @@ static struct snd_soc_dai_link sdp4430_dai[] = {
 		.ops = &sdp4430_dmic_ops,
 
 		.no_pcm = 1, /* don't create ALSA pcm for this */
-		.pre = sdp4430_dmic_twl6040_pre,
-		.post = sdp4430_dmic_twl6040_post,
 		.be_hw_params_fixup = dmic_be_hw_params_fixup,
 		.be_id = OMAP_ABE_DAI_DMIC2,
+	},
+	{
+		.name = OMAP_ABE_BE_VXREC,
+		.stream_name = "VXREC Capture",
+
+		/* ABE components - VxREC */
+		.cpu_dai_name = "omap-abe-vxrec-dai",
+		.platform_name = "aess",
+
+		/* no codec needed */
+		.codec_dai_name = "null-codec-dai",
+
+		.no_pcm = 1, /* don't create ALSA pcm for this */
+		.no_codec = 1,
+		.be_id = OMAP_ABE_DAI_VXREC,
+		.ignore_suspend = 1,
 	},
 };
 
@@ -1103,6 +1133,16 @@ static int __init sdp4430_soc_init(void)
 		goto err_dev;
 	}
 
+	/* Default mode is low-power, MCLK not required */
+	twl6040_power_mode = 0;
+	cdc_tcxo_set_req_int(CDC_TCXO_CLK2, 0);
+
+	/*
+	 * CDC CLK2 supplies TWL6040 MCLK, drive it from REQ2INT to
+	 * have full control of MCLK gating
+	 */
+	cdc_tcxo_set_req_prio(CDC_TCXO_CLK2, CDC_TCXO_PRIO_REQINT);
+
 	return ret;
 
 err_dev:
@@ -1116,6 +1156,8 @@ module_init(sdp4430_soc_init);
 static void __exit sdp4430_soc_exit(void)
 {
 	regulator_put(av_switch_reg);
+	cdc_tcxo_set_req_int(CDC_TCXO_CLK2, 0);
+	cdc_tcxo_set_req_prio(CDC_TCXO_CLK2, CDC_TCXO_PRIO_REQINT);
 	platform_device_unregister(sdp4430_snd_device);
 	snd_soc_unregister_dais(&sdp4430_snd_device->dev, ARRAY_SIZE(dai));
 }
