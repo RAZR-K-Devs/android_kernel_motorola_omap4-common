@@ -34,7 +34,7 @@ cd /media/dtrail/_home/4.4/
 export USE_CCACHE=1
 export PATH=${PATH/\/path\/to\/jdk\/dir:/}
 source build/envsetup.sh
-lunch cm_edison-userdebug
+lunch slim_edison-userdebug
 
 # built kernel & modules
 echo "Building kernel and modules..."

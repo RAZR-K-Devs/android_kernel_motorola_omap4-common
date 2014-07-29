@@ -35,7 +35,7 @@ cd /media/dtrail/_home/4.4
 export USE_CCACHE=1
 export PATH=${PATH/\/path\/to\/jdk\/dir:/}
 source build/envsetup.sh
-lunch cm_spyder-userdebug
+lunch slim_umts_spyder-userdebug
 
 # built kernel & modules
 echo "Building kernel and modules..."
