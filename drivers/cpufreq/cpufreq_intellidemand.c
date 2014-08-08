@@ -38,13 +38,13 @@
  * It helps to keep variable names smaller, simpler
  */
 
-#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(8)
-#define DEF_FREQUENCY_UP_THRESHOLD		(80)
+#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
+#define DEF_FREQUENCY_UP_THRESHOLD		(85)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define BOOSTED_SAMPLING_DOWN_FACTOR		(10)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
-#define MICRO_FREQUENCY_UP_THRESHOLD		(95)
+#define MICRO_FREQUENCY_UP_THRESHOLD		(75)
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(15000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
@@ -52,12 +52,12 @@
 #define DEFAULT_FREQ_BOOST_TIME			(1500000)
 #define DEF_SAMPLING_RATE			(50000)
 #define BOOSTED_SAMPLING_RATE			(15000)
-#define DBS_INPUT_EVENT_MIN_FREQ		(1000000)
-#define DBS_SYNC_FREQ				(800000)
-#define DBS_OPTIMAL_FREQ			(1200000)
+#define DBS_INPUT_EVENT_MIN_FREQ		(1200000)
+#define DBS_SYNC_FREQ				(500000)
+#define DBS_OPTIMAL_FREQ			(1000000)
 
 #ifdef CONFIG_CPUFREQ_ID_PERFLOCK
-#define DBS_PERFLOCK_MIN_FREQ			(100000)
+#define DBS_PERFLOCK_MIN_FREQ			(400000)
 #endif
 
 static u64 freq_boosted_time;
@@ -184,7 +184,7 @@ static struct dbs_tuners {
 	.freq_boost_time = DEFAULT_FREQ_BOOST_TIME,
 	.boostfreq = 1026000,
 #ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
-	.two_phase_freq = 1200000,
+	.two_phase_freq = 800000,
 #endif
 };
 
@@ -1241,6 +1241,9 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 }
 
+bool lmf_screen_state = true;
+bool lmf_browsing_state = true;
+
 #ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ
 
 enum {	
@@ -1263,9 +1266,6 @@ enum {
 
 #define NUM_ACTIVE_LOAD_ARRAY	(ACTIVE_DURATION_MSEC/SAMPLE_DURATION_MSEC)
 #define NUM_INACTIVE_LOAD_ARRAY	(INACTIVE_DURATION_MSEC/SAMPLE_DURATION_MSEC)
-
-bool lmf_browsing_state = true;
-bool lmf_screen_state = true;
 
 static unsigned long lmf_active_max_limit = ACTIVE_MAX_FREQ;
 static unsigned long lmf_inactive_max_limit = INACTIVE_MAX_FREQ;
@@ -1388,13 +1388,13 @@ static void do_dbs_timer(struct work_struct *work)
 	//pr_info("run stats: %u\n", nr_run_stat);
 
 #if 1
-	if (cpu == BOOT_CPU && lmf_screen_state) {
+	if (cpu == 0 && lmf_screen_state) {
 		switch (nr_run_stat) {
 			case 1:
 				if (persist_count > 0)
 					persist_count--;
 
-				if (num_online_cpus() == 2 && persist_count == 0 && lmf_screen_state != 1) {
+				if (num_online_cpus() == 2 && persist_count == 0) {
 					cpu_down(1);
 #ifdef CONFIG_CPUFREQ_ID_PERFLOCK
 					saved_policy_min = policy->min;
@@ -1403,8 +1403,8 @@ static void do_dbs_timer(struct work_struct *work)
 				}
 				break;
 			case 2:
-				persist_count = 2;
-				if (num_online_cpus() == 1 && lmf_screen_state != 0) {
+				persist_count = 8;
+				if (num_online_cpus() == 1) {
 					cpu_up(1);
 #ifdef CONFIG_CPUFREQ_ID_PERFLOCK
 					policy->min = saved_policy_min;
@@ -1442,11 +1442,11 @@ static void do_dbs_timer(struct work_struct *work)
 			{
 				pr_warn("LMF: disabled!\n");
 				lmf_old_state = false;
-/* #if 0
-
+#if 0
+				/* wake up the 2nd core */
 				if (num_online_cpus() < 2)
 					cpu_up(1);
-#endif */
+#endif
 
 			}
 
@@ -1579,11 +1579,11 @@ static void do_dbs_timer(struct work_struct *work)
 							else
 							{
 								msecs_limit_total = ACTIVE_DURATION_MSEC; // to prevent overflow
-/* #if 0
-							
+#if 0
+								/* take 2nd core offline */
 								if (num_online_cpus() > 1)
 									cpu_down(1);
-#endif */
+#endif
 
 							}
 						}

@@ -121,7 +121,7 @@ static u64 boostpulse_endtime;
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
-static bool io_is_busy = 1;
+static bool io_is_busy = 0;
 
 /*
  * If the max load among other CPUs is higher than up_threshold_any_cpu_load
@@ -130,8 +130,8 @@ static bool io_is_busy = 1;
  * sync_freq
  */
 static unsigned int up_threshold_any_cpu_load = 95;
-static unsigned int sync_freq = 700000;
-static unsigned int up_threshold_any_cpu_freq = 920000;
+static unsigned int sync_freq = 500000;
+static unsigned int up_threshold_any_cpu_freq = 700000;
 
 static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1060000} ;
 
