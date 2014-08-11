@@ -39,6 +39,7 @@
 #define DISPC_GAMMA_TABLE    		0x0630
 #endif 
 #define DISPC_DIVISOR			0x0804
+#define DISPC_GLOBAL_MFLAG		0x085C
 
 /* DISPC overlay registers */
 #define DISPC_OVL_BA0(n)		(DISPC_OVL_BASE(n) + \
@@ -784,8 +785,8 @@ static inline u16 DISPC_PRELOAD_OFFSET(enum omap_plane plane)
 	case OMAP_DSS_VIDEO2:
 		return 0x00E8;
 	case OMAP_DSS_VIDEO3:
-	case OMAP_DSS_WB:
 		return 0x00A0;
+	case OMAP_DSS_WB:
 	default:
 		BUG();
 	}

@@ -202,11 +202,7 @@ static int hdcp_lib_initiate_step1(void)
 
 	/* DDC: Read BKSV from RX */
 	if (hdcp_ddc_read(DDC_BKSV_LEN, DDC_BKSV_ADDR , an_ksv_data))
-#ifdef CONFIG_PANEL_MAPPHONE_OMAP4_HDTV
-		return -HDCP_DDC_BKSV_RD_ERR;
-#else
 		return -HDCP_DDC_ERROR;
-#endif
 
 	if (hdcp.pending_disable)
 		return -HDCP_CANCELLED_AUTH;

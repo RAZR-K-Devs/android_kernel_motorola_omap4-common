@@ -337,7 +337,7 @@ int dsscomp_gralloc_queue(struct dsscomp_setup_dispc_data *d,
 	ion_phys_addr_t phys = 0;
 	size_t tiler2d_size;
 	struct tiler_view_t view;
-	u32 wb_mgr_ix;
+//	u32 wb_mgr_ix;
 
 	/* reserve tiler areas if not already done so */
 	dsscomp_gralloc_init(cdev);

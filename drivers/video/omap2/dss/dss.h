@@ -438,9 +438,6 @@ void dispc_fake_vsync_irq(void);
 int dispc_runtime_get(void);
 void dispc_runtime_put(void);
 
-void dispc_save_context(void);
-void dispc_restore_context(void);
-
 void dispc_enable_sidle(void);
 void dispc_disable_sidle(void);
 
@@ -486,7 +483,7 @@ int dispc_setup_plane(enum omap_plane plane,
 		      u8 rotation, bool mirror,
 		      u8 global_alpha, u8 pre_mult_alpha,
 		      enum omap_channel channel,
-		      u32 puv_addr);
+		      u32 puv_addr, bool source_of_wb);
 int dispc_scaling_decision(u16 width, u16 height,
 		u16 out_width, u16 out_height,
 		enum omap_plane plane,

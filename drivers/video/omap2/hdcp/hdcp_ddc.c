@@ -89,10 +89,6 @@ static int hdcp_start_ddc_transfer(mddc_type *mddc_cmd, u8 operation)
 	u32 i, size;
 	unsigned long flags;
 
-	u32 prev, sleeps;
-	prev   = 0;
-	sleeps = 0;
-
 #ifdef _9032_AUTO_RI_
 	if (hdcp_suspend_resume_auto_ri(AUTO_RI_SUSPEND))
 		return -HDCP_DDC_ERROR;
@@ -169,23 +165,6 @@ static int hdcp_start_ddc_transfer(mddc_type *mddc_cmd, u8 operation)
 					jiffies_to_msecs(jiffies));
 			goto ddc_error;
 		}
-		if (prev == i) {
-			/* The read fifo was empty or the write fifo is full,
-			 * sleep for increasingly longer times to allow the
-			 * issue to rectify itself and allow other processing
-			 * to occur
-			 */
-			if (sleeps > 20)
-				msleep(100);
-			else if (sleeps > 5)
-				msleep(20);
-			else
-				mdelay(2);
-
-			sleeps++;
-		}
-		prev = i;
-
 	}
 
 	if (hdcp.pending_disable)

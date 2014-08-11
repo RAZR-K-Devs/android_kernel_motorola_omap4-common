@@ -37,10 +37,6 @@
 #include "dss.h"
 #include "dss_features.h"
 
-#ifdef CONFIG_BATTERY_FRIEND
-extern bool battery_friend_active;
-#endif
-
 static int num_managers;
 static struct list_head manager_list;
 static struct omap_overlay_manager *mgrs[MAX_DSS_MANAGERS];
@@ -663,6 +659,7 @@ struct manager_cache_data {
 	bool cpr_enable;
 	struct omap_dss_cpr_coefs cpr_coefs;
 	bool skip_init;
+	bool m2m_only;
 };
 
 static struct {
@@ -1039,9 +1036,13 @@ static bool dispc_is_overlay_scaled(struct overlay_cache_data *oc)
 static int configure_wb_overlay(void)
 {
 	struct writeback_cache_data *c = &dss_cache.writeback_cache;
-	int r;
+//	int r;
 
-	r = dispc_setup_wb(c);
+	int r = 0;
+
+	if (c->enabled)
+		r = dispc_setup_wb(c);
+//	r = dispc_setup_wb(c);
 	if (r)
 		DSSERR("dispc_setup_wb failed with error %d\n", r);
 	return r;
@@ -1059,25 +1060,42 @@ static int configure_overlay(enum omap_plane plane)
 	u16 x_decim, y_decim;
 	bool five_taps;
 	u16 orig_w, orig_h, orig_outw, orig_outh;
-	bool source_of_wb = false;
+//	bool source_of_wb = false;
+	bool m2m_with_ovl = false;
+	bool m2m_with_mgr = false;
 
 	DSSDBGF("%d", plane);
 
 	c = &dss_cache.overlay_cache[plane];
 
-	/* check if this overlay is source for wb, ignore mgr sources here*/
-	if (dss_has_feature(FEAT_OVL_WB)) {
-		wbc = &dss_cache.writeback_cache;
-		if (wbc->enabled && omap_dss_check_wb(wbc, plane, -1)) {
-			DSSDBG("wb->enabled=%d for plane:%d\n",
-						wbc->enabled, plane);
-			source_of_wb = true;
-		}
-	}
 
 	if (!c->enabled) {
 		dispc_enable_plane(plane, 0);
 		return 0;
+	}
+
+	if (dss_has_feature(FEAT_OVL_WB)) {
+		/* check if this overlay is source for wb, ignore mgr sources
+		 * here*/
+		wbc = &dss_cache.writeback_cache;
+		if (wbc->enabled && omap_dss_check_wb(wbc, plane, -1)) {
+			DSSDBG("wb->enabled=%d for plane:%d\n",
+						wbc->enabled, plane);
+//			source_of_wb = true;
+			m2m_with_ovl = true;
+		}
+		/* check if this overlay is source for manager, which is source
+		 * for wb, ignore ovl sources */
+		if (wbc->enabled && omap_dss_check_wb(wbc, -1, c->channel)) {
+			DSSDBG("check wb mgr wb->enabled=%d for plane:%d\n",
+							wbc->enabled, plane);
+			m2m_with_mgr = true;
+		}
+//	}
+
+//	if (!c->enabled) {
+//		dispc_enable_plane(plane, 0);
+//		return 0;
 	}
 
 	mc = &dss_cache.manager_cache[c->channel];
@@ -1207,7 +1225,9 @@ static int configure_overlay(enum omap_plane plane)
 			c->global_alpha,
 			c->pre_mult_alpha,
 			c->channel,
-			c->p_uv_addr);
+//			c->p_uv_addr);
+			c->p_uv_addr,
+			m2m_with_ovl || m2m_with_mgr);
 
 	if (r) {
 		/* this shouldn't happen */
@@ -1227,8 +1247,9 @@ static int configure_overlay(enum omap_plane plane)
 		_dispc_setup_color_conv_coef(plane, &c->cconv);
 
 //	dispc_enable_plane(plane, 1);
-	if (!source_of_wb)
+//	if (!source_of_wb)
 //		dispc_enable_plane(plane, 1);
+	if (!m2m_with_ovl)
 		dispc_set_channel_out(plane, c->channel);
 	else
 		dispc_set_wb_channel_out(plane);

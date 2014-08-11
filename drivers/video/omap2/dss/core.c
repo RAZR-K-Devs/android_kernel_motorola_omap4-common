@@ -180,7 +180,7 @@ void omap_dss_request_high_bandwidth(struct device *dss_dev)
 	if (IS_ERR_OR_NULL(dss_dev))
 		DSSERR("%s: wrong dss_dev pointer\n", __func__);
 	else if (!omap_pm_set_min_bus_tput(dss_dev,
-                                       OCP_INITIATOR_AGENT, HIGH_RES_TPUT))
+					OCP_INITIATOR_AGENT, HIGH_RES_TPUT))
 		return;
 	DSSDBG("Failed to set high L3 bus speed\n");
 }
@@ -207,6 +207,7 @@ static int omap_dss_probe(struct platform_device *pdev)
 
 	dss_init_overlay_managers(pdev);
 	dss_init_overlays(pdev);
+
 	if (dss_has_feature(FEAT_OVL_WB))
 		dss_init_writeback(pdev);
 
@@ -266,9 +267,6 @@ static int omap_dss_probe(struct platform_device *pdev)
 
 			goto err_register;
 		}
-
-//		if (def_disp_name && strcmp(def_disp_name, dssdev->name) == 0)
-//			pdata->default_device = dssdev;
 	}
 
 	return 0;
@@ -306,6 +304,8 @@ static int omap_dss_remove(struct platform_device *pdev)
 	hdmi_uninit_platform_driver();
 	dss_uninit_platform_driver();
 
+	if (dss_has_feature(FEAT_OVL_WB))
+		dss_uninit_writeback(pdev);
 	dss_uninit_overlays(pdev);
 	dss_uninit_overlay_managers(pdev);
 
@@ -466,7 +466,8 @@ static void omap_dss_driver_disable(struct omap_dss_device *dssdev)
 
 static int omap_dss_driver_enable(struct omap_dss_device *dssdev)
 {
-	int r = dssdev->driver->enable_orig(dssdev);
+	int r;
+	r = dssdev->driver->enable_orig(dssdev);
 	if (!r && dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
 		blocking_notifier_call_chain(&dssdev->state_notifiers,
 					OMAP_DSS_DISPLAY_ACTIVE, dssdev);
@@ -475,32 +476,7 @@ static int omap_dss_driver_enable(struct omap_dss_device *dssdev)
 
 static int omap_dss_driver_suspend(struct omap_dss_device *dssdev)
 {
-	int r;
-
-	/* Ignore manual power control devices */
-	if (dssdev->manual_power_control != OMAP_DSS_MPC_DISABLED)
-		return 0;
-
-	if (dssdev->state != OMAP_DSS_DISPLAY_DISABLED)
-		blocking_notifier_call_chain(&dssdev->state_notifiers,
-			OMAP_DSS_DISPLAY_DISABLED, dssdev);
-	r = dssdev->driver->suspend_orig(dssdev);
-	dssdev->first_vsync = false;
-	return r;
-}
-
-static int omap_dss_driver_resume(struct omap_dss_device *dssdev)
-{
-	int r;
-
-	/* Ignore manual power control devices */
-	if (dssdev->manual_power_control != OMAP_DSS_MPC_DISABLED)
-		return 0;
-
-	r = dssdev->driver->resume_orig(dssdev);
-	if (!r && dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
-		blocking_notifier_call_chain(&dssdev->state_notifiers,
-			OMAP_DSS_DISPLAY_ACTIVE, dssdev);
+	int r = dssdev->driver->suspend_orig(dssdev);
 	return r;
 }
 
@@ -523,8 +499,7 @@ int omap_dss_register_driver(struct omap_dss_driver *dssdriver)
 
 	dssdriver->suspend_orig = dssdriver->suspend;
 	dssdriver->suspend = omap_dss_driver_suspend;
-	dssdriver->resume_orig = dssdriver->resume;
-	dssdriver->resume = omap_dss_driver_resume;
+
 	return driver_register(&dssdriver->driver);
 }
 EXPORT_SYMBOL(omap_dss_register_driver);
