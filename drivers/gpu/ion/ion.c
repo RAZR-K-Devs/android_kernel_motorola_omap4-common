@@ -187,7 +187,7 @@ static bool ion_handle_validate(struct ion_client *client, struct ion_handle *ha
 	}
 	return false;
 }
-
+/*
 static bool ion_handle_validate_frm_dev(struct ion_device *dev,
 					struct ion_handle *handle)
 {
@@ -215,7 +215,7 @@ static bool ion_handle_validate_frm_dev(struct ion_device *dev,
 	}
 	return false;
 }
-
+*/
 static void ion_handle_add(struct ion_client *client, struct ion_handle *handle)
 {
 	struct rb_node **p = &client->handles.rb_node;

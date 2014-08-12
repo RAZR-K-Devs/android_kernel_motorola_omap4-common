@@ -124,7 +124,7 @@ struct menu_device {
 
 #define LOAD_INT(x) ((x) >> FSHIFT)
 #define LOAD_FRAC(x) LOAD_INT(((x) & (FIXED_1-1)) * 100)
-
+/*
 static int get_loadavg(void)
 {
 	unsigned long this = this_cpu_load();
@@ -132,7 +132,7 @@ static int get_loadavg(void)
 
 	return LOAD_INT(this) * 10 + LOAD_FRAC(this) / 10;
 }
-
+*/
 static inline int which_bucket(unsigned int duration)
 {
 	int bucket = 0;
@@ -180,7 +180,7 @@ static inline int performance_multiplier(void)
 	/* mult += 2 * get_loadavg(); */
 
 	/* for IO wait tasks (per cpu!) we add 5x each */
-	mult += 2 * nr_iowait_cpu(smp_processor_id());
+	mult += 10 * nr_iowait_cpu(smp_processor_id());
 
 	return mult;
 }

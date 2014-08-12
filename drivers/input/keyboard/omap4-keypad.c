@@ -83,7 +83,6 @@ struct omap4_keypad {
 	struct input_dev *input;
 
 	void __iomem *base;
-	bool irq_wake_enabled; 
 	int irq;
 
 	unsigned int rows;
@@ -383,7 +382,6 @@ static int __devinit omap4_keypad_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to register interrupt\n");
 		goto err_free_input;
 	}
-	device_init_wakeup(&pdev->dev, true); 
 	enable_irq_wake(OMAP44XX_IRQ_KBD_CTL);
 
 	pm_runtime_enable(&pdev->dev);
@@ -399,7 +397,6 @@ static int __devinit omap4_keypad_probe(struct platform_device *pdev)
 
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-	device_init_wakeup(&pdev->dev, false); 
 	free_irq(keypad_data->irq, keypad_data);
 err_free_input:
 	input_free_device(input_dev);
@@ -421,8 +418,6 @@ static int __devexit omap4_keypad_remove(struct platform_device *pdev)
 
 	pm_runtime_disable(&pdev->dev);
 
-	device_init_wakeup(&pdev->dev, false); 
-
 	input_unregister_device(keypad_data->input);
 
 	iounmap(keypad_data->base);
@@ -439,13 +434,6 @@ static int omap4_keypad_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct omap4_keypad *keypad_data = platform_get_drvdata(pdev);
-	int error;
-	
-	if (device_may_wakeup(&pdev->dev)) {
-		error = enable_irq_wake(keypad_data->irq);
-	if (!error)
-		keypad_data->irq_wake_enabled = true;
- }
 
 	if (keypad_data->keypad_pad_wkup)
 		keypad_data->keypad_pad_wkup(1);
@@ -457,26 +445,11 @@ static int omap4_keypad_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct omap4_keypad *keypad_data = platform_get_drvdata(pdev);
 
- if (device_may_wakeup(&pdev->dev) && keypad_data->irq_wake_enabled) {
-	disable_irq_wake(keypad_data->irq);
-	keypad_data->irq_wake_enabled = false;
- }
-
 	if (keypad_data->keypad_pad_wkup)
 		keypad_data->keypad_pad_wkup(0);
 
 	return 0;
 }
-
-#ifdef CONFIG_PM_SLEEP
-/* static SIMPLE_DEV_PM_OPS(omap4_keypad_pm_ops, omap4_keypad_suspend,
- omap4_keypad_resume); */
-
-#define OMAP4_KEYPAD_PM_OPS (&omap4_keypad_pm_ops)
-#else
-#define OMAP4_KEYPAD_PM_OPS NULL
-#endif
-
 static const struct dev_pm_ops omap4_keypad_pm_ops = {
 	.suspend = omap4_keypad_suspend,
 	.resume = omap4_keypad_resume,

@@ -57,7 +57,7 @@ static ssize_t led_brightness_store(struct device *dev,
 		ret = count;
 
 		if (state == LED_OFF)
-			led_trigger_set_default(led_cdev);
+			led_trigger_remove(led_cdev);
 		led_set_brightness(led_cdev, state);
 	}
 
@@ -267,8 +267,6 @@ void led_blink_set(struct led_classdev *led_cdev,
 		   unsigned long *delay_on,
 		   unsigned long *delay_off)
 {
-	del_timer_sync(&led_cdev->blink_timer);
-
 	if (led_cdev->blink_set &&
 	    !led_cdev->blink_set(led_cdev, delay_on, delay_off))
 		return;

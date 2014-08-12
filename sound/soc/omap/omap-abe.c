@@ -178,6 +178,11 @@ int omap_abe_set_dl1_output(int output)
 	case OMAP_ABE_DL1_EARPIECE:
 		gain = GAIN_M1dB;
 		break;
+#if !defined(CONFIG_SND_OMAP_SOC_ABE_DL2)
+       case OMAP_ABE_DL1_HANDSFREE:
+               gain = GAIN_M7dB;
+               break;
+#endif
 	case OMAP_ABE_DL1_NO_PDM:
 		gain = GAIN_0dB;
 		break;
@@ -194,13 +199,23 @@ EXPORT_SYMBOL(omap_abe_set_dl1_output);
 
 static int omap_abe_dl1_enabled(struct omap_abe_data *abe_priv)
 {
+       int dl1;
+
 	/* DL1 path is common for PDM_DL1, BT_VX_DL and MM_EXT_DL */
-	return omap_abe_port_is_enabled(abe_priv->abe,
+//	return omap_abe_port_is_enabled(abe_priv->abe,
+       dl1 = omap_abe_port_is_enabled(abe_priv->abe,
 				abe_priv->port[OMAP_ABE_BE_PORT_PDM_DL1]) +
 		omap_abe_port_is_enabled(abe_priv->abe,
 				abe_priv->port[OMAP_ABE_BE_PORT_BT_VX_DL]) +
 		omap_abe_port_is_enabled(abe_priv->abe,
 				abe_priv->port[OMAP_ABE_BE_PORT_MM_EXT_DL]);
+
+#if !defined(CONFIG_SND_OMAP_SOC_ABE_DL2)
+       dl1 += omap_abe_port_is_enabled(abe_priv->abe,
+                               abe_priv->port[OMAP_ABE_BE_PORT_PDM_DL2]);
+#endif
+
+       return dl1;
 }
 
 static void mute_be(struct snd_soc_pcm_runtime *be,
@@ -227,8 +242,16 @@ static void mute_be(struct snd_soc_pcm_runtime *be,
 			}
 			break;
 		case OMAP_ABE_DAI_PDM_DL2:
+#if defined(CONFIG_SND_OMAP_SOC_ABE_DL2)
 			abe_mute_gain(GAINS_DL2, GAIN_LEFT_OFFSET);
 			abe_mute_gain(GAINS_DL2, GAIN_RIGHT_OFFSET);
+#else
+                       if (omap_abe_dl1_enabled(abe_priv) == 1) {
+                               abe_mute_gain(GAINS_DL1, GAIN_LEFT_OFFSET);
+                               abe_mute_gain(GAINS_DL1, GAIN_RIGHT_OFFSET);
+                               abe_mute_gain(MIXSDT, MIX_SDT_INPUT_DL1_MIXER);
+                       }
+#endif
 			break;
 		case OMAP_ABE_DAI_PDM_VIB:
 		case OMAP_ABE_DAI_MODEM:
@@ -283,8 +306,14 @@ static void unmute_be(struct snd_soc_pcm_runtime *be,
 			abe_unmute_gain(MIXSDT, MIX_SDT_INPUT_DL1_MIXER);
 			break;
 		case OMAP_ABE_DAI_PDM_DL2:
+#if defined(CONFIG_SND_OMAP_SOC_ABE_DL2)
 			abe_unmute_gain(GAINS_DL2, GAIN_LEFT_OFFSET);
 			abe_unmute_gain(GAINS_DL2, GAIN_RIGHT_OFFSET);
+#else
+                       abe_unmute_gain(GAINS_DL1, GAIN_LEFT_OFFSET);
+                       abe_unmute_gain(GAINS_DL1, GAIN_RIGHT_OFFSET);
+                       abe_unmute_gain(MIXSDT, MIX_SDT_INPUT_DL1_MIXER);
+#endif
 			break;
 		case OMAP_ABE_DAI_PDM_VIB:
 			break;
@@ -346,7 +375,7 @@ static void enable_be_port(struct snd_soc_pcm_runtime *be,
 
 			/* BT_DL connection to McBSP 1 ports */
 			format.f = 8000;
-			format.samp_format = MONO_RSHIFTED_16;
+			format.samp_format = STEREO_RSHIFTED_16;
 			abe_connect_serial_port(BT_VX_DL_PORT, &format, MCBSP1_TX);
 			omap_abe_port_enable(abe_priv->abe,
 				abe_priv->port[OMAP_ABE_BE_PORT_BT_VX_DL]);
@@ -359,7 +388,7 @@ static void enable_be_port(struct snd_soc_pcm_runtime *be,
 
 			/* BT_UL connection to McBSP 1 ports */
 			format.f = 8000;
-			format.samp_format = MONO_RSHIFTED_16;
+			format.samp_format = STEREO_RSHIFTED_16;
 			abe_connect_serial_port(BT_VX_UL_PORT, &format, MCBSP1_RX);
 			omap_abe_port_enable(abe_priv->abe,
 				abe_priv->port[OMAP_ABE_BE_PORT_BT_VX_UL]);
@@ -894,6 +923,20 @@ static void playback_trigger(struct snd_pcm_substream *substream,
 	}
 }
 
+static int omap_abe_hwrule_period_step(struct snd_pcm_hw_params *params,
+                                       struct snd_pcm_hw_rule *rule)
+{
+       struct snd_interval *period_size = hw_param_interval(params,
+                                    SNDRV_PCM_HW_PARAM_PERIOD_SIZE);
+       unsigned int rate = params_rate(params);
+
+       /* 44.1kHz has the same iteration number as 48kHz */
+       rate = (rate == 44100) ? 48000 : rate;
+
+       /* ABE requires chunks of 250us worth of data */
+       return snd_interval_step(period_size, 0, rate / 4000);
+}
+
 static int omap_abe_dai_startup(struct snd_pcm_substream *substream,
 			struct snd_soc_dai *dai)
 {
@@ -922,6 +965,17 @@ static int omap_abe_dai_startup(struct snd_pcm_substream *substream,
 			dev_err(abe_priv->modem_dai->dev, "failed to open DAI %d\n", ret);
 			return ret;
 		}
+       } else {
+               /*
+                * Period size must be aligned with the Audio Engine
+                * processing loop which is 250 us long
+                */
+               snd_pcm_hw_rule_add(substream->runtime, 0,
+                               SNDRV_PCM_HW_PARAM_PERIOD_SIZE,
+                               omap_abe_hwrule_period_step,
+                               NULL,
+                               SNDRV_PCM_HW_PARAM_PERIOD_SIZE,
+                               SNDRV_PCM_HW_PARAM_RATE, -1);
 	}
 
 	return ret;
@@ -943,16 +997,16 @@ static int omap_abe_dai_hw_params(struct snd_pcm_substream *substream,
 	dma_data = &omap_abe_dai_dma_params[dai->id][substream->stream];
 
 	/* Reset DMA info that may have been overridden */
-	dma_data->port_addr = 0L;
-	dma_data->set_threshold = NULL;
-	dma_data->data_type = OMAP_DMA_DATA_TYPE_S32;
-	dma_data->packet_size = 0;
+//	dma_data->port_addr = 0L;
+//	dma_data->set_threshold = NULL;
+//	dma_data->data_type = OMAP_DMA_DATA_TYPE_S32;
+//	dma_data->packet_size = 0;
 
 	switch (params_channels(params)) {
 	case 1:
 		if (params_format(params) == SNDRV_PCM_FORMAT_S16_LE) {
 			format.samp_format = MONO_RSHIFTED_16;
-			dma_data->data_type = OMAP_DMA_DATA_TYPE_S16;
+//			dma_data->data_type = OMAP_DMA_DATA_TYPE_S16;
 		} else {
 			format.samp_format = MONO_MSB;
 		}
@@ -1339,6 +1393,7 @@ static struct snd_soc_dai_ops omap_abe_dai_ops = {
 static struct snd_soc_dai_driver omap_abe_dai[] = {
 	{	/* Multimedia Playback and Capture */
 		.name = "MultiMedia1",
+		.probe = omap_abe_dai_probe,
 		.remove = omap_abe_dai_remove,
 		.suspend = omap_abe_dai_suspend,
 		.resume = omap_abe_dai_resume,

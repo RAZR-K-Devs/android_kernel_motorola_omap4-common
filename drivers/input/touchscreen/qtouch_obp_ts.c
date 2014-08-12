@@ -2450,7 +2450,6 @@ static int qtouch_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 static int qtouch_ts_resume(struct i2c_client *client)
 {
 	struct qtouch_ts_data *ts = i2c_get_clientdata(client);
-	int ret;
 	int i;
 
 	if (qtouch_tsdebug & 4)

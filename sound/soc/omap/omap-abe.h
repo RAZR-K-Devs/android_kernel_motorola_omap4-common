@@ -44,7 +44,8 @@
 #define OMAP_ABE_DAI_DMIC0			7
 #define OMAP_ABE_DAI_DMIC1			8
 #define OMAP_ABE_DAI_DMIC2			9
-#define OMAP_ABE_DAI_NUM			10
+#define OMAP_ABE_DAI_VXREC			10
+#define OMAP_ABE_DAI_NUM			11
 
 #define OMAP_ABE_BE_PDM_DL1		"PDM-DL1"
 #define OMAP_ABE_BE_PDM_UL1		"PDM-UL1"
@@ -57,11 +58,15 @@
 #define OMAP_ABE_BE_DMIC0		"DMIC0"
 #define OMAP_ABE_BE_DMIC1		"DMIC1"
 #define OMAP_ABE_BE_DMIC2		"DMIC2"
+#define OMAP_ABE_BE_VXREC		"VXREC"
 
 #define OMAP_ABE_DL1_NO_PDM		0
 #define OMAP_ABE_DL1_HEADSET_LP		1
 #define OMAP_ABE_DL1_HEADSET_HP		2
 #define OMAP_ABE_DL1_EARPIECE		3
+#if !defined(CONFIG_SND_OMAP_SOC_ABE_DL2)
+#define OMAP_ABE_DL1_HANDSFREE		4
+#endif
 
 int omap_abe_set_dl1_output(int output);
 

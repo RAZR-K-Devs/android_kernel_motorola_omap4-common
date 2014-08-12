@@ -1,0 +1,23 @@
+c144f3b Intelli-Plug: Disable input boost
+518cfdd HWMON/THERMAL: Add support for TI tmp105 temperature sensor
+2303734 Added todays changelog and updated full history
+5df647d defconfig updates
+ad3ad84 [3.0.31] omap: video: hdmi:  update drivers
+501c4b7 Revert "Revert "omap2plus-cpufreq: fix the device cooling exit instruction""
+3261a5e BREAK: It seems this includes the fix for bootloop issue
+e05fbc5 Revert "omap2plus-cpufreq: fix the device cooling exit instruction"
+7e2f62d Revert "intelli_plug: older Qualcomm kernel compatibility fixup"
+2080cb9 Revert "Revert "OMAP: DSS: drop small YUV encoded frames on OMAP44XX and fix debuf messages""
+73ec578 Revert "OMAP: DSS: drop small YUV encoded frames on OMAP44XX and fix debuf messages"
+d9d45d0 defconfig: disable most thermal drivers until we have the sources for the right tmp105/tmp103 sensor
+df036d1 remove trash
+567f409 temp fixes
+49db5bc Intelli-Tweaks: Enable and adapt Faux's Intelli-Stuff as main default for JBX. Intelliactive is now default governor (but tweaked a little for our CPU power) Intelli-Plug updated to latest version (but of course keep my hotplug patches to allow CPU 1 to go offline only in idle mode - hotplugging while device is active, even when happening multiple times within a few seconds, eats more power than safe some! Itelli-Demand - Re-enabled and adapted tzo better compatibility with our CPU) Use other Intelli-related options, like CPUFREQ_ID_PERFLOCK to make all Intelli-drivers work best with JBX-Kernel
+69fe6d5 intelliactive: rework input register/unregister
+5055f64 intelli_plug: older Qualcomm kernel compatibility fixup
+94ccd95 intelli_plug: use primary CPU's info data for non-boot cpu's settings
+7370053 intelli_plug: initialize ip_info struct element during driver init this will eliminate race issues
+89a65bf intelli_plug: fix incorrect cpufreq API usage
+69e637e intelli_plug: only apply suspend/resume logic if active
+a0dc1c3 omap2plus-cpufreq: fix the device cooling exit instruction
+e7985d4 Update build scripts
