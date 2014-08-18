@@ -44,21 +44,11 @@ void __iomem *omap4_get_scu_base(void)
 
 void __cpuinit platform_secondary_init(unsigned int cpu)
 {
-	u32 diag0_errata_flags = 0;
 	/* Enable NS access to SMP bit for this CPU on HS devices */
-	if (cpu_is_omap446x() || cpu_is_omap443x()) {
-		if (omap_type() != OMAP2_DEVICE_TYPE_GP)
-			omap4_secure_dispatcher(PPA_SERVICE_DEFAULT_POR_NS_SMP,
+	if (cpu_is_omap443x() && (omap_type() != OMAP2_DEVICE_TYPE_GP))
+		omap4_secure_dispatcher(PPA_SERVICE_DEFAULT_POR_NS_SMP,
 					FLAG_START_CRITICAL,
 					0, 0, 0, 0, 0);
-		else {
-			diag0_errata_flags =
-				omap4_get_diagctrl0_errata_flags();
-			if (diag0_errata_flags)
-				omap_smc1(HAL_DIAGREG_0, diag0_errata_flags);
-		}
-
-	}
 
 	/*
 	 * If any interrupts are already enabled for the primary
@@ -180,6 +170,8 @@ static void __init wakeup_secondary(void)
 
 	if (!cpu1_clkdm)
 		cpu1_clkdm = clkdm_lookup("mpu1_clkdm");
+
+//	clkdm_init_mpu1(cpu1_clkdm);
 
 	/*
 	 * Send a 'sev' to wake the secondary core from WFE.

@@ -18,6 +18,8 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/io.h>
+#include <linux/socinfo.h>
+#include <linux/seq_file.h>
 
 #include <asm/cputype.h>
 
@@ -76,12 +78,14 @@ out:
 }
 EXPORT_SYMBOL(omap_type);
 
-#define OMAP4_SILICON_TYPE_STANDARD	0x01
-#define OMAP4_SILICON_TYPE_PERFORMANCE	0x02
 
 /*----------------------------------------------------------------------------*/
 
 #define OMAP_TAP_IDCODE		0x0204
+#define OMAP_TAP_PROD_ID_0      0x0208
+#define OMAP_TAP_PROD_ID_1      0x020c
+#define OMAP_TAP_PROD_ID_2      0x0210
+#define OMAP_TAP_PROD_ID_3      0x0214
 #define OMAP_TAP_DIE_ID_0	0x0218
 #define OMAP_TAP_DIE_ID_1	0x021C
 #define OMAP_TAP_DIE_ID_2	0x0220
@@ -114,6 +118,8 @@ static struct omap_id omap_ids[] __initdata = {
 
 static void __iomem *tap_base;
 static u16 tap_prod_id;
+#define SOCINFO_SZ		128
+static char socinfo[SOCINFO_SZ];
 
 void omap_get_die_id(struct omap_die_id *odi)
 {
@@ -143,7 +149,7 @@ void omap_get_production_id(struct omap_die_id *odi)
 
 static void __init omap24xx_check_revision(void)
 {
-	int i, j;
+	int i, j, sz;
 	u32 idcode, prod_id;
 	u16 hawkeye;
 	u8  dev_type, rev;
@@ -189,10 +195,11 @@ static void __init omap24xx_check_revision(void)
 		j = i;
 	}
 
-	pr_info("OMAP%04x", omap_rev() >> 16);
+	sz = snprintf(socinfo, SOCINFO_SZ, "OMAP%04x", omap_rev() >> 16);
 	if ((omap_rev() >> 8) & 0x0f)
-		pr_info("ES%x", (omap_rev() >> 12) & 0xf);
-	pr_info("\n");
+		snprintf(socinfo + sz, SOCINFO_SZ - sz, "ES%x",
+						(omap_rev() >> 12) & 0xf);
+	pr_info("%s\n", socinfo);
 }
 
 #define OMAP3_CHECK_FEATURE(status,feat)				\
@@ -237,16 +244,20 @@ static void __init omap4_check_features(void)
 	  (read_tap_reg(OMAP4_CTRL_MODULE_CORE_STD_FUSE_PROD_ID_1) >> 16) & 3;
 
 	switch (si_type) {
-	case OMAP4_SILICON_TYPE_PERFORMANCE:
+	case 0x2:
 		/* High performance device */
-		if (cpu_is_omap443x())
+		if (cpu_is_omap443x()) {
+			omap4_features |= OMAP4_HAS_MPU_1GHZ;
 			omap4_features |= OMAP4_HAS_MPU_1_2GHZ;
+			omap4_features |= OMAP4_HAS_MPU_1_3GHZ;
+			omap4_features |= OMAP4_HAS_IVA_500MHZ;
+		}
 		else if (cpu_is_omap446x() || cpu_is_omap447x()) {
 			omap4_features |= OMAP4_HAS_MPU_1_5GHZ;
 			omap4_features |= OMAP4_HAS_IVA_500MHZ;
 		}
-		/* Fall through to Standard device features */
-	case OMAP4_SILICON_TYPE_STANDARD:
+		break;
+	case 0x1:
 	default:
 		/* Standard device */
 		if (cpu_is_omap443x())
@@ -378,10 +389,32 @@ static void __init omap3_check_revision(void)
 	}
 }
 
+#define MAX_ID_STRING           (4*8 + 4)
+
+static int phone_id_panic_report_omap4(struct notifier_block *this,
+					unsigned long event, void *ptr)
+{
+	struct omap_die_id odi;
+	omap_get_die_id(&odi);
+	pr_emerg("Die id:%08x%08x", odi.id_3, odi.id_2);
+	return NOTIFY_DONE;
+}
+static struct notifier_block phone_id_panic_notifier_omap4 = {
+	.notifier_call	= phone_id_panic_report_omap4,
+	.next		= NULL,
+	.priority	= INT_MAX,
+};
+
 static void __init omap4_check_revision(void)
 {
 	u32 idcode;
 	u8 rev;
+	u8 *type;
+	u8 id_string[MAX_ID_STRING];
+	int sz, pos;
+	struct omap_die_id odi;
+	struct omap_die_id opi;
+
 	/*
 	 * NOTE: OMAP4460+ uses ramp system for identification and hawkeye
 	 * variable is reused for the same. Since the values are unique
@@ -402,7 +435,7 @@ static void __init omap4_check_revision(void)
 	 * Few initial 4430 ES2.0 samples IDCODE is same as ES1.0
 	 * Use ARM register to detect the correct ES version
 	 */
-	if (!rev && ((hawkeye == 0xb852) || (hawkeye == 0xb95c))) {
+	if (!rev && (hawkeye != 0xb94e)) {
 		idcode = read_cpuid(CPUID_ID);
 		rev = (idcode & 0xf) - 1;
 	}
@@ -449,23 +482,62 @@ static void __init omap4_check_revision(void)
 			break;
 		}
 		break;
-	case 0xb975:
-		switch (rev) {
-		case 0:
-		default:
-			omap_revision = OMAP4470_REV_ES1_0;
-			omap_chip.oc |= CHIP_IS_OMAP4470ES1_0;
-			break;
-		}
-		break;
 	default:
 		/* Unknown default to latest silicon rev as default */
 		omap_revision = OMAP4430_REV_ES2_3;
 		omap_chip.oc |= CHIP_IS_OMAP4430ES2_3;
 	}
 
-	pr_info("OMAP%04x ES%d.%d\n", omap_rev() >> 16,
-		((omap_rev() >> 12) & 0xf), ((omap_rev() >> 8) & 0xf));
+	switch (omap_type()) {
+	case OMAP2_DEVICE_TYPE_GP:
+		type = "GP";
+		break;
+	case OMAP2_DEVICE_TYPE_EMU:
+		type = "EMU";
+		break;
+	case OMAP2_DEVICE_TYPE_SEC:
+		type = "HS";
+		break;
+	default:
+		type = "bad-type";
+		break;
+	}
+
+	pr_info("***********************");
+	pr_info("OMAP%04x ES%d.%d type(%s)\n", omap_rev() >> 16,
+		((omap_rev() >> 12) & 0xf), ((omap_rev() >> 8) & 0xf), type);
+	idcode = read_tap_reg(OMAP_TAP_IDCODE);
+	pr_info("id-code  (%x)\n", idcode);
+
+	/* die-id string */
+	omap_get_die_id(&odi);
+	snprintf(id_string, MAX_ID_STRING, "%08X-%08X-%08X-%08X",
+						odi.id_3, odi.id_2,
+						odi.id_1, odi.id_0);
+	pr_info("Die-id   (%s)\n", id_string);
+
+	/* Get prod-id */
+	omap_get_production_id(&opi);
+	snprintf(id_string, MAX_ID_STRING, "%08X-%08X",
+						opi.id_1, opi.id_0);
+
+	pr_info("Prod-id  (%s)\n", id_string);
+	pr_info("***********************");
+
+	/* Print socinfo information */
+	sz = snprintf(socinfo, SOCINFO_SZ, "OMAP%04x ES%d.%d type(%s)\n",
+			omap_rev() >> 16, ((omap_rev() >> 12) & 0xf),
+			((omap_rev() >> 8) & 0xf), type);
+	pos = sz;
+	sz = snprintf(socinfo + pos, SOCINFO_SZ - pos,
+			"\nIDCODE\t: %08x", idcode);
+	pos += sz;
+	sz = snprintf(socinfo + pos, SOCINFO_SZ - pos,
+			"\nPr. ID\t: %08x %08x", opi.id_1, opi.id_0);
+	pos += sz;
+	snprintf(socinfo + pos, SOCINFO_SZ - pos,
+		"\nDie ID\t: %08x %08x %08x %08x",
+		odi.id_3, odi.id_2, odi.id_1, odi.id_0);
 }
 
 #define OMAP3_SHOW_FEATURE(feat)		\
@@ -474,6 +546,7 @@ static void __init omap4_check_revision(void)
 
 static void __init omap3_cpuinfo(void)
 {
+	int sz;
 	u8 rev = GET_OMAP_REVISION();
 	char cpu_name[16], cpu_rev[16];
 
@@ -563,7 +636,8 @@ static void __init omap3_cpuinfo(void)
 	}
 
 	/* Print verbose information */
-	pr_info("%s ES%s (", cpu_name, cpu_rev);
+	sz = snprintf(socinfo, SOCINFO_SZ, "%s ES%s", cpu_name, cpu_rev);
+	pr_info("%s (", socinfo);
 
 	OMAP3_SHOW_FEATURE(l2cache);
 	OMAP3_SHOW_FEATURE(iva);
@@ -573,7 +647,57 @@ static void __init omap3_cpuinfo(void)
 	OMAP3_SHOW_FEATURE(192mhz_clk);
 
 	printk(")\n");
+
+	/* Append OMAP3 IDCODE and Production ID to /proc/socinfo */
+	snprintf(socinfo + sz, SOCINFO_SZ - sz,
+			"\nIDCODE\t: %08x\nPr. ID\t: %08x %08x %08x %08x",
+			read_tap_reg(OMAP_TAP_IDCODE),
+			read_tap_reg(OMAP_TAP_PROD_ID_0),
+			read_tap_reg(OMAP_TAP_PROD_ID_1),
+			read_tap_reg(OMAP_TAP_PROD_ID_2),
+			read_tap_reg(OMAP_TAP_PROD_ID_3));
+
 }
+
+#ifdef CONFIG_OMAP3_EXPORT_DIE_ID
+static int __init omap3_die_id_setup(char *s)
+{
+	int sz;
+
+	sz = strlen(socinfo);
+	snprintf(socinfo + sz, SOCINFO_SZ - sz,
+			"\nDie ID\t: %08x %08x %08x %08x",
+			read_tap_reg(OMAP_TAP_DIE_ID_0),
+			read_tap_reg(OMAP_TAP_DIE_ID_1),
+			read_tap_reg(OMAP_TAP_DIE_ID_2),
+			read_tap_reg(OMAP_TAP_DIE_ID_3));
+
+	return 1;
+}
+__setup("omap3_die_id", omap3_die_id_setup);
+#endif
+
+static int omap_socinfo_show(struct seq_file *m, void *v)
+{
+	char *socinfop = v;
+
+	seq_printf(m, "SoC\t: %s\n", socinfop);
+
+	return 0;
+}
+
+static int phone_id_panic_report(struct notifier_block *this,
+					unsigned long event, void *ptr)
+{
+	pr_emerg("Phone id:%x%x", read_tap_reg(OMAP_TAP_DIE_ID_0), \
+					read_tap_reg(OMAP_TAP_DIE_ID_1));
+	return NOTIFY_DONE;
+}
+static struct notifier_block phone_id_panic_notifier = {
+	.notifier_call  = phone_id_panic_report,
+	.next           = NULL,
+	.priority       = INT_MAX,
+};
 
 /*
  * Try to detect the exact revision of the omap we're running on
@@ -596,15 +720,25 @@ void __init omap2_check_revision(void)
 			ti816x_check_features();
 
 		omap3_cpuinfo();
-		return;
 	} else if (cpu_is_omap44xx()) {
 		omap4_check_revision();
 		omap4_check_features();
-		return;
 	} else {
 		pr_err("OMAP revision unknown, please fix!\n");
 	}
 
+	/* also register call back to report SoC data under /proc/socinfo */
+	register_socinfo_show(omap_socinfo_show, socinfo);
+
+	if (cpu_is_omap44xx()) {
+		atomic_notifier_chain_register(&panic_notifier_list,
+					&phone_id_panic_notifier_omap4);
+	} else {
+		atomic_notifier_chain_register(&panic_notifier_list,
+					&phone_id_panic_notifier);
+		if (cpu_is_omap34xx())
+			return;
+	}
 	/*
 	 * OK, now we know the exact revision. Initialize omap_chip bits
 	 * for powerdowmain and clockdomain code.

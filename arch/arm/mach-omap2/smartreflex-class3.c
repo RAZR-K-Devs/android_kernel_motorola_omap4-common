@@ -11,7 +11,6 @@
  * published by the Free Software Foundation.
  */
 
-#include <plat/cpu.h>
 #include "smartreflex.h"
 
 static int sr_class3_enable(struct voltagedomain *voltdm,

@@ -47,7 +47,6 @@
 
 /* Backward references (IPs with Bus Master capability) */
 static struct omap_hwmod omap44xx_aess_hwmod;
-static struct omap_hwmod omap44xx_bb2d_hwmod;
 static struct omap_hwmod omap44xx_dma_system_hwmod;
 static struct omap_hwmod omap44xx_dmm_hwmod;
 static struct omap_hwmod omap44xx_dsp_hwmod;
@@ -329,14 +328,6 @@ static struct omap_hwmod_ocp_if omap44xx_dma_system__l3_main_2 = {
 	.user		= OCP_USER_MPU | OCP_USER_SDMA,
 };
 
-/* bb2d -> l3_main_2 */
-static struct omap_hwmod_ocp_if omap44xx_bb2d__l3_main_2 = {
-	.master		= &omap44xx_bb2d_hwmod,
-	.slave		= &omap44xx_l3_main_2_hwmod,
-	.clk		= "l3_div_ck",
-	.user		= OCP_USER_MPU | OCP_USER_SDMA,
-};
-
 /* gpu -> l3_main_2 */
 static struct omap_hwmod_ocp_if omap44xx_gpu__l3_main_2 = {
 	.master		= &omap44xx_gpu_hwmod,
@@ -421,7 +412,6 @@ static struct omap_hwmod_ocp_if omap44xx_usb_otg_hs__l3_main_2 = {
 
 /* l3_main_2 slave ports */
 static struct omap_hwmod_ocp_if *omap44xx_l3_main_2_slaves[] = {
-	&omap44xx_bb2d__l3_main_2,
 	&omap44xx_dma_system__l3_main_2,
 	&omap44xx_hsi__l3_main_2,
 	&omap44xx_ipu__l3_main_2,
@@ -1206,68 +1196,6 @@ static struct omap_hwmod omap446x_bandgap_hwmod = {
 	.opt_clks	= bandgap446x_opt_clks,
 	.opt_clks_cnt	= ARRAY_SIZE(bandgap446x_opt_clks),
 	.omap_chip	= OMAP_CHIP_INIT(CHIP_IS_OMAP446X),
-};
-
-/*
- * 'bb2d' class
- * 2d bit-blitter accelerator
- */
-
-static struct omap_hwmod_class omap44xx_bb2d_hwmod_class = {
-	.name   = "bb2d",
-};
-
-/* bb2d */
-static struct omap_hwmod_irq_info omap44xx_bb2d_irqs[] = {
-	{ .irq = 125 + OMAP44XX_IRQ_GIC_START },
-};
-
-static struct omap_hwmod_addr_space omap44xx_bb2d_addrs[] = {
-	{
-		.pa_start	= 0x59000000,
-		.pa_end		= 0x590007ff,
-		.flags		= ADDR_TYPE_RT
-	},
-};
-
-/* l3_main_2 -> bb2d */
-static struct omap_hwmod_ocp_if omap44xx_l3_main_2__bb2d = {
-	.master		= &omap44xx_l3_main_2_hwmod,
-	.slave		= &omap44xx_bb2d_hwmod,
-	.clk		= "l3_div_ck",
-	.addr		= omap44xx_bb2d_addrs,
-	.addr_cnt	= ARRAY_SIZE(omap44xx_bb2d_addrs),
-	.user		= OCP_USER_MPU | OCP_USER_SDMA,
-};
-
-/* bb2d master ports */
-static struct omap_hwmod_ocp_if *omap44xx_bb2d_masters[] = {
-	&omap44xx_bb2d__l3_main_2,
-};
-
-/* bb2d slave ports */
-static struct omap_hwmod_ocp_if *omap44xx_bb2d_slaves[] = {
-	&omap44xx_l3_main_2__bb2d,
-};
-
-static struct omap_hwmod omap44xx_bb2d_hwmod = {
-	.name		= "bb2d",
-	.class		= &omap44xx_bb2d_hwmod_class,
-	.mpu_irqs	= omap44xx_bb2d_irqs,
-	.mpu_irqs_cnt	= ARRAY_SIZE(omap44xx_bb2d_irqs),
-	.main_clk	= "bb2d_fck",
-	.prcm = {
-		.omap4 = {
-			.clkctrl_reg = OMAP4470_CM_DSS_BB2D_CLKCTRL,
-			/* FIXME no BB2D def*/
-			.context_reg = OMAP4430_RM_DSS_DEISS_CONTEXT,
-		},
-	},
-	.slaves		= omap44xx_bb2d_slaves,
-	.slaves_cnt	= ARRAY_SIZE(omap44xx_bb2d_slaves),
-	.masters	= omap44xx_bb2d_masters,
-	.masters_cnt	= ARRAY_SIZE(omap44xx_bb2d_masters),
-	.omap_chip	= OMAP_CHIP_INIT(CHIP_IS_OMAP447X),
 };
 
 /*
@@ -3416,7 +3344,6 @@ static struct omap_hwmod omap44xx_ipu_c0_hwmod = {
 	.flags		= HWMOD_INIT_NO_RESET,
 	.rst_lines	= omap44xx_ipu_c0_resets,
 	.rst_lines_cnt	= ARRAY_SIZE(omap44xx_ipu_c0_resets),
-	.main_clk       = "ipu_fck",
 	.prcm		= {
 		.omap4 = {
 			.rstctrl_reg = OMAP4430_RM_DUCATI_RSTCTRL,
@@ -3432,7 +3359,6 @@ static struct omap_hwmod omap44xx_ipu_c1_hwmod = {
 	.flags		= HWMOD_INIT_NO_RESET,
 	.rst_lines	= omap44xx_ipu_c1_resets,
 	.rst_lines_cnt	= ARRAY_SIZE(omap44xx_ipu_c1_resets),
-	.main_clk       = "ipu_fck",
 	.prcm		= {
 		.omap4 = {
 			.rstctrl_reg = OMAP4430_RM_DUCATI_RSTCTRL,
@@ -5755,7 +5681,6 @@ static struct omap_hwmod_ocp_if *omap44xx_uart3_slaves[] = {
 static struct omap_hwmod omap44xx_uart3_hwmod = {
 	.name		= "uart3",
 	.class		= &omap44xx_uart_hwmod_class,
-	.flags		= HWMOD_SWSUP_SIDLE,
 #ifdef CONFIG_EMU_UART_DEBUG
 	.flags		= (HWMOD_INIT_NO_IDLE | HWMOD_INIT_NO_RESET),
 #endif
@@ -6299,9 +6224,6 @@ static __initdata struct omap_hwmod *omap44xx_hwmods[] = {
 	/* bandgap class */
 	&omap443x_bandgap_hwmod,
 	&omap446x_bandgap_hwmod,
-
-	/* bb2d class */
-	&omap44xx_bb2d_hwmod,
 
 	/* counter class */
 /*	&omap44xx_counter_32k_hwmod, */

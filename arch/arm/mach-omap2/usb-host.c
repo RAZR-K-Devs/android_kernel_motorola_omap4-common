@@ -47,6 +47,7 @@
 static struct usbhs_omap_platform_data		usbhs_data;
 static struct ehci_hcd_omap_platform_data	ehci_data;
 static struct ohci_hcd_omap_platform_data	ohci_data;
+
 static struct omap_device_pm_latency omap_uhhtll_latency[] = {
 	  {
 		.deactivate_func = omap_device_idle_hwmods,

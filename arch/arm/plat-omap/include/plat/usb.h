@@ -80,7 +80,6 @@ struct ehci_hcd_omap_platform_data {
 struct ohci_hcd_omap_platform_data {
 	enum usbhs_omap_port_mode	port_mode[OMAP3_HS_USB_PORTS];
 	unsigned			es2_compatibility:1;
-
 	/* Suspend Functions for USB PHYs */
 	int	(*ohci_phy_suspend) (int on);
 
@@ -149,7 +148,7 @@ extern void usb_musb_init(struct omap_musb_board_data *board_data);
 extern void usbhs_init(const struct usbhs_omap_board_data *pdata);
 
 extern int omap4430_phy_power(struct device *dev, int ID, int on);
-//extern int omap4430_phy_set_clk(struct device *dev, int on);
+extern int omap4430_phy_set_clk(struct device *dev, int on);
 extern int omap4430_phy_init(struct device *dev);
 extern int omap4430_phy_exit(struct device *dev);
 extern int omap4_charger_detect(void);
@@ -346,5 +345,6 @@ extern void omap4_trigger_ioctrl(void);
 #define USBHS_OHCI_HWMODNAME    "usbhs_ohci"
 
 #endif	/* __ASM_ARCH_OMAP_USB_H */
+
 extern int sar_needs_ehci_saving;
 #define save_usb_sar_regs() do {sar_needs_ehci_saving = 1; } while (0);

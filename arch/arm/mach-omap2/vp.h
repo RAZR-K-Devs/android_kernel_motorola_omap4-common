@@ -65,6 +65,7 @@ struct omap_vp_common {
 	u8 vpconfig_initvdd;
 	u8 vpconfig_forceupdate;
 	u8 vpconfig_vpenable;
+	u8 vstatus_vpidle;
 	u8 vstepmin_stepmin_shift;
 	u8 vstepmin_smpswaittimemin_shift;
 	u8 vstepmax_stepmax_shift;
@@ -116,5 +117,7 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 			      struct omap_volt_data *target_v);
 int omap_vp_update_errorgain(struct voltagedomain *voltdm,
 			     unsigned long target_volt);
+bool omap_vp_is_transdone(struct voltagedomain *voltdm);
+void omap_vp_clear_transdone(struct voltagedomain *voltdm);
 
 #endif

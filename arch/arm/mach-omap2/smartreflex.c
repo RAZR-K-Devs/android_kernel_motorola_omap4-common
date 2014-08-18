@@ -653,6 +653,9 @@ int sr_disable_errgen(struct voltagedomain *voltdm)
 			__func__, voltdm->name);
 		return -EINVAL;
 	}
+	/* Check if SR clocks are already disabled. If yes do nothing */
+	if (pm_runtime_suspended(&sr->pdev->dev))
+		return 0;
 
 	if (sr->ip_type == SR_TYPE_V1) {
 		errconfig_offs = ERRCONFIG_V1;

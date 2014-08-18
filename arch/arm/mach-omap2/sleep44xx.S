@@ -48,19 +48,6 @@
 .endm
 
 /*
- * Macro to check OMAP4 revision
- * @a: bits 31:08 of omap_rev
- */
-.macro OMAP4_REV_CMP a
-	ldr	r0, =OMAP44XX_SAR_RAM_BASE
-	ldr	r1, [r0, #OMAP_REV_OFFSET]
-	lsr	r2, r1, #8
-	and	r2, r2, #0xffffff
-	ldr	r3, =\a
-	cmp	r2, r3
-.endm
-
-/*
  * To load POR which was saved in SAR RAM
  */
 POR_params:
@@ -341,37 +328,27 @@ ENDPROC(omap4_cpu_suspend)
 
 ENTRY(omap4_cpu_resume)
 	/*
-	 * Each CPU get the device type from SAR RAM and store in r9
-	 */
-	ldr	r8, =OMAP44XX_SAR_RAM_BASE
-	ldr	r9, [r8, #OMAP_TYPE_OFFSET]
-	/*
-	 * CPU1 must check if CPU0 is alive/awake,
+	 * CPU1 must check if CPU0 is alive/awaken.
 	 * if PL310 is OFF, MPUSS was OFF and CPU0 is still off,
 	 * CPU1 must go to sleep and wait for CPU0.
-	 * Only CPU0 should enable cache controller.
+	 * CPU0 is needed for any PPA API to work.
 	 */
-	mrc	p15, 0, r0, c0, c0, 5	@ Get cpuID
-	ands	r0, r0, #0x0f		@ Continue boot if CPU0
-	bne	is_cpu0_up		@ CPU1: Must check if CPU0 is up
-	cmp	r9, #0x1		@ CPU0: Check for HS device in r9
+	mrc     p15, 0, r0, c0, c0, 5	@ Get cpuID
+	ands    r0, r0, #0x0f		@ Continue boot if CPU0
 	beq	continue_boot
-	bne	gp_cp15_configure
-is_cpu0_up:
+	ldr     r8, =OMAP44XX_SAR_RAM_BASE
+	ldr	r9, [r8, #OMAP_TYPE_OFFSET]
+	cmp	r9, #0x1		@ Check for HS device
+	bne	continue_boot		@ Continue on GP devcies
 	ldr	r2, =OMAP44XX_L2CACHE_BASE
 	ldr	r0, [r2, #L2X0_CTRL]
 	and	r0, #0x0f
 	cmp	r0, #1				@ is CPU0 already UP?
-	beq	cpu1_configure_cp15
+	beq	ppa_cp15_cpu1_configure		@ CPU1 HS go to next stage
 	/*
 	 * When CPU1 is released to control of HLOS in the case of OSWR
 	 * and OFF mode, PPA below v1.7.3[1] is not performing all
 	 * Memory coherency and TLB operations required.
-	 *
-	 * For GP devices (PPA never present) this WA path is also taken if
-	 * CPU1 wakes up first, this mechanism should be used to synchronize
-	 * booting by shutting off CPU1 thus allowing CPU0 to boot first
-	 * and restore OMAP context.
 	 *
 	 * A WA to recover cleanly from this scenario is to switch CPU1 back to
 	 * previous OFF state. This forces a reset of CPU1, which in turn
@@ -424,64 +401,27 @@ is_cpu0_up:
 	 * CPU0, so, we ask CPU1 to loop back to stagger CPU1 behind CPU0
 	 */
 	b omap4_cpu_resume
-cpu1_configure_cp15:
-	/*
-	 * Select right API to set cp15 depending on device type
-	 */
-	cmp	r9, #0x1		@ Check for HS device in r9
-	bne	gp_cp15_configure	@ Jump to GP API
+
 ppa_cp15_cpu1_configure:
 	/*
+	 * Configure CP15 for CPU1 on HS devices:
 	 * In HS devices CPU0's CP15 is configured at wakeup by PPA, CPU1 must
-	 * call PPA to configure it and CPU0 must be online for any PPA API to
-	 * work. In 4430 devices CPU1 this call also enables the access to SMP
-	 * bit, on 4460 devices, CPU1 will have SMP bit access by default.
+	 * call PPA to configure it.
+	 * In 4430 devices CPU1 this call also enables the access to SMP bit,
+	 * on 4460 devices, CPU1 will have SMP bit access by default.
 	 */
-	mov	r0, #PPA_SERVICE_DEFAULT_POR_NS_SMP
+	mov     r0, #PPA_SERVICE_DEFAULT_POR_NS_SMP
 	adr	r3, ppa_zero_params		@ Pointer to parameters
 	LM_CALL_PPA_SERVICE_PA
 	isb
 	dsb
 	cmp	r0, #0x0			@ API returns 0 on success.
-	bne	ppa_cp15_cpu1_configure		@ retry if we did not succeed
-	/* HS device cp15 done, jump to continue_boot */
-	b	continue_boot
-gp_cp15_configure:
-	/* In GP devices, both CPUs must configure their CP15 */
-	/* Compute the ARM revision  */
-	mov	r3, #0
-	mrc	p15, 0, r1, c0, c0, 0		@ read main ID register
-	and	r2, r1, #0x00f00000		@ variant
-	and	r3, r1, #0x0000000f		@ revision
-	orr	r3, r3, r2, lsr #20-4		@ r3: has variant and revision
+	bne	ppa_cp15_cpu1_configure		@ retry if we did succeed
 
-	mov	r0, #0
-#ifdef CONFIG_OMAP4_ARM_ERRATA_742230
-	cmp	r3, #0x10			@ present in r1p0 onwards
-	blt	ignore_742230
-	cmp	r3, #0x22			@ not present after r2p2
-	orrle	r0, r0, #0x10			@ Set bit 4
-ignore_742230:
-#endif
-#ifdef 	CONFIG_OMAP4_ARM_ERRATA_751472
-	cmp	r3, #0x30			@ present prior to r3p0
-	orrlt	r0, r0, #0x800			@ Set bit 11
-#endif
-#ifdef 	CONFIG_OMAP4_ARM_ERRATA_743622
-	cmp	r3, #0x20			@ present in r2p0 onwards
-	blt	ignore_743622
-	cmp	r3, #0x30			@ not preset in r3p0 onwards
-	orrlt	r0, r0, #0x40			@ Set bit 6
-ignore_743622:
-#endif
-	cmp	r0, #0
-	beq	continue_boot
-	mov	r12, #HAL_DIAGREG_0
-	dsb
-	smc	#0
-	dsb
+	/* Fall through to continue with boot */
 
 continue_boot:
+
 #ifdef CONFIG_CACHE_L2X0
 	/*
 	 * Restore the L2 AUXCTRL and enable the L2 cache.
@@ -501,22 +441,13 @@ check_por:
 	ldr	r0, =OMAP44XX_SAR_RAM_BASE  @ Check DEVICE type
 	ldr	r1, [r0, #OMAP_TYPE_OFFSET]
 	cmp	r1, #0x1                   @ Check for HS device
-	bne	check_por_gp
+	bne	skip_por
 	ldr	r0, =PPA_SERVICE_PL310_POR @ Setup PPA HAL call
 	ldr	r1, =OMAP44XX_SAR_RAM_BASE
 	ldr	r4, [r1, #L2X0_PREFETCHCTRL_OFFSET]
 	adr	r3, POR_params
 	str	r4, [r3, #0x04]
 	LM_CALL_PPA_SERVICE_PA
-	b	skip_por
-check_por_gp:
-	OMAP4_REV_CMP 0x443022
-	blt	skip_por  @ for GP POR setup possible only on >= OMAP4430ES2.2
-	ldr	r3, =OMAP44XX_SAR_RAM_BASE
-	ldr	r0, [r3, #L2X0_PREFETCHCTRL_OFFSET]
-	ldr	r12, =0x113			@ Setup L2 POR value
-	dsb
-	smc	#0
 skip_por:
 	ldr	r3, =OMAP44XX_SAR_RAM_BASE
 	ldr	r0, [r3, #L2X0_AUXCTRL_OFFSET]
@@ -553,6 +484,7 @@ skip_l2en:
 	mcreq	p15, 0, r0, c1, c0, 1
 	isb
 skip_ns_smp_enable:
+
 	/*
 	 * Check the wakeup cpuid and use appropriate
 	 * SAR BANK location for context restore.
@@ -759,30 +691,5 @@ ENTRY(omap_do_wfi)
 
 	ldmfd	sp!, {pc}
 ENDPROC(omap_do_wfi)
-
-/*
- * ============================
- * == ARM get revision id    ==
- * ============================
- *
- * unsigned int omap_get_arm_rev()
- *
- * This function returns the ARM revision id ROM,
- * eg, 0x20 for arm r2p0, 0x21 for arm r2p1, 0x30 for arm r3p0
- */
-ENTRY(omap_get_arm_rev)
-	stmfd   sp!, {lr}
-	mov	r0, #0
-	mrc	p15, 0, r1, c0, c0, 0		@ read main ID register
-	and	r2, r1, #0xff000000		@ ARM?
-	teq	r2, #0x41000000
-	bne	not_arm
-	and	r2, r1, #0x00f00000		@ variant
-	and	r3, r1, #0x0000000f		@ revision
-	orr	r3, r3, r2, lsr #20-4		@ combine variant and revision
-	mov 	r0, r3
-not_arm:
-	ldmfd   sp!, {pc}
-ENDPROC(omap_get_arm_rev)
 
 #endif

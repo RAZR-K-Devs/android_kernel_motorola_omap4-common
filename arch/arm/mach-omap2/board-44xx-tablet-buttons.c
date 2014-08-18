@@ -135,8 +135,7 @@ int __init tablet_button_init(void)
 {
 	if (omap_is_board_version(OMAP4_TABLET_2_0) ||
 		omap_is_board_version(OMAP4_TABLET_2_1) ||
-		omap_is_board_version(OMAP4_TABLET_2_1_1) ||
-		omap_is_board_version(OMAP4_TABLET_2_1_2)) {
+		omap_is_board_version(OMAP4_TABLET_2_1_1)) {
 
 		omap_mux_init_gpio(TABLET2_GREEN_DBG2_LED_GPIO,
 			OMAP_MUX_MODE3 | OMAP_PIN_OUTPUT);
@@ -144,11 +143,6 @@ int __init tablet_button_init(void)
 			OMAP_MUX_MODE3 | OMAP_PIN_OUTPUT);
 		tablet_gpio_leds[0].gpio = TABLET2_GREEN_DBG2_LED_GPIO;
 		tablet_gpio_leds[4].gpio = TABLET2_GREEN_LED_GPIO;
-	}
-
-	if (omap_board_uses_hsic()) {
-		tablet_gpio_leds[2].gpio = 104;
-		tablet_gpio_leds[3].gpio = 36;
 	}
 
 	platform_add_devices(tablet_devices, ARRAY_SIZE(tablet_devices));

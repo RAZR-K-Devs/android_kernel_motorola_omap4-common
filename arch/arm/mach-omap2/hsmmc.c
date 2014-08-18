@@ -137,12 +137,9 @@ static void omap4_hsmmc1_after_set_reg(struct device *dev, int slot,
 	unsigned long timeout;
 
 	if (power_on) {
-		int use_3_volt_mode = !((1 << vdd) <= MMC_VDD_165_195);
-		int dont_try_again = 0;
-try_again:
 		reg = omap4_ctrl_pad_readl(control_pbias_offset);
 		reg |= OMAP4_MMC1_PBIASLITE_PWRDNZ_MASK;
-		if (!use_3_volt_mode)
+		if ((1 << vdd) <= MMC_VDD_165_195)
 			reg &= ~OMAP4_MMC1_PBIASLITE_VMODE_MASK;
 		else
 			reg |= OMAP4_MMC1_PBIASLITE_VMODE_MASK;
@@ -153,32 +150,16 @@ try_again:
 		timeout = jiffies + msecs_to_jiffies(5);
 		do {
 			reg = omap4_ctrl_pad_readl(control_pbias_offset);
-			/* If we detect an error, stop immediately to handle it.
-			 * Otherwise, keep going to make sure that no error
-			 * shows up within our timeout
-			 */
-			if (reg & OMAP4_MMC1_PBIASLITE_VMODE_ERROR_MASK)
+			if (!(reg & OMAP4_MMC1_PBIASLITE_VMODE_ERROR_MASK))
 				break;
 			usleep_range(100, 200);
 		} while (!time_after(jiffies, timeout));
 
 		if (reg & OMAP4_MMC1_PBIASLITE_VMODE_ERROR_MASK) {
+			pr_err("Pbias Voltage is not same as LDO\n");
 			/* Caution : On VMODE_ERROR Power Down MMC IO */
 			reg &= ~(OMAP4_MMC1_PWRDNZ_MASK);
 			omap4_ctrl_pad_writel(reg, control_pbias_offset);
-
-			if (!dont_try_again) {
-				use_3_volt_mode = !use_3_volt_mode;
-				pr_warn("Pbias Voltage is not the same as LDO,"
-				       "reconfiguring for %sv mode.\n",
-				       use_3_volt_mode ? "3" : "1.8");
-				usleep_range(100, 200);
-				dont_try_again = 1;
-				goto try_again;
-			} else {
-				pr_err("Pbias Voltage is still not the same as"
-				       " LDO.  Forcing shutdown\n");
-			}
 		}
 	}
 }
@@ -312,6 +293,7 @@ static int __init omap_hsmmc_pdata_init(struct omap2_hsmmc_info *c,
 	mmc->slots[0].caps = c->caps;
 	mmc->slots[0].internal_clock = !c->ext_clock;
 	mmc->dma_mask = 0xffffffff;
+	mmc->init_delay = c->init_delay;
 	if (cpu_is_omap44xx())
 		mmc->reg_offset = OMAP4_MMC_REG_OFFSET;
 	else
@@ -521,7 +503,7 @@ void __init omap2_hsmmc_init(struct omap2_hsmmc_info *controllers)
 			OMAP4_SDMMC1_PUSTRENGTH_GRP1_MASK);
 		reg &= ~(OMAP4_SDMMC1_PUSTRENGTH_GRP2_MASK |
 			OMAP4_SDMMC1_PUSTRENGTH_GRP3_MASK);
-		reg |= (OMAP4_SDMMC1_DR0_SPEEDCTRL_MASK |
+		reg |= (OMAP4_USBC1_DR0_SPEEDCTRL_MASK|
 			OMAP4_SDMMC1_DR1_SPEEDCTRL_MASK |
 			OMAP4_SDMMC1_DR2_SPEEDCTRL_MASK);
 		omap4_ctrl_pad_writel(reg, control_mmc1);

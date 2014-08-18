@@ -61,7 +61,8 @@ int omap4_ldo_trim_configure(void)
 	}
 
 	/* OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_EFUSE_1 is reserved for 4470 */
-	if (!cpu_is_omap447x()) {
+	/* FIXME: original code is: if (!cpu_is_omap447x()) */
+	if (cpu_is_omap443x() || cpu_is_omap446x()) {
 		/* For all trimmed and untrimmed write recommended value */
 		val =  0x10 << OMAP4_AVDAC_TRIM_BYTE0_SHIFT;
 		val |=  0x01 << OMAP4_AVDAC_TRIM_BYTE1_SHIFT;
@@ -80,7 +81,6 @@ int omap4_ldo_trim_configure(void)
 	/* Required for DPLL_MPU to lock at 2.4 GHz */
     // if (dpll_trim_override) /* Override factory-set trim for MPU DPLL (for freqs > 1.2GHz) */
 		omap_ctrl_writel(0x29, OMAP4_CTRL_MODULE_CORE_DPLL_NWELL_TRIM_0);
-
 
 	return 0;
 }

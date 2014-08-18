@@ -31,6 +31,10 @@
 	     (__i < (n)) && (cr = __iotlb_read_cr((obj), __i), true);	\
 	     __i++)
 
+#define SET_MPU_CORE_CONSTRAINT	400
+#define SET_DSP_CONSTRAINT	10
+#define CLEAR_CONSTRAINT	-1
+
 /* accommodate the difference between omap1 and omap2/3 */
 static const struct iommu_functions *arch_iommu;
 
@@ -853,13 +857,13 @@ static void _set_latency_cstr(struct iommu *obj, bool set)
 {
 	int val;
 
-	val = set ? obj->pm_constraint : PM_QOS_DEFAULT_VALUE;
-	if (!strcmp(obj->name, "ducati"))
+	if (!strcmp(obj->name, "ducati")) {
+		val = set ? SET_MPU_CORE_CONSTRAINT : CLEAR_CONSTRAINT;
 		pm_qos_update_request(obj->qos_request, val);
-	else if (!strcmp(obj->name, "tesla"))
-		omap_pm_set_max_dev_wakeup_lat(obj->dev,
-				obj->dev, val);
-
+	} else if (!strcmp(obj->name, "tesla")) {
+		val = set ? SET_DSP_CONSTRAINT : CLEAR_CONSTRAINT;
+		omap_pm_set_max_dev_wakeup_lat(obj->dev, obj->dev, val);
+	}
 	return;
 }
 
@@ -883,13 +887,12 @@ struct iommu *iommu_get(const char *name)
 	mutex_lock(&obj->iommu_lock);
 
 	if (obj->refcount++ == 0) {
-		if (obj->pm_constraint)
-			_set_latency_cstr(obj, true);
-
+		_set_latency_cstr(obj, true);
 		err = iommu_enable(obj);
-		if (err)
+		if (err) {
+			_set_latency_cstr(obj, false);
 			goto err_enable;
-
+		}
 		flush_iotlb_all(obj);
 	}
 
@@ -905,9 +908,6 @@ err_module:
 	if (obj->refcount == 1)
 		iommu_disable(obj);
 err_enable:
-	if (obj->pm_constraint)
-		_set_latency_cstr(obj, false);
-
 	obj->refcount--;
 	mutex_unlock(&obj->iommu_lock);
 	return ERR_PTR(err);
@@ -933,8 +933,7 @@ void iommu_put(struct iommu *obj)
 
 	if (--obj->refcount == 0) {
 		iommu_disable(obj);
-		if (obj->pm_constraint)
-			_set_latency_cstr(obj, false);
+		_set_latency_cstr(obj, false);
 	}
 
 	module_put(obj->owner);
@@ -1017,7 +1016,6 @@ static int __devinit omap_iommu_probe(struct platform_device *pdev)
 	obj->ctx = (void *)obj + sizeof(*obj);
 	obj->da_start = pdata->da_start;
 	obj->da_end = pdata->da_end;
-	obj->pm_constraint = pdata->pm_constraint;
 
 	mutex_init(&obj->iommu_lock);
 	mutex_init(&obj->mmap_lock);

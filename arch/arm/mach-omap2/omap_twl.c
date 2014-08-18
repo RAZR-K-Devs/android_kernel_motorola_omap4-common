@@ -22,40 +22,21 @@
 
 #include "pm.h"
 
-/*
- * TWL4030 PM companion device
- * Registers configuration for
- * SmartReflex compatible resources
- */
-#define TWL4030_SRI2C_SLAVE_ADDR	0x12
-#define TWL4030_VDD1_SR_CONTROL_REG	0x00
-#define TWL4030_VDD2_SR_CONTROL_REG	0x01
+#define OMAP3_SRI2C_SLAVE_ADDR		0x12
+#define OMAP3_VDD_MPU_SR_CONTROL_REG	0x00
+#define OMAP3_VDD_CORE_SR_CONTROL_REG	0x01
+#define OMAP3_VP_CONFIG_ERROROFFSET	0x00
+#define OMAP3_VP_VSTEPMIN_VSTEPMIN	0x1
+#define OMAP3_VP_VSTEPMAX_VSTEPMAX	0x04
+#define OMAP3_VP_VLIMITTO_TIMEOUT_US	200
 
-/*
- * TWL6030 PM companion device
- * Registers configuration for
- * SmartReflex compatible resources
- */
-#define TWL6030_SRI2C_SLAVE_ADDR	0x12
-#define TWL6030_VCORE1_SR_VOLT_REG	0x55
-#define TWL6030_VCORE1_SR_CMD_REG	0x56
-#define TWL6030_VCORE2_SR_VOLT_REG	0x5B
-#define TWL6030_VCORE2_SR_CMD_REG	0x5C
-#define TWL6030_VCORE3_SR_VOLT_REG	0x61
-#define TWL6030_VCORE3_SR_CMD_REG	0x62
-
-/*
- * TWL6032 PM companion device
- * Registers configuration for
- * SmartReflex compatible resources
- */
-#define TWL6032_SRI2C_SLAVE_ADDR	0x12
-#define TWL6032_SMPS5_SR_VOLT_REG	0x49
-#define TWL6032_SMPS5_SR_CMD_REG	0x4A
-#define TWL6032_SMPS1_SR_VOLT_REG	0x55
-#define TWL6032_SMPS1_SR_CMD_REG	0x56
-#define TWL6032_SMPS2_SR_VOLT_REG	0x5B
-#define TWL6032_SMPS2_SR_CMD_REG	0x5C
+#define OMAP4_SRI2C_SLAVE_ADDR		0x12
+#define OMAP4_VDD_MPU_SR_VOLT_REG	0x55
+#define OMAP4_VDD_MPU_SR_CMD_REG	0x56
+#define OMAP4_VDD_IVA_SR_VOLT_REG	0x5B
+#define OMAP4_VDD_IVA_SR_CMD_REG	0x5C
+#define OMAP4_VDD_CORE_SR_VOLT_REG	0x61
+#define OMAP4_VDD_CORE_SR_CMD_REG	0x62
 
 #define TWL6030_REG_VCORE1_CFG_GRP			0x52
 #define TWL6030_REG_VCORE1_CFG_TRANS			0x53
@@ -74,17 +55,6 @@
 							 0x00 << 2 | \
 							 0x01 << 0)
 #define TWL6030_REG_VCOREx_CFG_TRANS_MODE_DESC "OFF=OFF SLEEP=OFF ACT=AUTO"
-
-#define TWL6030_REG_VCORE1_CFG_GRP			0x52
-#define TWL6030_REG_VCORE1_CFG_TRANS			0x53
-#define TWL6030_REG_VCORE2_CFG_GRP			0x58
-#define TWL6030_REG_VCORE2_CFG_TRANS			0x59
-#define TWL6030_REG_VCORE3_CFG_GRP			0x5e
-#define TWL6030_REG_VCORE3_CFG_TRANS			0x5f
-#define TWL6030_BIT_APE_GRP				BIT(0)
-
-/* Pull down control */
-#define TWL6030_REG_CFG_SMPS_PD		0xF6
 
 static bool is_offset_valid;
 static u8 smps_offset;
@@ -221,7 +191,7 @@ static u8 twl6030_uv_to_vsel(unsigned long uv)
 			return 0x3A;
 		pr_err("%s:OUT OF RANGE! non mapped vsel for %ld Vs max %ld\n",
 			__func__, uv, twl6030_vsel_to_uv(0x39));
-		return 0x39;
+		return 0x3A;
 	}
 
 	if (smps_offset & 0x8)
@@ -241,11 +211,11 @@ static struct omap_voltdm_pmic omap3_mpu_pmic = {
 	.vp_erroroffset		= OMAP3_VP_CONFIG_ERROROFFSET,
 	.vp_vstepmin		= OMAP3_VP_VSTEPMIN_VSTEPMIN,
 	.vp_vstepmax		= OMAP3_VP_VSTEPMAX_VSTEPMAX,
-	.min_volt		= OMAP3430_VP1_VLIMITTO_VDDMIN,
-	.max_volt		= OMAP3430_VP1_VLIMITTO_VDDMAX,
+	.vp_vddmin		= OMAP3430_VP1_VLIMITTO_VDDMIN,
+	.vp_vddmax		= OMAP3430_VP1_VLIMITTO_VDDMAX,
 	.vp_timeout_us		= OMAP3_VP_VLIMITTO_TIMEOUT_US,
-	.i2c_slave_addr		= TWL4030_SRI2C_SLAVE_ADDR,
-	.volt_reg_addr		= TWL4030_VDD1_SR_CONTROL_REG,
+	.i2c_slave_addr		= OMAP3_SRI2C_SLAVE_ADDR,
+	.volt_reg_addr		= OMAP3_VDD_MPU_SR_CONTROL_REG,
 	.i2c_high_speed		= true,
 	.vsel_to_uv		= twl4030_vsel_to_uv,
 	.uv_to_vsel		= twl4030_uv_to_vsel,
@@ -262,17 +232,17 @@ static struct omap_voltdm_pmic omap3_core_pmic = {
 	.vp_erroroffset		= OMAP3_VP_CONFIG_ERROROFFSET,
 	.vp_vstepmin		= OMAP3_VP_VSTEPMIN_VSTEPMIN,
 	.vp_vstepmax		= OMAP3_VP_VSTEPMAX_VSTEPMAX,
-	.min_volt		= OMAP3430_VP2_VLIMITTO_VDDMIN,
-	.max_volt		= OMAP3430_VP2_VLIMITTO_VDDMAX,
+	.vp_vddmin		= OMAP3430_VP2_VLIMITTO_VDDMIN,
+	.vp_vddmax		= OMAP3430_VP2_VLIMITTO_VDDMAX,
 	.vp_timeout_us		= OMAP3_VP_VLIMITTO_TIMEOUT_US,
-	.i2c_slave_addr		= TWL4030_SRI2C_SLAVE_ADDR,
-	.volt_reg_addr		= TWL4030_VDD2_SR_CONTROL_REG,
+	.i2c_slave_addr		= OMAP3_SRI2C_SLAVE_ADDR,
+	.volt_reg_addr		= OMAP3_VDD_CORE_SR_CONTROL_REG,
 	.i2c_high_speed		= true,
 	.vsel_to_uv		= twl4030_vsel_to_uv,
 	.uv_to_vsel		= twl4030_uv_to_vsel,
 };
 
-static struct omap_voltdm_pmic omap443x_447x_mpu_pmic = {
+static struct omap_voltdm_pmic omap443x_mpu_pmic = {
 	.slew_rate		= 9000,
 	.step_size		= 12660,
 	.on_volt		= 1375000,
@@ -284,12 +254,12 @@ static struct omap_voltdm_pmic omap443x_447x_mpu_pmic = {
 	.vp_erroroffset		= OMAP4_VP_CONFIG_ERROROFFSET,
 	.vp_vstepmin		= OMAP4_VP_VSTEPMIN_VSTEPMIN,
 	.vp_vstepmax		= OMAP4_VP_VSTEPMAX_VSTEPMAX,
-	.min_volt		= 709000,
-	.max_volt		= 1418000,
+	.vp_vddmin		= OMAP4_VP_MPU_VLIMITTO_VDDMIN,
+	.vp_vddmax		= OMAP4_VP_MPU_VLIMITTO_VDDMAX,
 	.vp_timeout_us		= OMAP4_VP_VLIMITTO_TIMEOUT_US,
-	.i2c_slave_addr		= TWL6030_SRI2C_SLAVE_ADDR,
-	.volt_reg_addr		= TWL6030_VCORE1_SR_VOLT_REG,
-	.cmd_reg_addr		= TWL6030_VCORE1_SR_CMD_REG,
+	.i2c_slave_addr		= OMAP4_SRI2C_SLAVE_ADDR,
+	.volt_reg_addr		= OMAP4_VDD_MPU_SR_VOLT_REG,
+	.cmd_reg_addr		= OMAP4_VDD_MPU_SR_CMD_REG,
 	.i2c_high_speed		= true,
 	.i2c_scll_low		= 0x28,
 	.i2c_scll_high		= 0x2C,
@@ -299,7 +269,7 @@ static struct omap_voltdm_pmic omap443x_447x_mpu_pmic = {
 	.uv_to_vsel		= twl6030_uv_to_vsel,
 };
 
-static struct omap_voltdm_pmic omap443x_446x_iva_pmic = {
+static struct omap_voltdm_pmic omap4_iva_pmic = {
 	.slew_rate		= 9000,
 	.step_size		= 12660,
 	.on_volt		= 1188000,
@@ -311,39 +281,12 @@ static struct omap_voltdm_pmic omap443x_446x_iva_pmic = {
 	.vp_erroroffset		= OMAP4_VP_CONFIG_ERROROFFSET,
 	.vp_vstepmin		= OMAP4_VP_VSTEPMIN_VSTEPMIN,
 	.vp_vstepmax		= OMAP4_VP_VSTEPMAX_VSTEPMAX,
-	.min_volt		= 709000,
-	.max_volt		= 1418000,
+	.vp_vddmin		= OMAP4_VP_IVA_VLIMITTO_VDDMIN,
+	.vp_vddmax		= OMAP4_VP_IVA_VLIMITTO_VDDMAX,
 	.vp_timeout_us		= OMAP4_VP_VLIMITTO_TIMEOUT_US,
-	.i2c_slave_addr		= TWL6030_SRI2C_SLAVE_ADDR,
-	.volt_reg_addr		= TWL6030_VCORE2_SR_VOLT_REG,
-	.cmd_reg_addr		= TWL6030_VCORE2_SR_CMD_REG,
-	.i2c_high_speed		= true,
-	.i2c_scll_low		= 0x28,
-	.i2c_scll_high		= 0x2C,
-	.i2c_hscll_low		= 0x0B,
-	.i2c_hscll_high		= 0x00,
-	.vsel_to_uv		= twl6030_vsel_to_uv,
-	.uv_to_vsel		= twl6030_uv_to_vsel,
-};
-
-static struct omap_voltdm_pmic omap447x_iva_pmic = {
-	.slew_rate		= 9000,
-	.step_size		= 12660,
-	.on_volt		= 1188000,
-	.onlp_volt		= 1188000,
-	.ret_volt		= 750000,
-	.off_volt		= 0,
-	.volt_setup_time	= 0,
-	.switch_on_time		= 549,
-	.vp_erroroffset		= OMAP4_VP_CONFIG_ERROROFFSET,
-	.vp_vstepmin		= OMAP4_VP_VSTEPMIN_VSTEPMIN,
-	.vp_vstepmax		= OMAP4_VP_VSTEPMAX_VSTEPMAX,
-	.min_volt		= 709000,
-	.max_volt		= 1418000,
-	.vp_timeout_us		= OMAP4_VP_VLIMITTO_TIMEOUT_US,
-	.i2c_slave_addr		= TWL6032_SRI2C_SLAVE_ADDR,
-	.volt_reg_addr		= TWL6032_SMPS5_SR_VOLT_REG,
-	.cmd_reg_addr		= TWL6032_SMPS5_SR_CMD_REG,
+	.i2c_slave_addr		= OMAP4_SRI2C_SLAVE_ADDR,
+	.volt_reg_addr		= OMAP4_VDD_IVA_SR_VOLT_REG,
+	.cmd_reg_addr		= OMAP4_VDD_IVA_SR_CMD_REG,
 	.i2c_high_speed		= true,
 	.i2c_scll_low		= 0x28,
 	.i2c_scll_high		= 0x2C,
@@ -365,17 +308,17 @@ static struct omap_voltdm_pmic omap443x_core_pmic = {
 	.vp_erroroffset		= OMAP4_VP_CONFIG_ERROROFFSET,
 	.vp_vstepmin		= OMAP4_VP_VSTEPMIN_VSTEPMIN,
 	.vp_vstepmax		= OMAP4_VP_VSTEPMAX_VSTEPMAX,
-	.min_volt		= 709000,
-	.max_volt		= 1418000,
+	.vp_vddmin		= OMAP4_VP_CORE_VLIMITTO_VDDMIN,
+	.vp_vddmax		= OMAP4_VP_CORE_VLIMITTO_VDDMAX,
 	.vp_timeout_us		= OMAP4_VP_VLIMITTO_TIMEOUT_US,
-	.i2c_slave_addr		= TWL6030_SRI2C_SLAVE_ADDR,
-	.volt_reg_addr		= TWL6030_VCORE3_SR_VOLT_REG,
-	.cmd_reg_addr		= TWL6030_VCORE3_SR_CMD_REG,
+	.i2c_slave_addr		= OMAP4_SRI2C_SLAVE_ADDR,
 	.i2c_high_speed		= true,
 	.i2c_scll_low		= 0x28,
 	.i2c_scll_high		= 0x2C,
 	.i2c_hscll_low		= 0x0B,
 	.i2c_hscll_high		= 0x00,
+	.volt_reg_addr		= OMAP4_VDD_CORE_SR_VOLT_REG,
+	.cmd_reg_addr		= OMAP4_VDD_CORE_SR_CMD_REG,
 	.vsel_to_uv		= twl6030_vsel_to_uv,
 	.uv_to_vsel		= twl6030_uv_to_vsel,
 };
@@ -394,44 +337,17 @@ static struct omap_voltdm_pmic omap446x_core_pmic = {
 	.vp_erroroffset		= OMAP4_VP_CONFIG_ERROROFFSET,
 	.vp_vstepmin		= OMAP4_VP_VSTEPMIN_VSTEPMIN,
 	.vp_vstepmax		= OMAP4_VP_VSTEPMAX_VSTEPMAX,
-	.min_volt		= 709000,
-	.max_volt		= 1418000,
+	.vp_vddmin		= OMAP4_VP_CORE_VLIMITTO_VDDMIN,
+	.vp_vddmax		= OMAP4_VP_CORE_VLIMITTO_VDDMAX,
 	.vp_timeout_us		= OMAP4_VP_VLIMITTO_TIMEOUT_US,
-	.i2c_slave_addr		= TWL6030_SRI2C_SLAVE_ADDR,
-	.volt_reg_addr		= TWL6030_VCORE1_SR_VOLT_REG,
-	.cmd_reg_addr		= TWL6030_VCORE1_SR_CMD_REG,
+	.i2c_slave_addr		= OMAP4_SRI2C_SLAVE_ADDR,
 	.i2c_high_speed		= true,
 	.i2c_scll_low		= 0x28,
 	.i2c_scll_high		= 0x2C,
 	.i2c_hscll_low		= 0x0B,
 	.i2c_hscll_high		= 0x00,
-	.vsel_to_uv		= twl6030_vsel_to_uv,
-	.uv_to_vsel		= twl6030_uv_to_vsel,
-};
-
-static struct omap_voltdm_pmic omap447x_core_pmic = {
-	.slew_rate		= 9000,
-	.step_size		= 12660,
-	.on_volt		= 1200000,
-	.onlp_volt		= 1200000,
-	.ret_volt		= 830000,
-	.off_volt		= 0,
-	.volt_setup_time	= 0,
-	.switch_on_time		= 549,
-	.vp_erroroffset		= OMAP4_VP_CONFIG_ERROROFFSET,
-	.vp_vstepmin		= OMAP4_VP_VSTEPMIN_VSTEPMIN,
-	.vp_vstepmax		= OMAP4_VP_VSTEPMAX_VSTEPMAX,
-	.min_volt		= 709000,
-	.max_volt		= 1418000,
-	.vp_timeout_us		= OMAP4_VP_VLIMITTO_TIMEOUT_US,
-	.i2c_slave_addr		= TWL6032_SRI2C_SLAVE_ADDR,
-	.volt_reg_addr		= TWL6032_SMPS2_SR_VOLT_REG,
-	.cmd_reg_addr		= TWL6032_SMPS2_SR_CMD_REG,
-	.i2c_high_speed		= true,
-	.i2c_scll_low		= 0x28,
-	.i2c_scll_high		= 0x2C,
-	.i2c_hscll_low		= 0x0B,
-	.i2c_hscll_high		= 0x00,
+	.volt_reg_addr		= OMAP4_VDD_MPU_SR_VOLT_REG,
+	.cmd_reg_addr		= OMAP4_VDD_MPU_SR_CMD_REG,
 	.vsel_to_uv		= twl6030_vsel_to_uv,
 	.uv_to_vsel		= twl6030_uv_to_vsel,
 };
@@ -454,68 +370,6 @@ static int __init twl_set_sr(struct voltagedomain *voltdm)
 	return r;
 }
 
-static int __init twl6030_set_offset(struct voltagedomain *voltdm)
-{
-	/*
-	 * In TWL6030 depending on the value of SMPS_OFFSET
-	 * efuse register the voltage range supported in
-	 * standard mode can be either between 0.6V - 1.3V or
-	 * 0.7V - 1.4V. In TWL6030 ES1.0 SMPS_OFFSET efuse
-	 * is programmed to all 0's where as starting from
-	 * TWL6030 ES1.1 the efuse is programmed to 1
-	 */
-	if (!is_offset_valid) {
-		int r;
-
-		r = twl_i2c_read_u8(TWL6030_MODULE_ID0, &smps_offset,
-				REG_SMPS_OFFSET);
-		if (r) {
-			pr_err("%s: read of smps offset failed - %d\n",
-				__func__, r);
-			/* Nothing we can do - try later? */
-			goto out;
-		}
-		/* Check if SMPS offset already set */
-		if (smps_offset & 0x8)
-			goto out;
-		/* Check if TWL firmware lets us write */
-		if (!(smps_offset & 0x80)) {
-			WARN(1, "%s: No SMPS OFFSET value=0x%02x"
-				"update not possible, max val might be wrong\n",
-				__func__, smps_offset);
-			/* Nothing we can do */
-			goto out;
-		}
-
-		/* Attempt to set offset for all */
-		r = twl_i2c_write_u8(TWL6030_MODULE_ID0, 0xFF, REG_SMPS_OFFSET);
-		if (r) {
-			WARN(1, "%s: No SMPS OFFSET value=0x%02x"
-				"update failed %d, max val might be wrong\n",
-				__func__, smps_offset, r);
-			/* Nothing we can do */
-			goto out;
-		}
-
-		/* Check if SMPS offset now set */
-		r = twl_i2c_read_u8(TWL6030_MODULE_ID0, &smps_offset,
-				REG_SMPS_OFFSET);
-		if (r || !(smps_offset & 0x8)) {
-			WARN(1, "%s: No SMPS OFFSET value=0x%02x"
-				"check(r=%d) failed, max val might be wrong\n",
-				__func__, smps_offset, r);
-			/* Nothing we can do */
-			goto out;
-		}
-		is_offset_valid = true;
-	}
-out:
-	/*
-	 * even if i2c op failed, there is not much we could have done
-	 * Carry on with the hope that we will fix ourselves in next iteration
-	 */
-	return 0;
-}
 
 /* OMAP4430 - All vcores: 1, 2 and 3 should go down with PREQ */
 static __initdata struct twl_reg_setup_array omap4430_twl6030_setup[] = {
@@ -554,7 +408,6 @@ static __initdata struct twl_reg_setup_array omap4430_twl6030_setup[] = {
 
 static int __init twl_set_4430vcore(struct voltagedomain *voltdm)
 {
-	twl6030_set_offset(voltdm);
 	return _twl_set_regs("OMAP4430 ", omap4430_twl6030_setup);
 }
 
@@ -580,17 +433,11 @@ static __initdata struct twl_reg_setup_array omap4460_twl6030_setup[] = {
 		.val = TWL6030_REG_VCOREx_CFG_TRANS_MODE,
 		.desc = "VCORE2" TWL6030_REG_VCOREx_CFG_TRANS_MODE_DESC,
 	},
-	{
-		.addr = TWL6030_REG_CFG_SMPS_PD,
-		.val = 0x77,
-		.desc = "VCORE1 disable PD on shutdown",
-	},
 	{ .desc = NULL} /* TERMINATOR */
 };
 
 static int __init twl_set_4460vcore(struct voltagedomain *voltdm)
 {
-	twl6030_set_offset(voltdm);
 	return _twl_set_regs("OMAP4460 ", omap4460_twl6030_setup);
 }
 
@@ -612,10 +459,8 @@ static __initdata struct omap_pmic_map omap_twl_map[] = {
 	},
 	{
 		.name = "mpu",
-		.omap_chip = OMAP_CHIP_INIT(CHIP_IS_OMAP443X |
-						CHIP_IS_OMAP447X),
-		.pmic_data = &omap443x_447x_mpu_pmic,
-		.special_action = twl6030_set_offset,
+		.omap_chip = OMAP_CHIP_INIT(CHIP_IS_OMAP443X),
+		.pmic_data = &omap443x_mpu_pmic,
 	},
 	{
 		.name = "core",
@@ -630,23 +475,9 @@ static __initdata struct omap_pmic_map omap_twl_map[] = {
 		.special_action = twl_set_4460vcore,
 	},
 	{
-		.name = "core",
-		.omap_chip = OMAP_CHIP_INIT(CHIP_IS_OMAP447X),
-		.pmic_data = &omap447x_core_pmic,
-		.special_action = twl6030_set_offset,
-	},
-	{
 		.name = "iva",
-		.omap_chip = OMAP_CHIP_INIT(CHIP_IS_OMAP443X |
-						CHIP_IS_OMAP446X),
-		.pmic_data = &omap443x_446x_iva_pmic,
-		.special_action = twl6030_set_offset,
-	},
-	{
-		.name = "iva",
-		.omap_chip = OMAP_CHIP_INIT(CHIP_IS_OMAP447X),
-		.pmic_data = &omap447x_iva_pmic,
-		.special_action = twl6030_set_offset,
+		.omap_chip = OMAP_CHIP_INIT(CHIP_IS_OMAP44XX),
+		.pmic_data = &omap4_iva_pmic,
 	},
 	/* Terminator */
 	{ .name = NULL, .pmic_data = NULL},
@@ -664,12 +495,11 @@ int __init omap_twl_init(void)
 
 	/* Reuse OMAP3430 values */
 	if (cpu_is_omap3630()) {
-		omap3_mpu_pmic.min_volt = OMAP3630_VP1_VLIMITTO_VDDMIN;
-		omap3_mpu_pmic.max_volt = OMAP3630_VP1_VLIMITTO_VDDMAX;
-		omap3_core_pmic.min_volt = OMAP3630_VP2_VLIMITTO_VDDMIN;
-		omap3_core_pmic.max_volt = OMAP3630_VP2_VLIMITTO_VDDMAX;
+		omap3_mpu_pmic.vp_vddmin = OMAP3630_VP1_VLIMITTO_VDDMIN;
+		omap3_mpu_pmic.vp_vddmax = OMAP3630_VP1_VLIMITTO_VDDMAX;
+		omap3_core_pmic.vp_vddmin = OMAP3630_VP2_VLIMITTO_VDDMIN;
+		omap3_core_pmic.vp_vddmax = OMAP3630_VP2_VLIMITTO_VDDMAX;
 	}
-
 	if (cpu_is_omap44xx())
 		desc = &twl6030_pmic_desc;
 
@@ -677,7 +507,7 @@ int __init omap_twl_init(void)
 }
 
 /**
- * twl6030_set_offset() - setup TWL offset voltages
+ * omap3_twl_set_sr_bit() - Set/Clear SR bit on TWL
  * @enable: enable SR mode in twl or not
  *
  * If 'enable' is true, enables Smartreflex bit on TWL 4030 to make sure

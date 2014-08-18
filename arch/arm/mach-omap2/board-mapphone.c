@@ -499,7 +499,7 @@ static struct pcb_section omap4_duty_governor_pcb_sections[] = {
 		.duty_cycle_enabled		= true,
 		.tduty_params = {
 			.nitro_rate		= 1200000,
-			.cooling_rate		= 1000000,
+			.cooling_rate		= 800000,
 			.nitro_interval		= 20000,
 			.nitro_percentage	= 19,
 			},
@@ -510,7 +510,7 @@ static struct pcb_section omap4_duty_governor_pcb_sections[] = {
 		.duty_cycle_enabled		= true,
 		.tduty_params = {
 			.nitro_rate		= 1200000,
-			.cooling_rate		= 1000000,
+			.cooling_rate		= 700000,
 			.nitro_interval		= 20000,
 			.nitro_percentage	= 14,
 			},
@@ -521,7 +521,7 @@ static struct pcb_section omap4_duty_governor_pcb_sections[] = {
 		.duty_cycle_enabled		= true,
 		.tduty_params = {
 			.nitro_rate		= 1000000,
-			.cooling_rate		= 800000,
+			.cooling_rate		= 700000,
 			.nitro_interval		= 20000,
 			.nitro_percentage	= 1,
 			},

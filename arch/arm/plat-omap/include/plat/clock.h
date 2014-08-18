@@ -88,7 +88,7 @@ struct clkops {
 struct clksel_rate {
 	u32			val;
 	u8			div;
-	u16			flags;
+	u8			flags;
 };
 
 /**

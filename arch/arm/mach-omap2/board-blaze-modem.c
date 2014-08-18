@@ -32,8 +32,6 @@
 #define MODEM_PWRSTATE_POLLING_MS 10
 #define MODEM_PWRSTATE_TIMEOUT (100 / MODEM_PWRSTATE_POLLING_MS)
 
-static int modem_detected;
-
 /*
  * Switch-on or switch-off the modem and return modem status
  * Pre-requisites:
@@ -69,7 +67,10 @@ static void blaze_hsi_pad_conf(void)
 {
 	/*
 	 * HSI pad conf: hsi1_ca/ac_wake/flag/data/ready
+	 * Also configure gpio_95, input from modem
 	 */
+
+	pr_info("Update PAD for modem connection\n");
 
 	/* hsi1_cawake */
 	omap_mux_init_signal("usbb1_ulpitll_clk.hsi1_cawake", \
@@ -102,41 +103,13 @@ static void blaze_hsi_pad_conf(void)
 		OMAP_PIN_OFF_NONE);
 	/* hsi1_caready */
 	omap_mux_init_signal("usbb1_ulpitll_dat3.hsi1_caready", \
-		OMAP_PIN_INPUT_PULLDOWN | \
+		OMAP_PIN_INPUT | \
 		OMAP_PIN_OFF_NONE);
-}
-
-static void blaze_modem_pad_conf(void)
-{
-	pr_info("Update PAD for modem connection\n");
-
-	/* Configure PADconf for HSI */
-	blaze_hsi_pad_conf();
-
 	/* gpio_95 */
 	omap_mux_init_signal("usbb1_ulpitll_dat7.gpio_95", \
 		OMAP_PIN_INPUT_PULLDOWN | \
 		OMAP_PIN_OFF_NONE | \
 		OMAP_PIN_OFF_WAKEUPENABLE);
-
-	/* Ensure UART3 Tx will not drive until Modem is up and running */
-	omap_mux_init_signal("uart3_tx_irtx.uart3_tx_irtx", OMAP_MUX_MODE7);
-
-	/*mcbsp2_fsx*/
-	omap_mux_init_signal("abe_mcbsp2_fsx.abe_mcbsp2_fsx", \
-						OMAP_PIN_INPUT_PULLDOWN | \
-						OMAP_PIN_OFF_INPUT_PULLDOWN | \
-						OMAP_MUX_MODE0);
-	/*mcbsp2_clkx*/
-	omap_mux_init_signal("abe_mcbcp2_clkx.abe_mcbsp2_clkx", \
-						OMAP_PIN_INPUT_PULLDOWN | \
-						OMAP_PIN_OFF_INPUT_PULLDOWN | \
-						OMAP_MUX_MODE0);
-	/*mcbsp2_dr*/
-	omap_mux_init_signal("abe_mcbsp2_dr.abe_mcbsp2_dr", \
-						OMAP_PIN_INPUT_PULLDOWN | \
-						OMAP_PIN_OFF_OUTPUT_LOW | \
-						OMAP_MUX_MODE0);
 }
 
 /*
@@ -148,6 +121,7 @@ static void blaze_modem_pad_conf(void)
  */
 void __init blaze_modem_init(bool force_mux)
 {
+	int modem_detected = 0;
 	int modem_enabled;
 
 	/* Prepare MDM VBAT */
@@ -214,8 +188,8 @@ err_pwrstate1:
 		/* USBB2 I/O pads conflict with McBSP2 port */
 		usbhs_bdata.port_mode[1] = OMAP_USBHS_PORT_MODE_UNUSED;
 #endif
-		/* Setup modem pad conf for blaze platform */
-		blaze_modem_pad_conf();
+		/* Setup HSI pad conf for blaze platform */
+		blaze_hsi_pad_conf();
 		/* Allow HSI omap_device to be registered later */
 		omap_hsi_allow_registration();
 
@@ -226,29 +200,3 @@ err_pwrstate1:
 err_pwr:
 	return;
 }
-
-
-#include "omap-rfkill-ste.h"
-
-static struct omap_rfkill_ste_platform_data ste_pdata;
-
-static struct platform_device modem_dev = {
-	.name			= "ste-p5780",
-	.id			= -1,
-	.dev.platform_data	= &ste_pdata
-};
-
-static int late_blaze_modem_init(void)
-{
-	int ret;
-
-	if (modem_detected) {
-		ret =  platform_device_register(&modem_dev);
-		if (ret)
-			pr_err("Error registering modem dev: %d\n", ret);
-	}
-
-	return 0;
-}
-
-late_initcall(late_blaze_modem_init);
