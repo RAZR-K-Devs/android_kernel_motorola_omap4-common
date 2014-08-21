@@ -43,7 +43,6 @@ struct emif_instance {
 	void __iomem *base;
 	u16 irq;
 	struct platform_device *pdev;
-	bool ddr_refresh_disabled;
 };
 static struct emif_instance emif[EMIF_NUM_INSTANCES];
 static struct emif_regs *emif_curr_regs[EMIF_NUM_INSTANCES];
@@ -65,45 +64,6 @@ static struct omap_device_pm_latency omap_emif_latency[] = {
 	       .flags = OMAP_DEVICE_LATENCY_AUTO_ADJUST,
 	       },
 };
-
-/*
- * EMIF Power Management timer for Self Refresh will put the external SDRAM
- * in Self Refresh mode after the EMIF is idle for number of DDR clock cycles
- * set with REG_SR_TIM. The minimal value starts at 16 cycles mapped to 1 in
- * REG_SR_TIM.
- * However due to Errata i735, the minimal value of REG_SR_TIM is 6. That
- * corresponds to 512 DDR cycles required for OPP100
-*/
-#define EMIF_ERRATUM_SR_TIMER_i735	BIT(0)
-#define EMIF_ERRATUM_SR_TIMER_MIN	6
-
-/*
- * TI Errata i743 - LPDDR2 Power-Down State is Not Efficient
- * IMPACTED: OMAP4430 and OMAP4460 all revisions
- * The EMIF supports power-down state for low power. The EMIF automatically
- * puts the SDRAM into power-down after the memory is not accessed for a
- * defined number of cycles and the EMIF_PWR_MGMT_CTRL[10:8] REG_LP_MODE bit
- * field is set to 0x4.
- * As the EMIF supports automatic output impedance calibration, a ZQ
- * calibration long command is issued every time it exits active power-down
- * and precharge power-down modes. The EMIF waits and blocks any other command
- * during this calibration.
- * The EMIF does not allow selective disabling of ZQ calibration upon exit of
- * power-down mode. Due to very short periods of power-down cycles,
- * ZQ calibration overhead creates bandwidth issues and increases overall
- * system power consumption. On the other hand, issuing ZQ calibration
- * long commands when exiting self-refresh is still required.
- *
- * W/A: Because there is no power consumption benefit of the power-down due to
- * the calibration and there is a performance risk, the guideline is to not
- * allow power-down state and, therefore, to not have set the
- * EMIF_PWR_MGMT_CTRL[10:8] REG_LP_MODE bit field to 0x4.
- */
-#define EMIF_ERRATUM_POWER_DOWN_NOT_EFFICIENT_i743	BIT(1)
-
-static u32 emif_errata;
-#define is_emif_erratum(erratum) (emif_errata & EMIF_ERRATUM_##erratum)
-
 
 static void do_cancel_out(u32 *num, u32 *den, u32 factor)
 {
@@ -254,6 +214,51 @@ static const struct lpddr2_timings *get_timings_table(
 	return timings;
 }
 
+/*
+ * Finds the value of emif_sdram_config_reg
+ * All parameters are programmed based on the device on CS0.
+ * If there is a device on CS1, it will be same as that on CS0 or
+ * it will be NVM. We don't support NVM yet.
+ * If cs1_device pointer is NULL it is assumed that there is no device
+ * on CS1
+ */
+static u32 get_sdram_config_reg(const struct lpddr2_device_info *cs0_device,
+				const struct lpddr2_device_info *cs1_device,
+				const struct lpddr2_addressing *addressing,
+				u8 RL)
+{
+	u32 config_reg = 0;
+
+	mask_n_set(config_reg, OMAP44XX_REG_SDRAM_TYPE_SHIFT,
+		   OMAP44XX_REG_SDRAM_TYPE_MASK, cs0_device->type + 4);
+
+	mask_n_set(config_reg, OMAP44XX_REG_IBANK_POS_SHIFT,
+		   OMAP44XX_REG_IBANK_POS_MASK,
+		   EMIF_INTERLEAVING_POLICY_MAX_INTERLEAVING);
+
+	mask_n_set(config_reg, OMAP44XX_REG_NARROW_MODE_SHIFT,
+		   OMAP44XX_REG_NARROW_MODE_MASK, cs0_device->io_width);
+
+	mask_n_set(config_reg, OMAP44XX_REG_CL_SHIFT, OMAP44XX_REG_CL_MASK, RL);
+
+	mask_n_set(config_reg, OMAP44XX_REG_ROWSIZE_SHIFT,
+		   OMAP44XX_REG_ROWSIZE_MASK,
+		   addressing->row_sz[cs0_device->io_width]);
+
+	mask_n_set(config_reg, OMAP44XX_REG_IBANK_SHIFT,
+		   OMAP44XX_REG_IBANK_MASK, addressing->num_banks);
+
+	mask_n_set(config_reg, OMAP44XX_REG_EBANK_SHIFT,
+		   OMAP44XX_REG_EBANK_MASK,
+		   (cs1_device ? EBANK_CS1_EN : EBANK_CS1_DIS));
+
+	mask_n_set(config_reg, OMAP44XX_REG_PAGESIZE_SHIFT,
+		   OMAP44XX_REG_PAGESIZE_MASK,
+		   addressing->col_sz[cs0_device->io_width]);
+
+	return config_reg;
+}
+
 static u32 get_sdram_ref_ctrl(u32 freq,
 			      const struct lpddr2_addressing *addressing)
 {
@@ -385,8 +390,7 @@ static u32 get_sdram_tim_2_reg(const struct lpddr2_timings *timings,
 	return tim2;
 }
 
-static u32 get_sdram_tim_3_reg(u32 freq,
-			       const struct lpddr2_timings *timings,
+static u32 get_sdram_tim_3_reg(const struct lpddr2_timings *timings,
 			       const struct lpddr2_min_tck *min_tck,
 			       const struct lpddr2_addressing *addressing)
 {
@@ -399,13 +403,7 @@ static u32 get_sdram_tim_3_reg(u32 freq,
 	mask_n_set(tim3, OMAP44XX_REG_T_RFC_SHIFT, OMAP44XX_REG_T_RFC_MASK,
 		   val);
 
-	if (freq < 400000000)
-		val = ns_x2_2_cycles(timings->tDQSCKMAXx2) - 1;
-	else if (freq == 400000000)
-		val = 0x2;
-	else
-		val = 0x3;
-
+	val = ns_x2_2_cycles(timings->tDQSCKMAXx2) - 1;
 	mask_n_set(tim3, OMAP44XX_REG_T_TDQSCKMAX_SHIFT,
 		   OMAP44XX_REG_T_TDQSCKMAX_MASK, val);
 
@@ -418,6 +416,51 @@ static u32 get_sdram_tim_3_reg(u32 freq,
 		   OMAP44XX_REG_T_CKESR_MASK, val);
 
 	return tim3;
+}
+
+static u32 get_zq_config_reg(const struct lpddr2_device_info *cs1_device,
+			     const struct lpddr2_addressing *addressing,
+			     bool volt_ramp)
+{
+	u32 zq = 0, val = 0;
+	if (volt_ramp)
+		val =
+		    EMIF_ZQCS_INTERVAL_DVFS_IN_US * 10 /
+		    addressing->t_REFI_us_x10;
+	else
+		val =
+		    EMIF_ZQCS_INTERVAL_NORMAL_IN_US * 10 /
+		    addressing->t_REFI_us_x10;
+	mask_n_set(zq, OMAP44XX_REG_ZQ_REFINTERVAL_SHIFT,
+		   OMAP44XX_REG_ZQ_REFINTERVAL_MASK, val);
+
+	mask_n_set(zq, OMAP44XX_REG_ZQ_ZQCL_MULT_SHIFT,
+		   OMAP44XX_REG_ZQ_ZQCL_MULT_MASK, REG_ZQ_ZQCL_MULT - 1);
+
+	mask_n_set(zq, OMAP44XX_REG_ZQ_ZQINIT_MULT_SHIFT,
+		   OMAP44XX_REG_ZQ_ZQINIT_MULT_MASK, REG_ZQ_ZQINIT_MULT - 1);
+
+	mask_n_set(zq, OMAP44XX_REG_ZQ_SFEXITEN_SHIFT,
+		   OMAP44XX_REG_ZQ_SFEXITEN_MASK, REG_ZQ_SFEXITEN_ENABLE);
+
+	/*
+	 * Assuming that two chipselects have a single calibration resistor
+	 * If there are indeed two calibration resistors, then this flag should
+	 * be enabled to take advantage of dual calibration feature.
+	 * This data should ideally come from board files. But considering
+	 * that none of the boards today have calibration resistors per CS,
+	 * it would be an unnecessary overhead.
+	 */
+	mask_n_set(zq, OMAP44XX_REG_ZQ_DUALCALEN_SHIFT,
+		   OMAP44XX_REG_ZQ_DUALCALEN_MASK, REG_ZQ_DUALCALEN_DISABLE);
+
+	mask_n_set(zq, OMAP44XX_REG_ZQ_CS0EN_SHIFT,
+		   OMAP44XX_REG_ZQ_CS0EN_MASK, REG_ZQ_CS0EN_ENABLE);
+
+	mask_n_set(zq, OMAP44XX_REG_ZQ_CS1EN_SHIFT,
+		   OMAP44XX_REG_ZQ_CS1EN_MASK, (cs1_device ? 1 : 0));
+
+	return zq;
 }
 
 static u32 get_temp_alert_config(const struct lpddr2_device_info *cs1_device,
@@ -471,27 +514,20 @@ static u32 get_ddr_phy_ctrl_1(u32 freq, u8 RL)
 {
 	u32 phy = 0, val = 0;
 
-	if (RL == 6)
-		val = 0x9;
-	else if (RL == 7)
-		val = 0xB;
-	else
-		val = RL + 2;
-
 	mask_n_set(phy, OMAP44XX_REG_READ_LATENCY_SHIFT,
-		   OMAP44XX_REG_READ_LATENCY_MASK, val);
+		   OMAP44XX_REG_READ_LATENCY_MASK, RL + 2);
 
 	if (freq <= 100000000)
 		val = EMIF_DLL_SLAVE_DLY_CTRL_100_MHZ_AND_LESS;
 	else if (freq <= 200000000)
 		val = EMIF_DLL_SLAVE_DLY_CTRL_200_MHZ;
 	else if (freq <= 400000000)
-		if (cpu_is_omap447x())
+	//	if (cpu_is_omap447x())
 			val = EMIF_DLL_SLAVE_DLY_CTRL_466_MHZ;
 		else
 			val = EMIF_DLL_SLAVE_DLY_CTRL_400_MHZ;
-	else
-		val = EMIF_DLL_SLAVE_DLY_CTRL_466_MHZ;
+//	else
+	//	val = EMIF_DLL_SLAVE_DLY_CTRL_466_MHZ;
 
 	mask_n_set(phy, OMAP44XX_REG_DLL_SLAVE_DLY_CTRL_SHIFT,
 		   OMAP44XX_REG_DLL_SLAVE_DLY_CTRL_MASK, val);
@@ -504,58 +540,6 @@ static u32 get_ddr_phy_ctrl_1(u32 freq, u8 RL)
 	phy >>= OMAP44XX_REG_DDR_PHY_CTRL_1_SHIFT;
 
 	return phy;
-}
-
-/*
- * get_lp_mode - Get the LP Mode of a EMIF instance.
- *
- * It returns the REG_LP_MODE of EMIF_PWR_MGMT_CTRL[10:8]
- * for a EMIF.
- *
- */
-static u32 get_lp_mode(u32 emif_nr)
-{
-	u32 temp, lpmode;
-	void __iomem *base = emif[emif_nr].base;
-
-	temp = readl(base + OMAP44XX_EMIF_PWR_MGMT_CTRL);
-	lpmode = (temp & OMAP44XX_REG_LP_MODE_MASK) >>
-			OMAP44XX_REG_LP_MODE_SHIFT;
-
-	return lpmode;
-}
-
-/*
- * set_lp_mode - Set the LP Mode of a EMIF instance.
- *
- * It replaces the REG_LP_MODE of EMIF_PWR_MGMT_CTRL[10:8]
- * with the new value for a EMIF.
- *
- */
-static void set_lp_mode(u32 emif_nr, u32 lpmode)
-{
-	u32 temp;
-	void __iomem *base = emif[emif_nr].base;
-
-	if (is_emif_erratum(POWER_DOWN_NOT_EFFICIENT_i743) &&
-		(LP_MODE_PWR_DN == lpmode)) {
-
-		WARN_ONCE(1, "%s: Power-down mode"
-			" REG_LP_MODE = LP_MODE_PWR_DN(0x4) is prohibited by "
-			" erratum i743 switch to LP_MODE_SELF_REFRESH(0x2)",
-			__func__);
-		/* rallback LP_MODE to Self-refresh mode */
-		lpmode = LP_MODE_SELF_REFRESH;
-	}
-
-	/* Extract current lp mode value */
-	temp = readl(base + OMAP44XX_EMIF_PWR_MGMT_CTRL);
-
-	/* Write out the new lp mode value */
-	temp &= ~OMAP44XX_REG_LP_MODE_MASK;
-	temp |= lpmode << OMAP44XX_REG_LP_MODE_SHIFT;
-	writel(temp, base + OMAP44XX_EMIF_PWR_MGMT_CTRL);
-
 }
 
 /*
@@ -616,13 +600,10 @@ static void setup_registers(u32 emif_nr, struct emif_regs *regs, u32 volt_state)
 	u32 temp,read_idle;
 	void __iomem *base = emif[emif_nr].base;
 
-	__raw_writel(regs->ref_ctrl_shdw,
-			base + OMAP44XX_EMIF_SDRAM_REF_CTRL_SHDW);
+	__raw_writel(regs->ref_ctrl, base + OMAP44XX_EMIF_SDRAM_REF_CTRL_SHDW);
 
-	__raw_writel(regs->sdram_tim2_shdw,
-			base + OMAP44XX_EMIF_SDRAM_TIM_2_SHDW);
-	__raw_writel(regs->sdram_tim3_shdw,
-			base + OMAP44XX_EMIF_SDRAM_TIM_3_SHDW);
+	__raw_writel(regs->sdram_tim2, base + OMAP44XX_EMIF_SDRAM_TIM_2_SHDW);
+	__raw_writel(regs->sdram_tim3, base + OMAP44XX_EMIF_SDRAM_TIM_3_SHDW);
 	/*
 	 * Do not change the RL part in PHY CTRL register
 	 * RL is not changed during DVFS
@@ -630,7 +611,7 @@ static void setup_registers(u32 emif_nr, struct emif_regs *regs, u32 volt_state)
 	temp = __raw_readl(base + OMAP44XX_EMIF_DDR_PHY_CTRL_1_SHDW);
 	mask_n_set(temp, OMAP44XX_REG_DDR_PHY_CTRL_1_SHDW_SHIFT,
 		   OMAP44XX_REG_DDR_PHY_CTRL_1_SHDW_MASK,
-		   regs->emif_ddr_phy_ctlr_1_shdw_final);
+		   regs->emif_ddr_phy_ctlr_1_final);
 	__raw_writel(temp, base + OMAP44XX_EMIF_DDR_PHY_CTRL_1_SHDW);
 
 	__raw_writel(regs->temp_alert_config,
@@ -641,9 +622,9 @@ static void setup_registers(u32 emif_nr, struct emif_regs *regs, u32 volt_state)
 	 * happen more often.
 	 */
 	if (volt_state == LPDDR2_VOLTAGE_RAMPING)
-		read_idle = regs->read_idle_ctrl_shdw_volt_ramp;
+		read_idle = regs->read_idle_ctrl_volt_ramp;
 	else
-		read_idle = regs->read_idle_ctrl_shdw_normal;
+		read_idle = regs->read_idle_ctrl_normal;
 	__raw_writel(read_idle, base + OMAP44XX_EMIF_READ_IDLE_CTRL_SHDW);
 
 	/*
@@ -669,21 +650,21 @@ static void setup_temperature_sensitive_regs(u32 emif_nr,
 	u32 temperature = emif_temperature_level[emif_nr];
 
 	if (unlikely(temperature == SDRAM_TEMP_HIGH_DERATE_REFRESH)) {
-		tim1 = regs->sdram_tim1_shdw;
-		ref_ctrl = regs->ref_ctrl_shdw_derated;
+		tim1 = regs->sdram_tim1;
+		ref_ctrl = regs->ref_ctrl_derated;
 		temp_alert_cfg = regs->temp_alert_config_derated;
 	} else if (unlikely(temperature ==
 			    SDRAM_TEMP_HIGH_DERATE_REFRESH_AND_TIMINGS)) {
-		tim1 = regs->sdram_tim1_shdw_derated;
-		ref_ctrl = regs->ref_ctrl_shdw_derated;
+		tim1 = regs->sdram_tim1_derated;
+		ref_ctrl = regs->ref_ctrl_derated;
 		temp_alert_cfg = regs->temp_alert_config_derated;
 	} else {
 		/*
 		 * Nominal timings - you may switch back to the
 		 * nominal timings if the temperature falls
 		 */
-		tim1 = regs->sdram_tim1_shdw;
-		ref_ctrl = regs->ref_ctrl_shdw;
+		tim1 = regs->sdram_tim1;
+		ref_ctrl = regs->ref_ctrl;
 		temp_alert_cfg = regs->temp_alert_config;
 	}
 
@@ -732,9 +713,9 @@ static void setup_volt_sensitive_registers(u32 emif_nr, struct emif_regs *regs,
 	 * happen more often.
 	 */
 	if (volt_state == LPDDR2_VOLTAGE_RAMPING)
-		read_idle = regs->read_idle_ctrl_shdw_volt_ramp;
+		read_idle = regs->read_idle_ctrl_volt_ramp;
 	else
-		read_idle = regs->read_idle_ctrl_shdw_normal;
+		read_idle = regs->read_idle_ctrl_normal;
 
 	__raw_writel(read_idle, base + OMAP44XX_EMIF_READ_IDLE_CTRL_SHDW);
 
@@ -910,8 +891,6 @@ static int __devinit omap_emif_probe(struct platform_device *pdev)
 
 	pr_info("EMIF%d is enabled with IRQ%d\n", id, emif[id].irq);
 
-	emif[id].ddr_refresh_disabled = false;
-
 	return 0;
 }
 
@@ -982,25 +961,41 @@ static void emif_calculate_regs(const struct emif_device_details *devices,
 	emif_assert(addressing);
 
 	regs->RL_final = timings->RL;
+	/*
+	 * Initial value of EMIF_SDRAM_CONFIG corresponds to the base
+	 * frequency - 19.2 MHz
+	 */
+	regs->sdram_config_init =
+	    get_sdram_config_reg(cs0_device, cs1_device, addressing,
+				 RL_19_2_MHZ);
 
-	regs->ref_ctrl_shdw = get_sdram_ref_ctrl(freq, addressing);
-	regs->ref_ctrl_shdw_derated = regs->ref_ctrl_shdw / 4;
+	regs->sdram_config_final = regs->sdram_config_init;
+	mask_n_set(regs->sdram_config_final, OMAP44XX_REG_CL_SHIFT,
+		   OMAP44XX_REG_CL_MASK, timings->RL);
 
-	regs->sdram_tim1_shdw =
-	    get_sdram_tim_1_reg(timings, min_tck, addressing);
-	regs->sdram_tim1_shdw_derated =
+	regs->ref_ctrl = get_sdram_ref_ctrl(freq, addressing);
+	regs->ref_ctrl_derated = regs->ref_ctrl / 4;
+
+	regs->sdram_tim1 = get_sdram_tim_1_reg(timings, min_tck, addressing);
+
+	regs->sdram_tim1_derated =
 	    get_sdram_tim_1_reg_derated(timings, min_tck, addressing);
 
-	regs->sdram_tim2_shdw = get_sdram_tim_2_reg(timings, min_tck);
+	regs->sdram_tim2 = get_sdram_tim_2_reg(timings, min_tck);
 
-	regs->sdram_tim3_shdw =
-	    get_sdram_tim_3_reg(freq, timings, min_tck, addressing);
+	regs->sdram_tim3 = get_sdram_tim_3_reg(timings, min_tck, addressing);
 
-	regs->read_idle_ctrl_shdw_normal =
+	regs->read_idle_ctrl_normal =
 	    get_read_idle_ctrl_reg(LPDDR2_VOLTAGE_STABLE);
 
-	regs->read_idle_ctrl_shdw_volt_ramp =
+	regs->read_idle_ctrl_volt_ramp =
 	    get_read_idle_ctrl_reg(LPDDR2_VOLTAGE_RAMPING);
+
+	regs->zq_config_normal =
+	    get_zq_config_reg(cs1_device, addressing, LPDDR2_VOLTAGE_STABLE);
+
+	regs->zq_config_volt_ramp =
+	    get_zq_config_reg(cs1_device, addressing, LPDDR2_VOLTAGE_RAMPING);
 
 	regs->temp_alert_config =
 	    get_temp_alert_config(cs1_device, addressing, false);
@@ -1008,10 +1003,10 @@ static void emif_calculate_regs(const struct emif_device_details *devices,
 	regs->temp_alert_config_derated =
 	    get_temp_alert_config(cs1_device, addressing, true);
 
-	regs->emif_ddr_phy_ctlr_1_shdw_init =
+	regs->emif_ddr_phy_ctlr_1_init =
 	    get_ddr_phy_ctrl_1(EMIF_FREQ_19_2_MHZ, RL_19_2_MHZ);
 
-	regs->emif_ddr_phy_ctlr_1_shdw_final =
+	regs->emif_ddr_phy_ctlr_1_final =
 	    get_ddr_phy_ctrl_1(freq, regs->RL_final);
 
 	/* save the frequency in the struct to act as a tag when cached */
@@ -1019,23 +1014,27 @@ static void emif_calculate_regs(const struct emif_device_details *devices,
 
 	pr_debug("Calculated EMIF configuration register values "
 		 "for %d MHz", freq / 1000000);
-	pr_debug("sdram_ref_ctrl_shdw\t\t: 0x%08x\n", regs->ref_ctrl_shdw);
-	pr_debug("sdram_ref_ctrl_shdw_derated\t\t: 0x%08x\n",
-		 regs->ref_ctrl_shdw_derated);
-	pr_debug("sdram_tim1_shdw\t\t: 0x%08x\n", regs->sdram_tim1_shdw);
-	pr_debug("sdram_tim1_shdw_derated\t\t: 0x%08x\n",
-		 regs->sdram_tim1_shdw_derated);
-	pr_debug("sdram_tim2_shdw\t\t: 0x%08x\n", regs->sdram_tim2_shdw);
-	pr_debug("sdram_tim3_shdw\t\t: 0x%08x\n", regs->sdram_tim3_shdw);
-	pr_debug("emif_read_idle_ctrl_shdw_normal\t: 0x%08x\n",
-		 regs->read_idle_ctrl_shdw_normal);
+	pr_debug("sdram_config_init\t\t: 0x%08x\n", regs->sdram_config_init);
+	pr_debug("sdram_config_final\t\t: 0x%08x\n", regs->sdram_config_final);
+	pr_debug("sdram_ref_ctrl\t\t: 0x%08x\n", regs->ref_ctrl);
+	pr_debug("sdram_ref_ctrl_derated\t\t: 0x%08x\n",
+		 regs->ref_ctrl_derated);
+	pr_debug("sdram_tim_1_reg\t\t: 0x%08x\n", regs->sdram_tim1);
+	pr_debug("sdram_tim_1_reg_derated\t\t: 0x%08x\n",
+		 regs->sdram_tim1_derated);
+	pr_debug("sdram_tim_2_reg\t\t: 0x%08x\n", regs->sdram_tim2);
+	pr_debug("sdram_tim_3_reg\t\t: 0x%08x\n", regs->sdram_tim3);
+	pr_debug("emif_read_idle_ctrl_normal\t: 0x%08x\n",
+		 regs->read_idle_ctrl_normal);
 	pr_debug("emif_read_idle_ctrl_dvfs\t: 0x%08x\n",
-		 regs->read_idle_ctrl_shdw_volt_ramp);
+		 regs->read_idle_ctrl_volt_ramp);
+	pr_debug("zq_config_reg_normal\t: 0x%08x\n", regs->zq_config_normal);
+	pr_debug("zq_config_reg_dvfs\t\t: 0x%08x\n", regs->zq_config_volt_ramp);
 	pr_debug("temp_alert_config\t: 0x%08x\n", regs->temp_alert_config);
-	pr_debug("emif_ddr_phy_ctlr_1_shdw_init\t: 0x%08x\n",
-		 regs->emif_ddr_phy_ctlr_1_shdw_init);
-	pr_debug("emif_ddr_phy_ctlr_1_shdw_final\t: 0x%08x\n",
-		 regs->emif_ddr_phy_ctlr_1_shdw_final);
+	pr_debug("emif_ddr_phy_ctlr_1_init\t: 0x%08x\n",
+		 regs->emif_ddr_phy_ctlr_1_init);
+	pr_debug("emif_ddr_phy_ctlr_1_final\t: 0x%08x\n",
+		 regs->emif_ddr_phy_ctlr_1_final);
 }
 
 /*
@@ -1151,15 +1150,6 @@ static void init_temperature(u32 emif_nr)
 	}
 }
 
-static void __init emif_setup_errata(void)
-{
-	if (cpu_is_omap44xx())
-		emif_errata |= EMIF_ERRATUM_SR_TIMER_i735;
-
-	if (cpu_is_omap443x() || cpu_is_omap446x())
-		emif_errata |= EMIF_ERRATUM_POWER_DOWN_NOT_EFFICIENT_i743;
-}
-
 /*
  * omap_emif_device_init needs to be done before
  * ddr reconfigure function call.
@@ -1167,8 +1157,6 @@ static void __init emif_setup_errata(void)
  */
 static int __init omap_emif_device_init(void)
 {
-	/* setup the erratas */
-	emif_setup_errata();
 	/*
 	 * To avoid code running on other OMAPs in
 	 * multi-omap builds
@@ -1313,61 +1301,6 @@ int omap_emif_setup_registers(u32 freq, u32 volt_state)
 	return err;
 }
 
-
-/*
- * omap_emif_frequency_pre_notify - Disable DDR self refresh of both EMIFs
- *
- * It disables the LP mode if the LP mode of EMIFs was LP_MODE_SELF_REFRESH.
- *
- * It should be called before any PRCM frequency update sequence.
- * After the frequency update sequence, omap_emif_frequency_post_notify
- * should be called to restore the original LP MODE setting of the EMIFs.
- *
- */
-void omap_emif_frequency_pre_notify(void)
-{
-	int emif_num;
-
-	for (emif_num = EMIF1; emif_num < EMIF_NUM_INSTANCES; emif_num++) {
-
-		/*
-		 * Only disable ddr self-refresh
-		 * if ddr self-refresh was enabled
-		 */
-		if (likely(LP_MODE_SELF_REFRESH == get_lp_mode(emif_num))) {
-
-			set_lp_mode(emif_num, LP_MODE_DISABLE);
-			emif[emif_num].ddr_refresh_disabled = true;
-		}
-
-	}
-}
-
-/*
- * omap_emif_frequency_post_notify - Enable DDR self refresh of both EMIFs
- *
- * It restores the LP mode of the EMIFs back to LP_MODE_SELF_REFRESH if it
- * was previously disabled by omap_emif_frequency_pre_notify()
- *
- */
-void omap_emif_frequency_post_notify(void)
-{
-	int emif_num;
-
-	for (emif_num = EMIF1; emif_num < EMIF_NUM_INSTANCES; emif_num++) {
-
-		/*
-		 * Only re-enable ddr self-refresh
-		 * if ddr self-refresh was disabled
-		 */
-		if (likely(emif[emif_num].ddr_refresh_disabled)) {
-
-			set_lp_mode(emif_num, LP_MODE_SELF_REFRESH);
-			emif[emif_num].ddr_refresh_disabled = false;
-		}
-	}
-}
-
 /*
  * omap_emif_setup_device_details - save the SDRAM device details passed
  * from the board file
@@ -1420,6 +1353,9 @@ static void __init setup_lowpower_regs(u32 emif_nr,
 	if (dev->emif_ddr_selfrefresh_cycles >= 0) {
 		u32 num_cycles, ddr_sr_timer;
 
+		/* Enable self refresh if not already configured */
+		temp = __raw_readl(base + OMAP44XX_EMIF_PWR_MGMT_CTRL) &
+			OMAP44XX_REG_LP_MODE_MASK;
 		/*
 		 * Configure the self refresh timing
 		 * base value starts at 16 cycles mapped to 1( __fls(16) = 4)
@@ -1430,18 +1366,6 @@ static void __init setup_lowpower_regs(u32 emif_nr,
 		else
 			ddr_sr_timer = 0;
 
-		if (is_emif_erratum(SR_TIMER_i735) &&
-				ddr_sr_timer < EMIF_ERRATUM_SR_TIMER_MIN) {
-			/*
-			 * Operating with such SR_TIM value will cause
-			 * instability, so re-adjust to safe value as stated
-			 * by erratum i735
-			 */
-			ddr_sr_timer = EMIF_ERRATUM_SR_TIMER_MIN;
-			pr_warning("%s: PM timer for self refresh is set to %i"
-					" cycles\n", __func__,
-					16 << (EMIF_ERRATUM_SR_TIMER_MIN - 1));
-		}
 		/* Program the idle delay */
 		temp = __raw_readl(base + OMAP44XX_EMIF_PWR_MGMT_CTRL_SHDW);
 		mask_n_set(temp, OMAP44XX_REG_SR_TIM_SHDW_SHIFT,
@@ -1455,18 +1379,24 @@ static void __init setup_lowpower_regs(u32 emif_nr,
 		__raw_writel(temp, base + OMAP44XX_EMIF_PWR_MGMT_CTRL_SHDW);
 
 		/* Enable Self Refresh */
-		set_lp_mode(emif_nr, LP_MODE_SELF_REFRESH);
+		temp = __raw_readl(base + OMAP44XX_EMIF_PWR_MGMT_CTRL);
+		mask_n_set(temp, OMAP44XX_REG_LP_MODE_SHIFT,
+			   OMAP44XX_REG_LP_MODE_MASK, LP_MODE_SELF_REFRESH);
+		__raw_writel(temp, base + OMAP44XX_EMIF_PWR_MGMT_CTRL);
 	} else {
-		/* Disable Automatic power management if < 0 */
+		/* Disable Automatic power management if < 0 and not disabled */
+		temp = __raw_readl(base + OMAP44XX_EMIF_PWR_MGMT_CTRL) &
+			OMAP44XX_REG_LP_MODE_MASK;
 
-		/* Program the idle delay to 0x0 */
 		temp = __raw_readl(base + OMAP44XX_EMIF_PWR_MGMT_CTRL_SHDW);
 		mask_n_set(temp, OMAP44XX_REG_SR_TIM_SHDW_SHIFT,
 			   OMAP44XX_REG_SR_TIM_SHDW_MASK, 0x0);
 		__raw_writel(temp, base + OMAP44XX_EMIF_PWR_MGMT_CTRL_SHDW);
 
-		/* Disable Automatic power management */
-		set_lp_mode(emif_nr, LP_MODE_DISABLE);
+		temp = __raw_readl(base + OMAP44XX_EMIF_PWR_MGMT_CTRL);
+		mask_n_set(temp, OMAP44XX_REG_LP_MODE_SHIFT,
+			   OMAP44XX_REG_LP_MODE_MASK, LP_MODE_DISABLE);
+		__raw_writel(temp, base + OMAP44XX_EMIF_PWR_MGMT_CTRL);
 	}
 }
 

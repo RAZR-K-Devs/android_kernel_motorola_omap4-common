@@ -556,4 +556,3 @@ static struct platform_driver ohci_hcd_omap_driver = {
 };
 
 MODULE_ALIAS("platform:ohci");
-

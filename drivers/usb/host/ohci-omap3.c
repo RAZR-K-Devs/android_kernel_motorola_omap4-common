@@ -103,7 +103,7 @@ static int ohci_omap3_bus_resume(struct usb_hcd *hcd)
 	oh = omap_hwmod_lookup(USBHS_OHCI_HWMODNAME);
 
 	if (oh)
-	omap_hwmod_disable_ioring_wakeup(oh);
+		omap_hwmod_disable_ioring_wakeup(oh);
 #endif
 
 	/* Re-enable any external transceiver */
@@ -253,6 +253,7 @@ static int __devinit ohci_hcd_omap3_probe(struct platform_device *pdev)
 	hcd->regs =  regs;
 
 	pm_runtime_get_sync(dev->parent);
+
 	ohci_hcd_init(hcd_to_ohci(hcd));
 
 	ret = usb_add_hcd(hcd, irq, IRQF_DISABLED);

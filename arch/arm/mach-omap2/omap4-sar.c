@@ -608,7 +608,6 @@ static const u32 omap446x_sar_ram1_layout[][4] = {
 		OMAP4_CM_SDMA_STATICDEP_RESTORE_OFFSET, 1, 0x00000928},
 };
 
-
 /*
  * OMAP4460, OMAP4470
  * SAR_RAM2 register layout consist of SYSCTRL_PADCONF_CORE regsiters
@@ -1174,15 +1173,15 @@ static void sar_save(u32 nb_regs, u32 sar_bank, const u32 sar_layout_table[][4])
 						reg_val =
 						usb_sar_data
 						[(sar_wr_addr-usb_sar_start)/4
-						    + j].val;
+							+ j].val;
 					} else {
 						/* Save the USB SAR register */
 						usb_sar_data
 						[(sar_wr_addr-usb_sar_start)/4
-						    + j].val = reg_val;
+							+ j].val = reg_val;
 						usb_sar_data
 						[(sar_wr_addr-usb_sar_start)/4
-						    + j].reg_addr = reg_read_addr;
+						+ j].reg_addr = reg_read_addr;
 					}
 				}
 				__raw_writel(reg_val, sar_wr_addr + j * 4);
@@ -1285,8 +1284,9 @@ int omap4_sar_save(void)
 		sar_save(ARRAY_SIZE(omap447x_sar_ram1_layout), SAR_BANK1_OFFSET,
 			 omap447x_sar_ram1_layout);
 	else
-	sar_save(ARRAY_SIZE(omap443x_sar_ram1_layout), SAR_BANK1_OFFSET,
+		sar_save(ARRAY_SIZE(omap443x_sar_ram1_layout), SAR_BANK1_OFFSET,
 			 omap443x_sar_ram1_layout);
+
 	clk_disable(usb_host_ck);
 	clk_disable(usb_tll_ck);
 	pwrdm_disable_hdwr_sar(l3init_pwrdm);
@@ -1358,8 +1358,7 @@ void omap4_sar_overwrite(void)
 	__raw_writel(val, sar_ram_base + SAR_BANK1_OFFSET + 0x100);
 	/* CM1 CM_SHADOW_FREQ_CONFIG1, Enable FREQ UPDATE */
 	val = __raw_readl(OMAP4430_CM_SHADOW_FREQ_CONFIG1);
-	val |= (1 << OMAP4430_FREQ_UPDATE_SHIFT) |
-		(1 << OMAP4430_DLL_RESET_SHIFT);
+	val |= 1 << OMAP4430_FREQ_UPDATE_SHIFT;
 	val &= ~OMAP4430_DLL_OVERRIDE_MASK;
 	__raw_writel(val, sar_ram_base + SAR_BANK1_OFFSET + 0x104);
 	/* CM2 MEMIF_CLKTRCTRL = HW_AUTO, after FREQ UPDATE */
