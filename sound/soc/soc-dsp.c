@@ -1105,6 +1105,7 @@ disconnect:
 				dsp_params->state = SND_SOC_DSP_LINK_STATE_FREE;
 	}
 
+//	be_disconnect(fe, stream);
 	return ret;
 }
 
@@ -1205,11 +1206,11 @@ int soc_dsp_runtime_update(struct snd_soc_dapm_widget *widget)
 //			dev_err(&fe->dev, "failed to update playback FE stream %s\n",
 //					fe->dai_link->stream_name);
 		}
-
-		/* free old playback links */
-		fe_clear_pending(fe, SNDRV_PCM_STREAM_PLAYBACK);
-		be_disconnect(fe, SNDRV_PCM_STREAM_PLAYBACK);
-
+//
+//		/* free old playback links */
+//		be_disconnect(fe, SNDRV_PCM_STREAM_PLAYBACK);
+//		fe_clear_pending(fe, SNDRV_PCM_STREAM_PLAYBACK);
+//
 capture:
 		/* skip if FE doesn't have capture capability */
 		if (!fe->cpu_dai->driver->capture.channels_min)
@@ -1238,10 +1239,10 @@ capture:
 //			dev_err(&fe->dev, "failed to update capture FE stream %s\n",
 //					fe->dai_link->stream_name);
 		}
-
-		/* free old capture links */
-		fe_clear_pending(fe, SNDRV_PCM_STREAM_CAPTURE);
-		be_disconnect(fe, SNDRV_PCM_STREAM_CAPTURE);
+//
+//		/* free old capture links */
+//		be_disconnect(fe, SNDRV_PCM_STREAM_CAPTURE);
+//		fe_clear_pending(fe, SNDRV_PCM_STREAM_CAPTURE);
 	}
 
 	mutex_unlock(&widget->dapm->card->dsp_mutex);
