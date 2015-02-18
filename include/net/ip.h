@@ -37,11 +37,12 @@ struct inet_skb_parm {
 	struct ip_options	opt;		/* Compiled IP options		*/
 	unsigned char		flags;
 
-#define IPSKB_FORWARDED		1
-#define IPSKB_XFRM_TUNNEL_SIZE	2
-#define IPSKB_XFRM_TRANSFORMED	4
-#define IPSKB_FRAG_COMPLETE	8
-#define IPSKB_REROUTED		16
+#define IPSKB_FORWARDED		BIT(0)
+#define IPSKB_XFRM_TUNNEL_SIZE	BIT(1)
+#define IPSKB_XFRM_TRANSFORMED	BIT(2)
+#define IPSKB_FRAG_COMPLETE	BIT(3)
+#define IPSKB_REROUTED		BIT(4)
+#define IPSKB_DOREDIRECT	BIT(5)
 };
 
 static inline unsigned int ip_hdrlen(const struct sk_buff *skb)
@@ -165,6 +166,8 @@ struct ip_reply_arg {
 	int	    csumoffset; /* u16 offset of csum in iov[0].iov_base */
 				/* -1 if not needed */ 
 	int	    bound_dev_if;
+	u8  	    tos;
+	uid_t	    uid;
 }; 
 
 #define IP_REPLY_ARG_NOSRCCHECK 1
@@ -175,7 +178,7 @@ static inline __u8 ip_reply_arg_flowi_flags(const struct ip_reply_arg *arg)
 }
 
 void ip_send_reply(struct sock *sk, struct sk_buff *skb, __be32 daddr,
-		   struct ip_reply_arg *arg, unsigned int len);
+		   const struct ip_reply_arg *arg, unsigned int len);
 
 struct ipv4_config {
 	int	log_martians;

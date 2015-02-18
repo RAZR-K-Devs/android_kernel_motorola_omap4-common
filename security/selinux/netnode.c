@@ -182,7 +182,6 @@ static void sel_netnode_insert(struct sel_netnode *node)
 		break;
 	default:
 		BUG();
-		return;
 	}
 
 	/* we need to impose a limit on the growth of the hash table so check
@@ -242,7 +241,6 @@ static int sel_netnode_sid_slow(void *addr, u16 family, u32 *sid)
 		break;
 	default:
 		BUG();
-		ret = -EINVAL;
 	}
 	if (ret != 0)
 		goto out;

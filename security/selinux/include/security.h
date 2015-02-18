@@ -41,17 +41,16 @@
 #endif
 
 /* Mask for just the mount related flags */
-#define SE_MNTMASK	0x1f
+#define SE_MNTMASK	0x0f
 /* Super block security struct flags for mount options */
-/* BE CAREFUL, these need to be the low order bits for selinux_get_mnt_opts */
 #define CONTEXT_MNT	0x01
 #define FSCONTEXT_MNT	0x02
 #define ROOTCONTEXT_MNT	0x04
 #define DEFCONTEXT_MNT	0x08
-#define SBLABEL_MNT	0x10
 /* Non-mount related flags */
-#define SE_SBINITIALIZED	0x0100
-#define SE_SBPROC		0x0200
+#define SE_SBINITIALIZED	0x10
+#define SE_SBPROC		0x20
+#define SE_SBLABELSUPP	0x40
 
 #define CONTEXT_STR	"context="
 #define FSCONTEXT_STR	"fscontext="
@@ -169,7 +168,8 @@ int security_get_allow_unknown(void);
 #define SECURITY_FS_USE_NONE		5 /* no labeling support */
 #define SECURITY_FS_USE_MNTPOINT	6 /* use mountpoint labeling */
 
-int security_fs_use(struct super_block *sb);
+int security_fs_use(const char *fstype, unsigned int *behavior,
+	u32 *sid);
 
 int security_genfs_sid(const char *fstype, char *name, u16 sclass,
 	u32 *sid);
