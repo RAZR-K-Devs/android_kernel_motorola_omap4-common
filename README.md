@@ -90,7 +90,7 @@ This tutorial explains how to build JBX-Kernel 3.0 Series (3.0.31)! You will nee
 
 PREPARE ROM SOURCE
 
-1. Create work dir with FULL CM11 sources on your local hard drive.
+1. Create work dir with FULL CM12 sources on your local hard drive.
 2. After syncing depencies, prebuilts, etc, head into your CM11 source, go to "YOUR_CM_SOURCE_DIR/.repo/local_manifests/".
 3. Edit the "roomservice.xml" and find the following line
 
@@ -106,19 +106,21 @@ PREPARE ROM SOURCE
 PREPARE KERNEL SOURCE
 
 1. git clone this repo (JBX-Kernel) into a seperate folder.
-2. Be sure you're in JBX_30X branch.
+2. Be sure you're in JBX_40X branch.
 3. Edit build scripts for your local paths.
    (i.e. for Droid RAZR use 'build_quad.sh', for ATRIX 2 use 'build_edison_quad.sh', etc..).
 4. Keep in mind that the build scripts assume you to have my 'built_rls' repo cloned on your local harddrive.
 5. If you don't want to use it, exclude the section and install the kernel manually! Otherwise proceed NOW at 'OPTIONAL'.
 6. Run the build script (or proceed firsth with OPTIONAL).
 
+NOTE: CM12 doesn't use the vendor/cm/get-prebuilts script anymore! Just skip this step if you come to it by reading the CM building guides!
+
 
 [OPTIONAL]
 ----------
 If you want to use my AROMA Installer Setup continue here:
 
-clone my repo "built_rls".
+clone my repo "built_rls" and name its folder "built".
 Edit the paths in build scripts accordingly to where you stored 'built_rls' repo.
 Now, finally, run the build script.
 
