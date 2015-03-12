@@ -583,7 +583,7 @@ static void save_all_ctx(void)
 	dispc_enable_plane(OMAP_DSS_VIDEO2, 0);
 	dispc_enable_plane(OMAP_DSS_VIDEO3, 0);
 
-//	dispc_save_context();
+	dispc_save_context();
 
 	dss_runtime_put();
 }
@@ -594,7 +594,7 @@ static void restore_all_ctx(void)
 	dss_runtime_get();
 
 	dss_restore_context();
-//	dispc_restore_context();
+	dispc_restore_context();
 
 	dss_runtime_put();
 }

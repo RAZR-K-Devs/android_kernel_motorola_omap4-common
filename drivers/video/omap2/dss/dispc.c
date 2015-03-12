@@ -168,7 +168,7 @@ static int dispc_get_ctx_loss_count(void)
 #define RR(reg) \
 	dispc_write_reg(DISPC_##reg, dispc.ctx[DISPC_##reg / sizeof(u32)])
 
-static void dispc_save_context(void)
+void dispc_save_context(void)
 {
 	int i, o;
 
@@ -310,7 +310,7 @@ static void dispc_save_context(void)
 	DSSDBG("context saved, ctx_loss_count %d\n", dispc.ctx_loss_cnt);
 }
 
-static void dispc_restore_context(void)
+void dispc_restore_context(void)
 {
 	struct device *dev = &dispc.pdev->dev;
 	int i, o, ctx;
@@ -608,7 +608,7 @@ err_dss_get:
 
 void dispc_runtime_put(void)
 {
-
+	struct powerdomain *dss_powerdomain = pwrdm_lookup("dss_pwrdm");
 	mutex_lock(&dispc.runtime_lock);
 
 	if (--dispc.runtime_count == 0) {
@@ -622,12 +622,12 @@ void dispc_runtime_put(void)
 		 * * (allowing for deeper power state)
 		 * */
 #if 0		/* STARGO: This causes panic */
-	struct powerdomain *dss_powerdomain = pwrdm_lookup("dss_pwrdm");
 		omap_pm_set_max_dev_wakeup_lat(
 				&dispc.pdev->dev,
 				&dispc.pdev->dev,
 				dss_powerdomain->wakeup_lat[PWRDM_FUNC_PWRST_OFF]);
 #endif
+
 		r = pm_runtime_put_sync(&dispc.pdev->dev);
 		WARN_ON(r);
 
@@ -1443,7 +1443,6 @@ u32 dispc_get_plane_fifo_size(enum omap_plane plane)
 void dispc_setup_plane_fifo(enum omap_plane plane, u32 low, u32 high)
 {
 	u8 hi_start, hi_end, lo_start, lo_end;
-	u32 fifosize;
 
 	dss_feat_get_reg_field(FEAT_REG_FIFOHIGHTHRESHOLD, &hi_start, &hi_end);
 	dss_feat_get_reg_field(FEAT_REG_FIFOLOWTHRESHOLD, &lo_start, &lo_end);
@@ -1464,16 +1463,9 @@ void dispc_setup_plane_fifo(enum omap_plane plane, u32 low, u32 high)
 			FLD_VAL(high, hi_start, hi_end) |
 			FLD_VAL(low, lo_start, lo_end));
 
-	if (plane == OMAP_DSS_GFX) {
-		/* give high priority to GFX pipe */
-		REG_FLD_MOD(DISPC_OVL_ATTRIBUTES(OMAP_DSS_GFX), 1, 14, 14);
-	}
-
-	fifosize = dispc_get_plane_fifo_size(plane);
-
 	if (dss_has_feature(FEAT_GLOBAL_MFLAG))
 		dispc_write_reg(DISPC_OVL_MFLAG_THRESHOLD(plane),
-			FLD_VAL((fifosize*5)/8, 31, 16) | FLD_VAL((fifosize*4)/8, 15, 0));
+			FLD_VAL(high, 31, 16) | FLD_VAL(low, 15, 0));
 }
 
 void dispc_enable_fifomerge(bool enable)
@@ -2272,16 +2264,6 @@ int dispc_scaling_decision(u16 width, u16 height,
 		in_width = DIV_ROUND_UP(width, x);
 		in_height = DIV_ROUND_UP(height, y);
 
-		/* Use 5-tap filter unless must use 3-tap,
-		 * even in no-scaling case, for not to lose sharpening filters
-		 */
-		if (!cpu_is_omap44xx())
-			*five_taps = in_width <= 1024;
-		else if (omap_rev() == OMAP4430_REV_ES1_0)
-			*five_taps = in_width <= 1280;
-		else
-			*five_taps = true;
-
 		if (in_width == out_width && in_height == out_height)
 			break;
 
@@ -2292,6 +2274,13 @@ int dispc_scaling_decision(u16 width, u16 height,
 			out_height < in_height / maxdownscale)
 			goto loop;
 
+		/* Use 5-tap filter unless must use 3-tap */
+		if (!cpu_is_omap44xx())
+			*five_taps = in_width <= 1024;
+		else if (omap_rev() == OMAP4430_REV_ES1_0)
+			*five_taps = in_width <= 1280;
+		else
+			*five_taps = true;
 
 		/*
 		 * Predecimation on OMAP4 still fetches the whole lines
@@ -2607,10 +2596,18 @@ int dispc_setup_plane(enum omap_plane plane,
 	_dispc_setup_global_alpha(plane, global_alpha);
 
 	if (cpu_is_omap44xx()) {
+#if !defined(CONFIG_OMAP2_HDMI_DEFAULT_DISPLAY)
 		fifo_low = dispc_calculate_threshold(plane, paddr + offset0,
 				   puv_addr + offset0, width, height,
 				   row_inc, pix_inc);
 		fifo_high = dispc_get_plane_fifo_size(plane) - 1;
+#else
+		u32 size;
+		size = dispc_get_plane_fifo_size(plane);
+
+		default_get_overlay_fifo_thresholds(plane, size,
+				&size, &fifo_low, &fifo_high);
+#endif
 		dispc_setup_plane_fifo(plane, fifo_low, fifo_high);
 	}
 
@@ -3395,7 +3392,7 @@ static void dispc_set_lcd_divisor(enum omap_channel channel, u16 lck_div,
 		u16 pck_div)
 {
 	BUG_ON(lck_div < 1);
-	BUG_ON(pck_div < 1);
+	BUG_ON(pck_div < 2);
 
 	dispc_write_reg(DISPC_DIVISORo(channel),
 			FLD_VAL(lck_div, 23, 16) | FLD_VAL(pck_div, 7, 0));
@@ -3758,29 +3755,6 @@ static void _dispc_set_pol_freq(enum omap_channel channel, bool onoff, bool rf,
 	dispc_write_reg(DISPC_POL_FREQ(channel), l);
 }
 
-static void dispc_get_pol_freq(enum omap_channel channel,
-			enum omap_panel_config *config, u8 *acbi, u8 *acb)
-{
-	u32 l = dispc_read_reg(DISPC_POL_FREQ(channel));
-	*config = 0;
-
-	if (FLD_GET(l, 17, 17))
-		*config |= OMAP_DSS_LCD_ONOFF;
-	if (FLD_GET(l, 16, 16))
-		*config |= OMAP_DSS_LCD_RF;
-	if (FLD_GET(l, 15, 15))
-		*config |= OMAP_DSS_LCD_IEO;
-	if (FLD_GET(l, 14, 14))
-		*config |= OMAP_DSS_LCD_IPC;
-	if (FLD_GET(l, 13, 13))
-		*config |= OMAP_DSS_LCD_IHS;
-	if (FLD_GET(l, 12, 12))
-		*config |= OMAP_DSS_LCD_IVS;
-
-	*acbi = FLD_GET(l, 11, 8);
-	*acb = FLD_GET(l, 7, 0);
-}
-
 void dispc_set_pol_freq(enum omap_channel channel,
 		enum omap_panel_config config, u8 acbi, u8 acb)
 {
@@ -3844,7 +3818,7 @@ int dispc_calc_clock_rates(unsigned long dispc_fclk_rate,
 {
 	if (cinfo->lck_div > 255 || cinfo->lck_div == 0)
 		return -EINVAL;
-	if (cinfo->pck_div < 1 || cinfo->pck_div > 255)
+	if (cinfo->pck_div < 2 || cinfo->pck_div > 255)
 		return -EINVAL;
 
 	cinfo->lck = dispc_fclk_rate / cinfo->lck_div;
@@ -3858,16 +3832,6 @@ int dispc_set_clock_div(enum omap_channel channel,
 {
 	DSSDBG("lck = %lu (%u)\n", cinfo->lck, cinfo->lck_div);
 	DSSDBG("pck = %lu (%u)\n", cinfo->pck, cinfo->pck_div);
-
-	/* In case DISPC_CORE_CLK == PCLK, IPC must work on rising edge */
-	if (dss_has_feature(FEAT_CORE_CLK_DIV) &&
-			(cinfo->lck_div * cinfo->pck_div == 1)) {
-		u8 acb, acbi;
-		enum omap_panel_config config;
-		dispc_get_pol_freq(channel, &config, &acbi, &acb);
-		config |= OMAP_DSS_LCD_IPC;
-		dispc_set_pol_freq(channel, config, acbi, acb);
-	}
 
 	dispc_set_lcd_divisor(channel, cinfo->lck_div, cinfo->pck_div);
 
@@ -4506,6 +4470,21 @@ static void _omap_dispc_initial_config(void)
 		dispc_write_reg(DISPC_GLOBAL_MFLAG, 2);
 }
 
+void dispc_cleanup_irq(void)
+{
+	/*
+	 * This is called in dispc probe function
+	 * before requesting irq
+	 */
+
+	/*Disable all interrupts */
+	dispc_write_reg(DISPC_IRQENABLE, 0x0);
+
+	/*Clear interrupts if any */
+	dispc_write_reg(DISPC_IRQSTATUS, 0xffffffff);
+
+}
+
 /* DISPC HW IP initialisation */
 static int omap_dispchw_probe(struct platform_device *pdev)
 {
@@ -4552,6 +4531,15 @@ static int omap_dispchw_probe(struct platform_device *pdev)
 		r = -ENODEV;
 		goto err_irq;
 	}
+
+	/*
+	 * Need to disable DISPC_IRQ  and clear DISPC_IRQSTATUS here,
+	 * so no irqs are deliverd before the dsi block is fully
+	 * initialzed -- this will be needed if bootloader initialized
+	 * DSS already and interrupt are enabled.
+	 */
+	if (cpu_is_omap44xx())
+		dispc_cleanup_irq();
 
 	r = request_irq(dispc.irq, omap_dispc_irq_handler, IRQF_SHARED,
 		"OMAP DISPC", dispc.pdev);

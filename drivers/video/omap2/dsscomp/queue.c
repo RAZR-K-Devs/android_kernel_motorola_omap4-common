@@ -263,7 +263,6 @@ int dsscomp_set_ovl(dsscomp_t comp, struct dss2_ovl_info *ovl)
 	ix = comp->ix;
 
 	if (ovl->cfg.ix >= cdev->num_ovls && ovl->cfg.ix != OMAP_DSS_WB) {
-//	if (ovl->cfg.ix >= cdev->num_ovls) {
 		r = -EINVAL;
 		goto done;
 	}
@@ -294,13 +293,7 @@ int dsscomp_set_ovl(dsscomp_t comp, struct dss2_ovl_info *ovl)
 
 		/* and disabled (unless forced) if on another manager */
 		o = cdev->ovls[ovl->cfg.ix];
-//		if (o->info.enabled && (!o->manager || o->manager->id != ix))
-//			goto done;
 		if (ovl->cfg.ix != OMAP_DSS_WB) {
-			if (o->info.enabled &&
-			   (!o->manager || o->manager->id != ix))
-				goto done;
-		} else {
 			if (o->info.enabled &&
 			   (!o->manager || o->manager->id != ix))
 				goto done;
@@ -333,7 +326,6 @@ int dsscomp_get_ovl(dsscomp_t comp, u32 ix, struct dss2_ovl_info *ovl)
 	BUG_ON(comp->state != DSSCOMP_STATE_ACTIVE);
 
 	if (ix >= cdev->num_ovls && ix != OMAP_DSS_WB) {
-//	if (ix >= cdev->num_ovls) {
 		r = -EINVAL;
 	} else if (comp->ovl_mask & (1 << ix)) {
 		r = 0;
@@ -515,13 +507,12 @@ int dsscomp_apply(dsscomp_t comp)
 	struct omap_overlay_manager *mgr;
 	struct omap_overlay *ovl;
 	struct dsscomp_setup_mgr_data *d;
-//	struct omap_writeback_info wb_info;
-//	struct omap_writeback *wb;
+	struct omap_writeback_info wb_info;
+	struct omap_writeback *wb;
 	u32 oix;
 	bool cb_programmed = false;
-	struct omap_writeback *wb = cdev->wb_ovl;
 	bool wb_apply = false;
-//	bool m2m_mgr_mode = false;
+	bool m2m_mgr_mode = false;
 
 	struct omapdss_ovl_cb cb = {
 		.fn = dsscomp_mgr_callback,
@@ -549,6 +540,9 @@ int dsscomp_apply(dsscomp_t comp)
 
 	dump_comp_info(cdev, d, "apply");
 
+	wb = omap_dss_get_wb(0); 
+	wb->get_wb_info(wb, &wb_info);
+
 	r = 0;
 	dmask = 0;
 
@@ -558,66 +552,63 @@ int dsscomp_apply(dsscomp_t comp)
 	for (oix = 0; oix < comp->frm.num_ovls; oix++) {
 		struct dss2_ovl_info *oi = comp->ovls + oix;
 
-		/* keep track of disabled overlays */
-		if (!oi->cfg.enabled)
-			dmask |= 1 << oi->cfg.ix;
-
-		if (r && !comp->must_apply)
+		if (!comp->must_apply)
 			continue;
 
-//		dump_ovl_info(cdev, oi);
-//		if (oi->cfg.ix == OMAP_DSS_WB) {
+		if (oi->cfg.ix == OMAP_DSS_WB) {
 			/* update status of WB */
-/*			if (!oi->cfg.enabled)
+			if (!oi->cfg.enabled)
 				dmask |= 1 << oi->cfg.ix;
 
-//			wb_apply = true;
+			wb_apply = true;
 
 			wb = omap_dss_get_wb(0);
 			wb->get_wb_info(wb, &wb_info);
-*/			/* if prev comp was with M2M WB */
-/*			if (wb_info.mode == OMAP_WB_MEM2MEM_MODE &&
+			/* if prev comp was with M2M WB */
+			if (wb_info.mode == OMAP_WB_MEM2MEM_MODE &&
 							wb_info.enabled) {
 				if (wb->wait_framedone(wb))
 					dev_warn(DEV(cdev),
 						"WB Framedone expired\n");
 			}
-*/
-//			if (oi->cfg.ix >= cdev->num_ovls) {
-			if (oi->cfg.ix >= cdev->num_ovls && oi->cfg.ix != OMAP_DSS_WB) {
-			r = -EINVAL;
-			continue;
-		}
-//		ovl = cdev->ovls[oi->cfg.ix];
 
-//		/* set overlays' manager & info */
-//		if (ovl->info.enabled && ovl->manager != mgr) {
-//			r = -EBUSY;
-//			goto skip_ovl_set;
-//		}
-//		if (ovl->manager != mgr) {
-//                               /*
-//                                * Ideally, we should call
-//                                * ovl->unset_manager(ovl), but it may block
-//                                * on go even though the disabling of the
-//                                * overlay already went through. So instead,
-//                                * we are just clearing the manager.
-//                                */
-//                               ovl->manager = NULL;
-//                               r = ovl->set_manager(ovl, mgr);
-//			if (r)
-		if (oi->cfg.ix == OMAP_DSS_WB) {
-			enum omap_writeback_source src;
-			if (wb->info.enabled && wb->info.source != mgr->id) {
+			/* if wb is disabled and wb was enabled in prev
+			 * comp - set m2m flag. */
+			if (!oi->cfg.enabled && wb_info.enabled &&
+						wb_info.source == mgr->id &&
+					wb_info.mode == OMAP_WB_MEM2MEM_MODE)
+				m2m_mgr_mode = true;
+
+			/* set m2m_mgr_mode if we will capture in m2m mode
+			 * from the manager */
+			if (oi->cfg.enabled &&
+				oi->cfg.wb_mode == OMAP_WB_MEM2MEM_MODE &&
+						oi->cfg.wb_source == mgr->id)
+				m2m_mgr_mode = true;
+
+			r = set_dss_wb_info(oi);
+			break;
+		}
+	}
+
+	for (oix = 0; oix < comp->frm.num_ovls; oix++) {
+		struct dss2_ovl_info *oi = comp->ovls + oix;
+
+		if (oi->cfg.ix != OMAP_DSS_WB) {
+			/* keep track of disabled overlays */
+			if (!oi->cfg.enabled)
 				dmask |= 1 << oi->cfg.ix;
+
+			if (r && !comp->must_apply)
+				continue;
+
+			dump_ovl_info(cdev, oi);
+
+			if (oi->cfg.ix >= cdev->num_ovls) {
+				r = -EINVAL;
 				continue;
 			}
-			/* update status of WB */
-			wb_apply = true;
-			src = mgr->id;
 
-			r = set_dss_wb_info(oi, src);
-		} else {
 			ovl = cdev->ovls[oi->cfg.ix];
 
 			/* set overlays' manager & info */
@@ -625,20 +616,38 @@ int dsscomp_apply(dsscomp_t comp)
 				r = -EBUSY;
 				goto skip_ovl_set;
 			}
+
 			if (ovl->manager != mgr) {
-				/*
-				 * Ideally, we should call ovl->unset_manager(ovl),
-				 * but it may block on go even though the disabling
-				 * of the overlay already went through.  So instead,
-				 * we are just clearing the manager.
-				 */
-				ovl->manager = NULL;
-				r = ovl->set_manager(ovl, mgr);
+				mutex_lock(&mtx);
+				if (!mgrq[comp->ix].blanking || m2m_mgr_mode) {
+					/*
+					 * Ideally, we should call
+					 * ovl->unset_manager(ovl),
+					 * but it may block on go
+					 * even though the disabling
+					 * of the overlay already
+					 * went through. So instead,
+					 * we are just clearing the manager.
+					 */
+					ovl->manager = NULL;
+					r = ovl->set_manager(ovl, mgr);
+				} else	{
+					/* Ignoring manager change
+					during blanking. */
+					pr_info_ratelimited("dsscomp_apply "
+						"skip set_manager(%s) for "
+						"ovl%d while blank."
+						, mgr->name, oi->cfg.ix);
+					r = -ENODEV;
+				}
+				mutex_unlock(&mtx);
+
 				if (r)
 					goto skip_ovl_set;
 			}
 			r = set_dss_ovl_info(oi);
 		}
+
 skip_ovl_set:
 		if (r && comp->must_apply) {
 			dev_err(DEV(cdev), "[%p] set ovl%d failed %d", comp,
@@ -655,7 +664,7 @@ skip_ovl_set:
 	 * composition.  Otherwise, we can skip the composition now.
 	 */
 	if (!r || comp->must_apply) {
-		r = set_dss_mgr_info(&d->mgr, &cb);
+		r = set_dss_mgr_info(&d->mgr, &cb, m2m_mgr_mode);
 		cb_programmed = r == 0;
 	}
 
@@ -714,8 +723,28 @@ skip_ovl_set:
 	if (!d->win.h && !d->win.y)
 		d->win.h = dssdev->panel.timings.y_res - d->win.y;
 
+	/* Report m2m_only mode to a manager. A manager will apply a new
+	 * composition and will free a previous composition immediately. */
+	mgr->m2m_only = comp->m2m_only;
+
+	/* turn on clock if m2m_only mode is enabled (LCD is OFF) */
+	/* turn off clock if LCD goes ON and prev comp was m2m_only */
+	dss_m2m_clock_handling(mgr);
+
+	if (wb_apply) {
+		struct omap_writeback_info wb_info;
+		struct omap_writeback *wb;
+
+		wb = omap_dss_get_wb(0);
+		wb->get_wb_info(wb, &wb_info);
+
+		if (wb_info.mode == OMAP_WB_MEM2MEM_MODE &&
+			wb_info.enabled)
+			wb->register_framedone(wb);
+	}
+
 	mutex_lock(&mtx);
-	if (mgrq[comp->ix].blanking) {
+	if (mgrq[comp->ix].blanking && !m2m_mgr_mode) {
 		pr_info_ratelimited("ignoring apply mgr(%s) while blanking\n",
 								mgr->name);
 		r = -ENODEV;
@@ -751,11 +780,24 @@ skip_ovl_set:
 			r = 0;
 	}
 
+	/* This blanking is needed, when we received composition without WB for
+	 * disabling pipes, which are sources for manager, which is source for
+	 * WB. In this case manager apply operation is skipped and we need to
+	 * update caches and to invoke callback functions to free the buffers.
+	 */
+	if (!m2m_mgr_mode && wb_info.mode == OMAP_WB_MEM2MEM_MODE &&
+				wb_info.source == mgr->id && mgr->device &&
+			mgr->device->state != OMAP_DSS_DISPLAY_ACTIVE &&
+							comp->must_apply) {
+		mgr->blank(mgr, true);
+		goto done;
+	}
+
 	/* if failed to apply, kick out prior composition */
 	if (comp->must_apply && r)
 		mgr->blank(mgr, true);
 
-	if (!r && (d->mode & DSSCOMP_SETUP_MODE_DISPLAY)) {
+	if (!r && (d->mode & DSSCOMP_SETUP_MODE_DISPLAY) && !m2m_mgr_mode) {
 		if (dssdev_manually_updated(dssdev) && drv->update) {
 			r = drv->update(dssdev, d->win.x,
 					d->win.y, d->win.w, d->win.h);

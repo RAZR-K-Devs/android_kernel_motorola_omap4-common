@@ -113,7 +113,7 @@ struct dsscomp_data {
 	void (*extra_cb)(void *data, int status);
 	void *extra_cb_data;
 	bool must_apply;	/* whether composition must be applied */
-//	bool m2m_only;
+	bool m2m_only;
 #ifdef CONFIG_DEBUG_FS
 	struct list_head dbg_q;
 	u32 dbg_used;
@@ -144,9 +144,9 @@ int dsscomp_state_notifier(struct notifier_block *nb,
 
 /* basic operation - if not using queues */
 int set_dss_ovl_info(struct dss2_ovl_info *oi);
-int set_dss_wb_info(struct dss2_ovl_info *oi,
-	enum omap_writeback_source src);
-int set_dss_mgr_info(struct dss2_mgr_info *mi, struct omapdss_ovl_cb *cb);
+int set_dss_wb_info(struct dss2_ovl_info *oi);
+int set_dss_mgr_info(struct dss2_mgr_info *mi, struct omapdss_ovl_cb *cb,
+								bool m2m_mode);
 struct omap_overlay_manager *find_dss_mgr(int display_ix);
 void swap_rb_in_ovl_info(struct dss2_ovl_info *oi);
 void swap_rb_in_mgr_info(struct dss2_mgr_info *mi);

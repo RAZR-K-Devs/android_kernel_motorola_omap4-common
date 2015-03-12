@@ -233,6 +233,8 @@ enum av_mute {
 #define HDCP_DRIVER_ERROR	6
 #define HDCP_CANCELLED_AUTH	7
 
+#define HDCP_DDC_BKSV_RD_ERR	10
+
 #define HDCP_INFINITE_REAUTH	0x100
 #define HDCP_MAX_DDC_ERR	5
 

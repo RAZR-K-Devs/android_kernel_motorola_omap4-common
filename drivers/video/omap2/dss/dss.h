@@ -198,16 +198,16 @@ struct writeback_cache_data {
 	u16 out_height;
 	u16 width;
 	u16 height;
-	u32     fifo_low;
-	u32     fifo_high;
-	enum omap_color_mode                    color_mode;
-	enum omap_color_mode                    input_color_mode;
-	enum omap_writeback_capturemode capturemode;
-	enum omap_writeback_source              source;
-	enum omap_burst_size                    burst_size;
-	enum omap_writeback_mode                mode;
-	u8                                      rotation;
-	enum omap_dss_rotation_type             rotation_type;
+	u32	fifo_low;
+	u32	fifo_high;
+	enum omap_color_mode			color_mode;
+	enum omap_color_mode			input_color_mode;
+	enum omap_writeback_capturemode	capturemode;
+	enum omap_writeback_source		source;
+	enum omap_burst_size			burst_size;
+	enum omap_writeback_mode		mode;
+	u8					rotation;
+	enum omap_dss_rotation_type		rotation_type;
 };
 
 struct seq_file;
@@ -217,6 +217,9 @@ struct platform_device;
 struct bus_type *dss_get_bus(void);
 struct regulator *dss_get_vdds_dsi(void);
 struct regulator *dss_get_vdds_sdi(void);
+void omap_dss_request_high_bandwidth(struct device *dss_dev);
+void omap_dss_reset_high_bandwidth(struct device *dss_dev);
+void omap_dss_overlay_ensure_bw(void);
 
 /* display */
 int dss_suspend_all_devices(void);
@@ -253,7 +256,6 @@ void dss_overlay_setup_dispc_manager(struct omap_overlay_manager *mgr);
 void dss_overlay_setup_l4_manager(struct omap_overlay_manager *mgr);
 #endif
 void dss_recheck_connections(struct omap_dss_device *dssdev, bool force);
-
 /* Write back */
 void dss_init_writeback(struct platform_device *pdev);
 void dss_uninit_writeback(struct platform_device *pdev);
@@ -438,6 +440,9 @@ void dispc_fake_vsync_irq(void);
 int dispc_runtime_get(void);
 void dispc_runtime_put(void);
 
+void dispc_save_context(void);
+void dispc_restore_context(void);
+
 void dispc_enable_sidle(void);
 void dispc_disable_sidle(void);
 
@@ -543,6 +548,7 @@ int dispc_get_clock_div(enum omap_channel channel,
 		struct dispc_clock_info *cinfo);
 u32 sa_calc_wrap(struct dispc_config *dispc_reg_config, u32 channel_no);
 int dispc_setup_wb(struct writeback_cache_data *wb);
+void dispc_setup_wb_source(enum omap_writeback_source source);
 void dispc_go_wb(void);
 
 /* VENC */
@@ -604,7 +610,6 @@ int hdmi_get_current_hpd(void);
 void hdmi_get_monspecs(struct fb_monspecs *specs);
 void hdmi_inform_hpd_to_cec(int status);
 void hdmi_inform_power_on_to_cec(int status);
-void hdmi_get_audspecs(struct omap_hdmi_audio_modes *specs);
 u8 *hdmi_read_edid(struct omap_video_timings *);
 void hdmi_set_edid_state(bool val);
 
@@ -626,7 +631,7 @@ int omap_dss_ovl_set_info(struct omap_overlay *ovl,
 /*#ifdef CONFIG_PANEL_MAPPHONE_OMAP4_HDTV
 #define FB_MODE_FLAG_DVI_AUDIO   (1 << 30)
 #define FB_MODE_FLAG_DSSMGR      (1 << 29)
-//int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev, int edid_only);
+int omapdss_hdmi_display_enable(struct omap_dss_device *dssdev, int edid_only);
 int mapphone_omapdss_hdmi_get_edid(struct omap_dss_device *dssdev, u8 *edid, int len);
 int omapdss_set_hdmi_mode(struct omap_dss_device *dssdev, int code);
 int omapdss_set_hdmi_hpd(struct omap_dss_device *dssdev, bool enable);
